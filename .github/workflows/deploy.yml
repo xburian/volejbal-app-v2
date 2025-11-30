@@ -36,13 +36,8 @@ jobs:
     - name: 'Set up Cloud SDK'
       uses: 'google-github-actions/setup-gcloud@v2'
 
-    # Explicitly enable necessary APIs to prevent "API not enabled" errors
-    - name: 'Enable Google Cloud APIs'
-      run: |
-        gcloud services enable artifactregistry.googleapis.com run.googleapis.com
-
     # Create the repository if it doesn't exist.
-    # Requires "Artifact Registry Administrator" role.
+    # Requires "Artifact Registry Administrator" role on the Service Account.
     - name: 'Create Artifact Repository'
       run: |
         gcloud artifacts repositories create ${{ env.REPOSITORY }} \
