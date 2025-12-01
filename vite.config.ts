@@ -9,5 +9,6 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './setupTests.ts',
     css: true,
+    testTimeout: 10000, // 10 seconds timeout for integration tests
   },
 });

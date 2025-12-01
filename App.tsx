@@ -49,6 +49,23 @@ const App: React.FC = () => {
     loadEvents();
   }, []);
 
+  // Automatically select first upcoming event when events load or user logs in
+  useEffect(() => {
+    if (!currentUser || events.length === 0) return;
+
+    // Only auto-select if no event is currently selected
+    if (selectedEventId) return;
+
+    const today = startOfDay(new Date());
+    const upcomingEvents = events
+      .filter(e => new Date(e.date) >= today)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    if (upcomingEvents.length > 0) {
+      setSelectedEventId(upcomingEvents[0].id);
+    }
+  }, [currentUser, events, selectedEventId]);
+
   // Check for debts whenever user or events change
   useEffect(() => {
     if (!currentUser || events.length === 0) {
@@ -171,7 +188,7 @@ const App: React.FC = () => {
   }
 
   // Filter events logic
-  let displayedEvents: VolleyballEvent[] = [];
+  let displayedEvents: VolleyballEvent[];
   const isUpcomingMode = selectedDate === null;
 
   if (isUpcomingMode) {

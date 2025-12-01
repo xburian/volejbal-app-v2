@@ -1,8 +1,9 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { VolleyballEvent, Participant, User } from '../types';
 import * as storage from '../services/storage';
-import { Users, Trash2, Wallet, Hand, AlertTriangle, Edit2, Check, X, Loader2 } from 'lucide-react';
+import { Users, Trash2, Wallet, Hand, AlertTriangle, Edit2, Check, X, Loader2, Copy } from 'lucide-react';
 import QRCode from 'react-qr-code';
+import { format } from 'date-fns';
 
 interface EventDetailProps {
   event: VolleyballEvent;
@@ -35,11 +36,16 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, on
   const [isEditingAccount, setIsEditingAccount] = useState(false);
   const [tempAccountNumber, setTempAccountNumber] = useState(event.accountNumber);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+  const [isEditingCost, setIsEditingCost] = useState(false);
+  const [tempTotalCost, setTempTotalCost] = useState(event.totalCost);
 
   useEffect(() => {
     setTempAccountNumber(event.accountNumber);
     setIsEditingAccount(false);
-  }, [event.id, event.accountNumber]);
+    setTempTotalCost(event.totalCost);
+    setIsEditingCost(false);
+  }, [event.id, event.accountNumber, event.totalCost]);
 
   const joinedParticipants = event.participants.filter(p => p.status === 'joined');
   const countJoined = joinedParticipants.length;
@@ -92,6 +98,29 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, on
     setIsEditingAccount(false);
   };
 
+  const handleCopyToClipboard = async () => {
+    if (event.accountNumber) {
+      try {
+        await navigator.clipboard.writeText(event.accountNumber);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy:', err);
+      }
+    }
+  };
+
+  const handleSaveCost = () => {
+    const updatedEvent = { ...event, totalCost: tempTotalCost };
+    onUpdate(updatedEvent);
+    setIsEditingCost(false);
+  };
+
+  const handleCancelCostEdit = () => {
+    setTempTotalCost(event.totalCost);
+    setIsEditingCost(false);
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden flex flex-col h-full relative">
       {isLoading && (
@@ -103,10 +132,47 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, on
       {/* Header */}
       <div className="p-6 bg-slate-50 border-b border-slate-100 flex justify-between items-start">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">{event.title}</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-bold text-slate-800">{event.title}</h2>
+            <span className="text-lg text-slate-500 font-medium">
+              {format(new Date(event.date), 'dd.MM.yyyy')}
+            </span>
+          </div>
           <div className="flex items-center gap-4 text-slate-500 mt-2 text-sm">
             <span className="flex items-center gap-1"><Users size={16} /> {event.location}</span>
-            <span className="flex items-center gap-1"><Wallet size={16} /> Celkem: {event.totalCost} Kč</span>
+            <div className="flex items-center gap-1">
+              <Wallet size={16} />
+              {!isEditingCost ? (
+                <>
+                  <span>Celkem: {event.totalCost} Kč</span>
+                  <button
+                    onClick={() => setIsEditingCost(true)}
+                    className="ml-1 text-slate-400 hover:text-blue-600 transition-colors p-0.5"
+                    title="Upravit celkovou cenu"
+                  >
+                    <Edit2 size={12} />
+                  </button>
+                </>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <span>Celkem:</span>
+                  <input
+                    type="number"
+                    value={tempTotalCost}
+                    onChange={(e) => setTempTotalCost(Number(e.target.value))}
+                    className="w-16 px-1 py-0.5 text-sm border border-blue-300 rounded focus:ring-1 focus:ring-blue-200 outline-none"
+                    min="0"
+                  />
+                  <span>Kč</span>
+                  <button onClick={handleSaveCost} className="text-green-600 hover:bg-green-50 p-0.5 rounded transition-colors">
+                    <Check size={14}/>
+                  </button>
+                  <button onClick={handleCancelCostEdit} className="text-red-600 hover:bg-red-50 p-0.5 rounded transition-colors">
+                    <X size={14}/>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <button 
@@ -237,9 +303,24 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, on
               </div>
               
               {!isEditingAccount ? (
-                <p className="text-xl font-mono text-slate-800 tracking-wider select-all truncate">
-                  {event.accountNumber || 'Nezadáno'}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-xl font-mono text-slate-800 tracking-wider select-all truncate flex-1">
+                    {event.accountNumber || 'Nezadáno'}
+                  </p>
+                  {event.accountNumber && (
+                    <button
+                      onClick={handleCopyToClipboard}
+                      className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 p-2 rounded transition-colors flex-shrink-0"
+                      title="Zkopírovat číslo účtu"
+                    >
+                      {isCopied ? (
+                        <Check size={18} className="text-green-600" />
+                      ) : (
+                        <Copy size={18} />
+                      )}
+                    </button>
+                  )}
+                </div>
               ) : (
                 <input 
                   type="text"

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User } from '../types';
 import * as storage from '../services/storage';
-import { UserPlus, LogIn, Trophy, Trash2, Loader2 } from 'lucide-react';
+import { UserPlus, Trophy, Trash2, Loader2, Search } from 'lucide-react';
 import { ConfirmModal } from './ConfirmModal';
 
 interface LoginScreenProps {
@@ -13,7 +13,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   const [newName, setNewName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  
+  const [searchQuery, setSearchQuery] = useState('');
+
   // State for deleting user
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
@@ -69,6 +70,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     }
   };
 
+  // Normalize string to remove diacritics for search
+  const normalizeString = (str: string): string => {
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  };
+
+  // Filter users based on search query (with diacritic normalization)
+  const filteredUsers = users.filter(user => {
+    const normalizedName = normalizeString(user.name);
+    const normalizedQuery = normalizeString(searchQuery);
+    return normalizedName.includes(normalizedQuery);
+  });
+
   return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden relative">
@@ -90,8 +103,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
           {/* User List */}
           <div className="mb-6">
              <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Vyberte svůj profil</h2>
+
+             {/* Search Bar */}
+             <div className="relative mb-3">
+               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+               <input
+                 type="text"
+                 value={searchQuery}
+                 onChange={(e) => setSearchQuery(e.target.value)}
+                 placeholder="Hledat hráče..."
+                 className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+               />
+             </div>
+
              <div className="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto custom-scrollbar">
-               {users.map(user => (
+               {filteredUsers.map(user => (
                  <div key={user.id} className="relative group">
                    <button
                      onClick={() => onLogin(user)}
@@ -115,7 +141,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                    </button>
                  </div>
                ))}
-               
+
+               {!isLoading && filteredUsers.length === 0 && users.length > 0 && (
+                 <div className="col-span-2 text-center text-slate-400 text-sm py-4 italic">
+                   Žádný hráč nenalezen.
+                 </div>
+               )}
+
                {!isLoading && users.length === 0 && (
                  <div className="col-span-2 text-center text-slate-400 text-sm py-4 italic">
                    Zatím žádní uživatelé. Vytvořte prvního.
