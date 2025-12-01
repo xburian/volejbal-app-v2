@@ -14,6 +14,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   // State for deleting user
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
@@ -34,6 +35,24 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     loadUsers();
   }, []);
 
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Check file size (max 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        setError('Obrázek je příliš velký. Maximum je 2MB.');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result as string);
+        setError(null);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -42,11 +61,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
 
     setIsLoading(true);
     try {
-      const newUser = await storage.createUser(newName);
-      // We don't need to append manually, just reload or use the result
-      // But for Firestore consistency, reloading is safer or appending is fine if we trust optimistic
+      const newUser = await storage.createUser(newName, photoPreview || undefined);
       setUsers(prev => [...prev, newUser]);
       setNewName('');
+      setPhotoPreview(null);
       onLogin(newUser);
     } catch (err: any) {
       setError(err.message || 'Chyba při vytváření uživatele.');
@@ -123,9 +141,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                      onClick={() => onLogin(user)}
                      className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-blue-500 hover:bg-blue-50 transition-all text-left pr-10"
                    >
-                     <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold text-sm group-hover:bg-blue-200 group-hover:text-blue-700 shrink-0">
-                       {user.name.charAt(0).toUpperCase()}
-                     </div>
+                     {user.photoUrl ? (
+                       <img
+                         src={user.photoUrl}
+                         alt={user.name}
+                         className="w-8 h-8 rounded-full object-cover shrink-0"
+                       />
+                     ) : (
+                       <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold text-sm group-hover:bg-blue-200 group-hover:text-blue-700 shrink-0">
+                         {user.name.charAt(0).toUpperCase()}
+                       </div>
+                     )}
                      <span className="font-medium text-slate-700 group-hover:text-blue-900 truncate">{user.name}</span>
                    </button>
                    
@@ -168,6 +194,34 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
           {/* Create User Form */}
           <form onSubmit={handleCreateUser} className="mt-6">
             <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Nový hráč</h2>
+
+            {/* Photo Upload */}
+            <div className="mb-3 flex items-center gap-3">
+              <label className="cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  className="hidden"
+                />
+                {photoPreview ? (
+                  <img
+                    src={photoPreview}
+                    alt="Preview"
+                    className="w-16 h-16 rounded-full object-cover border-2 border-slate-300 hover:border-blue-500 transition-colors"
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-full bg-slate-100 border-2 border-dashed border-slate-300 hover:border-blue-500 flex items-center justify-center text-slate-400 text-xs text-center transition-colors">
+                    <span>Přidat<br/>foto</span>
+                  </div>
+                )}
+              </label>
+              <div className="text-xs text-slate-500">
+                <p>Volitelné</p>
+                <p className="text-slate-400">Max 2MB</p>
+              </div>
+            </div>
+
             <div className="flex gap-2">
               <input 
                 type="text" 

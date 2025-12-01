@@ -39,6 +39,8 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, on
   const [isCopied, setIsCopied] = useState(false);
   const [isEditingCost, setIsEditingCost] = useState(false);
   const [tempTotalCost, setTempTotalCost] = useState(event.totalCost);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
 
   useEffect(() => {
     setTempAccountNumber(event.accountNumber);
@@ -121,6 +123,56 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, on
     setIsEditingCost(false);
   };
 
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setPhotoError('Obrázek je příliš velký. Maximum je 2MB.');
+      return;
+    }
+
+    setIsUploadingPhoto(true);
+    setPhotoError(null);
+
+    try {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const photoUrl = reader.result as string;
+
+        // Update user in storage
+        await storage.updateUser(currentUser.id, { photoUrl });
+
+        // Refresh event data to get updated participant photos
+        await refreshEventData();
+        setIsUploadingPhoto(false);
+      };
+      reader.onerror = () => {
+        setPhotoError('Chyba při načítání obrázku.');
+        setIsUploadingPhoto(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      setPhotoError('Chyba při ukládání obrázku.');
+      setIsUploadingPhoto(false);
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    setIsUploadingPhoto(true);
+    setPhotoError(null);
+
+    try {
+      await storage.updateUser(currentUser.id, { photoUrl: undefined });
+      await refreshEventData();
+      setIsUploadingPhoto(false);
+    } catch (err) {
+      setPhotoError('Chyba při mazání obrázku.');
+      setIsUploadingPhoto(false);
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden flex flex-col h-full relative">
       {isLoading && (
@@ -196,6 +248,14 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, on
               </span>
             </h3>
 
+            {/* Photo Error Message */}
+            {photoError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm flex items-center gap-2">
+                <AlertTriangle size={16} />
+                {photoError}
+              </div>
+            )}
+
             {/* Quick Join Button for Current User */}
             {!isCurrentUserJoined && (
               <button 
@@ -219,6 +279,60 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, on
                         p.status === 'joined' ? 'bg-green-500' : 
                         p.status === 'declined' ? 'bg-red-500' : 'bg-yellow-400'
                       }`}></div>
+
+                      {/* Photo with upload option for current user */}
+                      {isMe ? (
+                        <div className="relative group/photo">
+                          <label className="cursor-pointer block">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handlePhotoChange}
+                              disabled={isUploadingPhoto}
+                              className="hidden"
+                            />
+                            {p.photoUrl ? (
+                              <img
+                                src={p.photoUrl}
+                                alt={p.name}
+                                className="w-8 h-8 rounded-full object-cover border-2 border-blue-400 hover:border-blue-500 transition-colors"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-blue-200 text-blue-700 flex items-center justify-center font-bold text-sm border-2 border-blue-400 hover:border-blue-500 transition-colors">
+                                {p.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            {isUploadingPhoto && (
+                              <div className="absolute inset-0 bg-white/80 rounded-full flex items-center justify-center">
+                                <Loader2 size={16} className="animate-spin text-blue-600" />
+                              </div>
+                            )}
+                          </label>
+                          {p.photoUrl && !isUploadingPhoto && (
+                            <button
+                              onClick={handleRemovePhoto}
+                              className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover/photo:opacity-100 transition-opacity"
+                              title="Odebrat fotku"
+                            >
+                              <X size={10} />
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          {p.photoUrl ? (
+                            <img
+                              src={p.photoUrl}
+                              alt={p.name}
+                              className="w-8 h-8 rounded-full object-cover border-2 border-slate-200"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm border-2 border-slate-200">
+                              {p.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                        </>
+                      )}
                       <div>
                         <p className={`font-medium text-sm ${isMe ? 'text-blue-800' : 'text-slate-800'}`}>
                           {p.name} {isMe && '(Já)'}

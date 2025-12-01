@@ -249,6 +249,13 @@ const App: React.FC = () => {
            </div>
            
            <div className="flex items-center gap-3">
+             {currentUser.photoUrl && (
+               <img
+                 src={currentUser.photoUrl}
+                 alt={currentUser.name}
+                 className="w-8 h-8 rounded-full object-cover"
+               />
+             )}
              <span className="text-sm font-medium text-slate-600">Ahoj, {currentUser.name}</span>
              <button 
                 onClick={handleLogout}

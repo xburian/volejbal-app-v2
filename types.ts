@@ -1,11 +1,13 @@
 export interface User {
   id: string;
   name: string;
+  photoUrl?: string; // URL or base64 encoded image
 }
 
 export interface Participant {
   userId: string; // Foreign key to User
   name: string;   // Denormalized name for display
+  photoUrl?: string; // Denormalized photo for display
   status: 'joined' | 'declined' | 'maybe';
   hasPaid: boolean;
 }

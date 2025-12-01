@@ -9,6 +9,7 @@ import * as storage from '../services/storage';
 vi.mock('../services/storage', () => ({
   updateAttendance: vi.fn(),
   getEvents: vi.fn(),
+  updateUser: vi.fn(),
 }));
 
 // Mock clipboard API
@@ -60,6 +61,7 @@ describe('EventDetail Component', () => {
   const mockCurrentUser: User = {
     id: 'user1',
     name: 'Test User',
+    photoUrl: undefined,
   };
 
   const mockEvent: VolleyballEvent = {
@@ -447,6 +449,33 @@ describe('EventDetail Component', () => {
       expect(screen.getByText('Přidejte účastníky pro výpočet ceny.')).toBeInTheDocument();
     });
 
+    it('displays participant photos when available', () => {
+      const eventWithPhotos: VolleyballEvent = {
+        ...mockEvent,
+        participants: [
+          { userId: 'user1', name: 'User With Photo', photoUrl: 'https://example.com/photo.jpg', status: 'joined', hasPaid: false },
+          { userId: 'user2', name: 'User Without Photo', status: 'joined', hasPaid: false },
+        ],
+      };
+
+      render(
+        <EventDetail
+          event={eventWithPhotos}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      // Check that photo img is rendered for user with photo
+      const photoImg = screen.getByAltText('User With Photo');
+      expect(photoImg).toBeInTheDocument();
+      expect(photoImg).toHaveAttribute('src', 'https://example.com/photo.jpg');
+
+      // Check that initial is displayed for user without photo
+      expect(screen.getByText('U')).toBeInTheDocument(); // "U" from "User Without Photo"
+    });
+
     it('rounds up cost per person correctly', () => {
       const eventOddCost = {
         ...mockEvent,
@@ -468,6 +497,161 @@ describe('EventDetail Component', () => {
 
       // 1001 / 3 = 333.666... -> should round up to 334
       expect(screen.getByText('334 Kč / os.')).toBeInTheDocument();
+    });
+  });
+
+  describe('User Photo Upload in EventDetail', () => {
+    beforeEach(() => {
+      vi.mocked(storage.updateUser).mockResolvedValue({
+        ...mockCurrentUser,
+        photoUrl: 'data:image/png;base64,test',
+      });
+    });
+
+    it('shows photo upload UI for current user', () => {
+      render(
+        <EventDetail
+          event={mockEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      // Current user is in participants (user1), so there should be a file input
+      // Check that the photo is interactive (has file input)
+      const fileInput = document.querySelector('input[type="file"]');
+      expect(fileInput).toBeInTheDocument();
+      expect(fileInput).toHaveAttribute('accept', 'image/*');
+    });
+
+    it('displays remove button when user has photo', () => {
+      const eventWithUserPhoto = {
+        ...mockEvent,
+        participants: [
+          { ...mockEvent.participants[0], photoUrl: 'https://example.com/my-photo.jpg' },
+          ...mockEvent.participants.slice(1),
+        ],
+      };
+
+      render(
+        <EventDetail
+          event={eventWithUserPhoto}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      // The remove button should exist but be hidden until hover
+      const removeButtons = document.querySelectorAll('button[title="Odebrat fotku"]');
+      expect(removeButtons.length).toBeGreaterThan(0);
+    });
+
+    it('does not show photo upload for other users', () => {
+      const eventWithOtherUsers = {
+        ...mockEvent,
+        participants: [
+          { userId: 'other1', name: 'Other User', photoUrl: 'https://example.com/other.jpg', status: 'joined' as const, hasPaid: false },
+        ],
+      };
+
+      render(
+        <EventDetail
+          event={eventWithOtherUsers}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      // Other users should not have file input
+      const fileInputs = document.querySelectorAll('input[type="file"]');
+      expect(fileInputs.length).toBe(0);
+    });
+
+    it('shows loading state during photo upload', async () => {
+      const user = userEvent.setup();
+
+      render(
+        <EventDetail
+          event={mockEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      expect(fileInput).toBeTruthy();
+
+      const file = new File(['photo'], 'photo.jpg', { type: 'image/jpeg' });
+      await user.upload(fileInput, file);
+
+      // Since the upload is async, we should see loading state briefly
+      // but it will complete quickly in tests
+      await waitFor(() => {
+        expect(vi.mocked(storage.updateUser)).toHaveBeenCalled();
+      });
+    });
+
+    it('shows error for files larger than 2MB', async () => {
+      const user = userEvent.setup();
+
+      render(
+        <EventDetail
+          event={mockEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const largeFile = new File(['x'.repeat(3 * 1024 * 1024)], 'large.jpg', { type: 'image/jpeg' });
+
+      await user.upload(fileInput, largeFile);
+
+      await waitFor(() => {
+        expect(screen.getByText(/příliš velký/i)).toBeInTheDocument();
+      });
+
+      // updateUser should not be called for oversized files
+      expect(vi.mocked(storage.updateUser)).not.toHaveBeenCalled();
+    });
+
+    it('maintains backward compatibility with users without photos', () => {
+      const eventWithMixedUsers = {
+        ...mockEvent,
+        participants: [
+          { userId: 'user1', name: 'Test User', photoUrl: 'https://example.com/photo.jpg', status: 'joined' as const, hasPaid: false },
+          { userId: 'user2', name: 'Jan Novák', status: 'joined' as const, hasPaid: false },
+        ],
+      };
+
+      render(
+        <EventDetail
+          event={eventWithMixedUsers}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      // Both should render without errors
+      // Test User appears multiple times, so just verify rendering didn't crash
+      expect(screen.getAllByText(/Test User/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Jan Novák/).length).toBeGreaterThan(0);
+
+      // Verify photo is displayed for user with photo
+      const photoImg = screen.getByAltText('Test User');
+      expect(photoImg).toHaveAttribute('src', 'https://example.com/photo.jpg');
+
+      // User without photo should show initial (J from Jan Novák)
+      const janInitial = screen.getAllByText('J').find(el =>
+        el.className.includes('rounded-full')
+      );
+      expect(janInitial).toBeInTheDocument();
     });
   });
 });

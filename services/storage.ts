@@ -60,7 +60,7 @@ export const getUser = async (id: string): Promise<User | undefined> => {
   return users.find(u => u.id === id);
 };
 
-export const createUser = async (name: string): Promise<User> => {
+export const createUser = async (name: string, photoUrl?: string): Promise<User> => {
   const users = await getUsers();
   
   if (users.some(u => u.name.toLowerCase() === name.trim().toLowerCase())) {
@@ -69,7 +69,8 @@ export const createUser = async (name: string): Promise<User> => {
 
   const newUser: User = {
     id: generateId(),
-    name: name.trim()
+    name: name.trim(),
+    ...(photoUrl && { photoUrl })
   };
 
   if (!db) {
@@ -81,6 +82,30 @@ export const createUser = async (name: string): Promise<User> => {
 
   await setDoc(doc(db, USERS_COL, newUser.id), newUser);
   return newUser;
+};
+
+export const updateUser = async (userId: string, updates: Partial<User>): Promise<User> => {
+  const users = await getUsers();
+  const userIndex = users.findIndex(u => u.id === userId);
+
+  if (userIndex === -1) {
+    throw new Error('Uživatel nenalezen.');
+  }
+
+  const updatedUser = { ...users[userIndex], ...updates };
+
+  if (!db) {
+    const lsUsers = getLS<User>(LS_USERS);
+    const idx = lsUsers.findIndex(u => u.id === userId);
+    if (idx !== -1) {
+      lsUsers[idx] = updatedUser;
+      setLS(LS_USERS, lsUsers);
+    }
+    return updatedUser;
+  }
+
+  await setDoc(doc(db, USERS_COL, userId), updatedUser);
+  return updatedUser;
 };
 
 export const deleteUser = async (userId: string): Promise<void> => {
@@ -180,6 +205,7 @@ export const getEvents = async (): Promise<VolleyballEvent[]> => {
       return {
         userId: record.userId,
         name: user ? user.name : 'Neznámý',
+        photoUrl: user?.photoUrl,
         status: record.status,
         hasPaid: record.hasPaid
       };
