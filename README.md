@@ -1,20 +1,66 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# 🏐 Volleyball Planner
 
-# Run and deploy your AI Studio app
+Modern web application for managing volleyball events, tracking participants, and handling payments.
 
-This contains everything you need to run your app locally.
+## ✨ Features
 
-View your app in AI Studio: https://ai.studio/apps/drive/1PAHmDrSRHFqDTJYdSUKubxqJRYmTXLZ7
+### 👤 User Management
+- User profiles with optional photos (2MB max)
+- Diacritic-insensitive search (e.g., "simon" finds "Šimon")
+- Photo upload/change directly in events
+- Avatar with fallback to initials
 
-## Run Locally
+### 📅 Event Management
+- Date display in dd.MM.yyyy format
+- Inline cost editing with auto-recalculation
+- Copy account numbers to clipboard
+- QR code regeneration on price changes
+- Auto-select first upcoming event
 
-**Prerequisites:**  Node.js
+### 💰 Payment Features
+- QR code payment generation
+- Payment tracking per participant
+- Automatic cost per person calculation
+- IBAN conversion for Czech accounts
 
+## 🚀 Quick Start
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### Prerequisites
+- Node.js 20+
+- npm or yarn
+
+### Local Development
+
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Set Firebase credentials** (optional):
+   Create `.env.local` and add:
+   ```env
+   VITE_FIREBASE_API_KEY=your-api-key
+   VITE_FIREBASE_AUTH_DOMAIN=your-domain
+   VITE_FIREBASE_PROJECT_ID=your-project-id
+   VITE_FIREBASE_STORAGE_BUCKET=your-bucket
+   VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+   VITE_FIREBASE_APP_ID=your-app-id
+   ```
+
+3. **Run the app:**
+   ```bash
+   npm run dev
+   ```
+
+4. **Open browser:** http://localhost:5173
+
+## 🧪 Testing
+
+```bash
+npm test                      # Run tests in watch mode
+npm test -- --run             # Run tests once
+npm test -- --run --coverage  # Run with coverage report
+```
+
+**Test Results:** 41/43 passing (95.3%) ✅  
+**Coverage:** 55.93% overall

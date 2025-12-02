@@ -35,8 +35,7 @@ jobs:
       run: npm test -- --run
 
     - name: Run Tests with Coverage
-      run: npx vitest run --coverage
-      continue-on-error: true
+      run: npm test -- --run --coverage
 
   deploy:
     name: Deploy to Cloud Run
