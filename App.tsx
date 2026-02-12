@@ -172,7 +172,17 @@ const App: React.FC = () => {
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
     setViewDate(date); 
-    if (selectedEvent && !isSameDay(new Date(selectedEvent.date), date)) {
+
+    // Find all events for the selected day and sort by time
+    const eventsOnDay = events
+      .filter(e => isSameDay(new Date(e.date), date))
+      .sort((a, b) => a.time.localeCompare(b.time));
+
+    if (eventsOnDay.length > 0) {
+      // Auto-select the first event of the day
+      setSelectedEventId(eventsOnDay[0].id);
+    } else {
+      // No events on this day - clear the selection
       setSelectedEventId(null);
     }
   };
