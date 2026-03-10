@@ -1,23 +1,20 @@
 import { VolleyballEvent, User, AttendanceRecord, Participant } from '../types';
-import { db } from './firebase';
-import { 
-  collection, 
-  getDocs, 
-  doc, 
-  setDoc, 
-  deleteDoc, 
-  query, 
-  where
-} from 'firebase/firestore';
 
-const EVENTS_COL = 'events';
-const USERS_COL = 'users';
-const ATTENDANCE_COL = 'attendance';
-
-// Local Storage Keys
+// Local Storage Keys (fallback for offline / test / dev:vite mode)
 const LS_USERS = 'volleyball_users_db_v1';
 const LS_EVENTS = 'volleyball_events_db_v1';
 const LS_ATTENDANCE = 'volleyball_attendance_db_v1';
+
+// Detect if API is available (running via `vercel dev` or deployed on Vercel)
+const API_BASE = '/api';
+
+const useApi = (): boolean => {
+  // In test environment (vitest / jsdom), always use localStorage
+  if (typeof process !== 'undefined' && (process as any).env?.VITEST) return false;
+  if (typeof window !== 'undefined' && (window as any).__VITEST__) return false;
+  // If running in browser, try API
+  return typeof window !== 'undefined';
+};
 
 // Helper for ID generation
 const generateId = (): string => {
@@ -39,19 +36,30 @@ const setLS = (key: string, data: any[]) => {
   localStorage.setItem(key, JSON.stringify(data));
 };
 
+// --- Fetch helper ---
+async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `API error ${res.status}`);
+  }
+  return res.json();
+}
+
 // --- Users ---
 
 export const getUsers = async (): Promise<User[]> => {
-  if (!db) {
+  if (!useApi()) {
     return getLS<User>(LS_USERS);
   }
-
   try {
-    const querySnapshot = await getDocs(collection(db, USERS_COL));
-    return querySnapshot.docs.map(doc => doc.data() as User);
+    return await apiFetch<User[]>('/users');
   } catch (e) {
-    console.error("Failed to load users", e);
-    return [];
+    console.error("Failed to load users from API, falling back to localStorage", e);
+    return getLS<User>(LS_USERS);
   }
 };
 
@@ -61,103 +69,71 @@ export const getUser = async (id: string): Promise<User | undefined> => {
 };
 
 export const createUser = async (name: string, photoUrl?: string): Promise<User> => {
-  const users = await getUsers();
-  
-  if (users.some(u => u.name.toLowerCase() === name.trim().toLowerCase())) {
-    throw new Error('Uživatel s tímto jménem již existuje.');
-  }
-
-  const newUser: User = {
-    id: generateId(),
-    name: name.trim(),
-    ...(photoUrl && { photoUrl })
-  };
-
-  if (!db) {
-    const lsUsers = getLS<User>(LS_USERS);
-    lsUsers.push(newUser);
-    setLS(LS_USERS, lsUsers);
+  if (!useApi()) {
+    const users = getLS<User>(LS_USERS);
+    if (users.some(u => u.name.toLowerCase() === name.trim().toLowerCase())) {
+      throw new Error('Uživatel s tímto jménem již existuje.');
+    }
+    const newUser: User = {
+      id: generateId(),
+      name: name.trim(),
+      ...(photoUrl && { photoUrl })
+    };
+    users.push(newUser);
+    setLS(LS_USERS, users);
     return newUser;
   }
 
-  await setDoc(doc(db, USERS_COL, newUser.id), newUser);
-  return newUser;
+  return apiFetch<User>('/users', {
+    method: 'POST',
+    body: JSON.stringify({ name, photoUrl }),
+  });
 };
 
 export const updateUser = async (userId: string, updates: Partial<User>): Promise<User> => {
-  const users = await getUsers();
-  const userIndex = users.findIndex(u => u.id === userId);
-
-  if (userIndex === -1) {
-    throw new Error('Uživatel nenalezen.');
+  if (!useApi()) {
+    const users = getLS<User>(LS_USERS);
+    const idx = users.findIndex(u => u.id === userId);
+    if (idx === -1) throw new Error('Uživatel nenalezen.');
+    users[idx] = { ...users[idx], ...updates };
+    setLS(LS_USERS, users);
+    return users[idx];
   }
 
-  const updatedUser = { ...users[userIndex], ...updates };
-
-  if (!db) {
-    const lsUsers = getLS<User>(LS_USERS);
-    const idx = lsUsers.findIndex(u => u.id === userId);
-    if (idx !== -1) {
-      lsUsers[idx] = updatedUser;
-      setLS(LS_USERS, lsUsers);
-    }
-    return updatedUser;
-  }
-
-  await setDoc(doc(db, USERS_COL, userId), updatedUser);
-  return updatedUser;
+  return apiFetch<User>('/users', {
+    method: 'PUT',
+    body: JSON.stringify({ id: userId, ...updates }),
+  });
 };
 
 export const deleteUser = async (userId: string): Promise<void> => {
-  if (!db) {
+  if (!useApi()) {
     const users = getLS<User>(LS_USERS).filter(u => u.id !== userId);
     setLS(LS_USERS, users);
-    
     const attendance = getLS<AttendanceRecord>(LS_ATTENDANCE).filter(a => a.userId !== userId);
     setLS(LS_ATTENDANCE, attendance);
     return;
   }
 
-  // 1. Remove User
-  await deleteDoc(doc(db, USERS_COL, userId));
-
-  // 2. Remove Attendance records for this user
-  const q = query(collection(db, ATTENDANCE_COL), where("userId", "==", userId));
-  const snapshot = await getDocs(q);
-  
-  const deletePromises = snapshot.docs.map(d => deleteDoc(d.ref));
-  await Promise.all(deletePromises);
+  await apiFetch<void>(`/users?id=${encodeURIComponent(userId)}`, {
+    method: 'DELETE',
+  });
 };
 
 // --- Attendance ---
 
-const getAttendances = async (): Promise<AttendanceRecord[]> => {
-  if (!db) {
-    return getLS<AttendanceRecord>(LS_ATTENDANCE);
-  }
-  try {
-    const snapshot = await getDocs(collection(db, ATTENDANCE_COL));
-    return snapshot.docs.map(doc => doc.data() as AttendanceRecord);
-  } catch (e) {
-    return [];
-  }
-};
-
 export const updateAttendance = async (eventId: string, userId: string, status: Participant['status'], hasPaid?: boolean): Promise<void> => {
-  const record: AttendanceRecord = {
-    eventId,
-    userId,
-    status,
-    hasPaid: hasPaid || false,
-    timestamp: Date.now()
-  };
-
-  if (!db) {
+  if (!useApi()) {
+    const record: AttendanceRecord = {
+      eventId,
+      userId,
+      status,
+      hasPaid: hasPaid || false,
+      timestamp: Date.now()
+    };
     const all = getLS<AttendanceRecord>(LS_ATTENDANCE);
     const existingIndex = all.findIndex(a => a.eventId === eventId && a.userId === userId);
-    
     if (existingIndex >= 0) {
-      // Merge logic similar to Firestore
       all[existingIndex] = { ...all[existingIndex], ...record };
     } else {
       all.push(record);
@@ -166,56 +142,43 @@ export const updateAttendance = async (eventId: string, userId: string, status: 
     return;
   }
 
-  // Composite ID for the document to easily find it later
-  const docId = `${eventId}_${userId}`;
-  const docRef = doc(db, ATTENDANCE_COL, docId);
-  await setDoc(docRef, record, { merge: true });
+  await apiFetch<void>('/attendance', {
+    method: 'PUT',
+    body: JSON.stringify({ eventId, userId, status, hasPaid }),
+  });
 };
 
 // --- Events ---
 
-const getRawEvents = async (): Promise<Omit<VolleyballEvent, 'participants'>[]> => {
-  if (!db) {
-    return getLS<Omit<VolleyballEvent, 'participants'>>(LS_EVENTS);
+export const getEvents = async (): Promise<VolleyballEvent[]> => {
+  if (!useApi()) {
+    // Local join logic (same as before)
+    const rawEvents = getLS<Omit<VolleyballEvent, 'participants'>>(LS_EVENTS);
+    const attendances = getLS<AttendanceRecord>(LS_ATTENDANCE);
+    const users = getLS<User>(LS_USERS);
+
+    return rawEvents.map(event => {
+      const eventAttendance = attendances.filter(a => a.eventId === event.id);
+      const participants: Participant[] = eventAttendance.map(record => {
+        const user = users.find(u => u.id === record.userId);
+        return {
+          userId: record.userId,
+          name: user ? user.name : 'Neznámý',
+          photoUrl: user?.photoUrl,
+          status: record.status,
+          hasPaid: record.hasPaid
+        };
+      });
+      return { ...event, participants };
+    });
   }
+
   try {
-    const snapshot = await getDocs(collection(db, EVENTS_COL));
-    return snapshot.docs.map(doc => doc.data() as Omit<VolleyballEvent, 'participants'>);
+    return await apiFetch<VolleyballEvent[]>('/events');
   } catch (e) {
+    console.error("Failed to load events from API", e);
     return [];
   }
-};
-
-// Join Logic
-export const getEvents = async (): Promise<VolleyballEvent[]> => {
-  // Fetch all collections in parallel
-  const [rawEvents, attendances, users] = await Promise.all([
-    getRawEvents(),
-    getAttendances(),
-    getUsers()
-  ]);
-
-  return rawEvents.map(event => {
-    // Find all attendance records for this event
-    const eventAttendance = attendances.filter(a => a.eventId === event.id);
-    
-    // Map them to Participants with User details
-    const participants: Participant[] = eventAttendance.map(record => {
-      const user = users.find(u => u.id === record.userId);
-      return {
-        userId: record.userId,
-        name: user ? user.name : 'Neznámý',
-        photoUrl: user?.photoUrl,
-        status: record.status,
-        hasPaid: record.hasPaid
-      };
-    });
-
-    return {
-      ...event,
-      participants
-    };
-  });
 };
 
 export const createEvent = async (event: VolleyballEvent): Promise<VolleyballEvent[]> => {
@@ -224,21 +187,24 @@ export const createEvent = async (event: VolleyballEvent): Promise<VolleyballEve
   }
   const { participants, ...eventData } = event;
 
-  if (!db) {
+  if (!useApi()) {
     const events = getLS<Omit<VolleyballEvent, 'participants'>>(LS_EVENTS);
     events.push(eventData);
     setLS(LS_EVENTS, events);
     return getEvents();
   }
 
-  await setDoc(doc(db, EVENTS_COL, event.id), eventData);
+  await apiFetch('/events', {
+    method: 'POST',
+    body: JSON.stringify(eventData),
+  });
   return getEvents();
 };
 
 export const updateEvent = async (updatedEvent: VolleyballEvent): Promise<VolleyballEvent[]> => {
   const { participants, ...eventData } = updatedEvent;
 
-  if (!db) {
+  if (!useApi()) {
     const events = getLS<Omit<VolleyballEvent, 'participants'>>(LS_EVENTS);
     const idx = events.findIndex(e => e.id === updatedEvent.id);
     if (idx !== -1) {
@@ -248,28 +214,24 @@ export const updateEvent = async (updatedEvent: VolleyballEvent): Promise<Volley
     return getEvents();
   }
 
-  await setDoc(doc(db, EVENTS_COL, updatedEvent.id), eventData, { merge: true });
+  await apiFetch('/events', {
+    method: 'PUT',
+    body: JSON.stringify(eventData),
+  });
   return getEvents();
 };
 
 export const deleteEvent = async (id: string): Promise<VolleyballEvent[]> => {
-  if (!db) {
+  if (!useApi()) {
     const events = getLS<Omit<VolleyballEvent, 'participants'>>(LS_EVENTS).filter(e => e.id !== id);
     setLS(LS_EVENTS, events);
-    
-    // Cleanup attendance
     const attendance = getLS<AttendanceRecord>(LS_ATTENDANCE).filter(a => a.eventId !== id);
     setLS(LS_ATTENDANCE, attendance);
     return getEvents();
   }
 
-  await deleteDoc(doc(db, EVENTS_COL, id));
-  
-  // Cleanup attendance
-  const q = query(collection(db, ATTENDANCE_COL), where("eventId", "==", id));
-  const snapshot = await getDocs(q);
-  const deletePromises = snapshot.docs.map(d => deleteDoc(d.ref));
-  await Promise.all(deletePromises);
-
+  await apiFetch(`/events?id=${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
   return getEvents();
 };

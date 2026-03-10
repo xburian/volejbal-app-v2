@@ -26,5 +26,9 @@
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
-  }
+  },
+  "exclude": ["api", "scripts", "node_modules"],
+  "references": [
+    { "path": "./tsconfig.server.json" }
+  ]
 }
