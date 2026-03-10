@@ -115,10 +115,9 @@ const App: React.FC = () => {
 
   }, [currentUser, events]); 
 
-  const handleLogin = async (user: User) => {
+  const handleLogin = (user: User) => {
     setCurrentUser(user);
-    // Refresh events on login to ensure fresh data
-    await loadEvents();
+    // Events are loaded automatically by the useEffect([currentUser]) hook
     
     // Reset views on login
     setSelectedDate(null); 
