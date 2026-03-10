@@ -44,10 +44,11 @@ const App: React.FC = () => {
     }
   };
 
-  // Load events on mount
+  // Load events only when user is logged in (skip on login screen)
   useEffect(() => {
+    if (!currentUser) return;
     loadEvents();
-  }, []);
+  }, [currentUser]);
 
   // Automatically select first upcoming event when events load or user logs in
   useEffect(() => {

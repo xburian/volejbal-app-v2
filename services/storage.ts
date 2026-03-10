@@ -49,14 +49,42 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json();
 }
 
+// --- In-memory cache with TTL ---
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+const USERS_CACHE_TTL = 60_000;  // 60 seconds
+const EVENTS_CACHE_TTL = 30_000; // 30 seconds
+
+let usersCache: CacheEntry<User[]> | null = null;
+let eventsCache: CacheEntry<VolleyballEvent[]> | null = null;
+
+function getCached<T>(entry: CacheEntry<T> | null, ttl: number): T | null {
+  if (entry && Date.now() - entry.timestamp < ttl) {
+    return entry.data;
+  }
+  return null;
+}
+
+export const invalidateUsersCache = () => { usersCache = null; };
+export const invalidateEventsCache = () => { eventsCache = null; };
+
 // --- Users ---
 
 export const getUsers = async (): Promise<User[]> => {
   if (!useApi()) {
     return getLS<User>(LS_USERS);
   }
+
+  const cached = getCached(usersCache, USERS_CACHE_TTL);
+  if (cached) return cached;
+
   try {
-    return await apiFetch<User[]>('/users');
+    const data = await apiFetch<User[]>('/users');
+    usersCache = { data, timestamp: Date.now() };
+    return data;
   } catch (e) {
     console.error("Failed to load users from API, falling back to localStorage", e);
     return getLS<User>(LS_USERS);
@@ -84,10 +112,12 @@ export const createUser = async (name: string, photoUrl?: string): Promise<User>
     return newUser;
   }
 
-  return apiFetch<User>('/users', {
+  const newUser = await apiFetch<User>('/users', {
     method: 'POST',
     body: JSON.stringify({ name, photoUrl }),
   });
+  invalidateUsersCache();
+  return newUser;
 };
 
 export const updateUser = async (userId: string, updates: Partial<User>): Promise<User> => {
@@ -100,10 +130,12 @@ export const updateUser = async (userId: string, updates: Partial<User>): Promis
     return users[idx];
   }
 
-  return apiFetch<User>('/users', {
+  const updatedUser = await apiFetch<User>('/users', {
     method: 'PUT',
     body: JSON.stringify({ id: userId, ...updates }),
   });
+  invalidateUsersCache();
+  return updatedUser;
 };
 
 export const deleteUser = async (userId: string): Promise<void> => {
@@ -118,6 +150,7 @@ export const deleteUser = async (userId: string): Promise<void> => {
   await apiFetch<void>(`/users?id=${encodeURIComponent(userId)}`, {
     method: 'DELETE',
   });
+  invalidateUsersCache();
 };
 
 // --- Attendance ---
@@ -146,6 +179,7 @@ export const updateAttendance = async (eventId: string, userId: string, status: 
     method: 'PUT',
     body: JSON.stringify({ eventId, userId, status, hasPaid }),
   });
+  invalidateEventsCache();
 };
 
 // --- Events ---
@@ -173,8 +207,13 @@ export const getEvents = async (): Promise<VolleyballEvent[]> => {
     });
   }
 
+  const cached = getCached(eventsCache, EVENTS_CACHE_TTL);
+  if (cached) return cached;
+
   try {
-    return await apiFetch<VolleyballEvent[]>('/events');
+    const data = await apiFetch<VolleyballEvent[]>('/events');
+    eventsCache = { data, timestamp: Date.now() };
+    return data;
   } catch (e) {
     console.error("Failed to load events from API", e);
     return [];
@@ -198,6 +237,7 @@ export const createEvent = async (event: VolleyballEvent): Promise<VolleyballEve
     method: 'POST',
     body: JSON.stringify(eventData),
   });
+  invalidateEventsCache();
   return getEvents();
 };
 
@@ -218,6 +258,7 @@ export const updateEvent = async (updatedEvent: VolleyballEvent): Promise<Volley
     method: 'PUT',
     body: JSON.stringify(eventData),
   });
+  invalidateEventsCache();
   return getEvents();
 };
 
@@ -233,5 +274,6 @@ export const deleteEvent = async (id: string): Promise<VolleyballEvent[]> => {
   await apiFetch(`/events?id=${encodeURIComponent(id)}`, {
     method: 'DELETE',
   });
+  invalidateEventsCache();
   return getEvents();
 };

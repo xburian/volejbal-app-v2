@@ -30,6 +30,53 @@ jobs:
     - name: Run Tests with Coverage
       run: npm test -- --run --coverage
 
-  # Deployment is handled by Vercel (auto-deploys on push to main).
-  # Set volejbal_KV_REST_API_URL and volejbal_KV_REST_API_TOKEN
-  # in Vercel Project → Settings → Environment Variables.
+#  deploy:
+#    name: Deploy to Vercel
+#    runs-on: ubuntu-latest
+#    needs: test
+#    if: success()
+#
+#    env:
+#      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+#      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+#      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+#
+#    steps:
+#    - name: Checkout code
+#      uses: actions/checkout@v4
+#
+#    - name: Setup Node.js
+#      uses: actions/setup-node@v4
+#      with:
+#        node-version: '20'
+#        cache: 'npm'
+#
+#    - name: Install Vercel CLI
+#      run: npm install -g vercel
+#
+#    - name: Pull Vercel Environment
+#      run: vercel pull --yes --token=$VERCEL_TOKEN
+#
+#    - name: Build Project
+#      run: vercel build --token=$VERCEL_TOKEN ${{ github.event_name == 'push' && '--prod' || '' }}
+#
+#    - name: Deploy to Vercel (Production)
+#      if: github.event_name == 'push'
+#      run: vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+#
+#    - name: Deploy to Vercel (Preview)
+#      if: github.event_name == 'pull_request'
+#      run: vercel deploy --prebuilt --token=$VERCEL_TOKEN
+
+  # SETUP INSTRUCTIONS:
+  #
+  # 1. Disable Vercel auto-deploy:
+  #    Vercel Dashboard → Project → Settings → Git → Disable "Auto Deploy"
+  #
+  # 2. Add these GitHub Secrets (repo → Settings → Secrets → Actions):
+  #    - VERCEL_TOKEN:      Vercel → Account Settings → Tokens → Create
+  #    - VERCEL_ORG_ID:     Run `vercel link` locally, then check .vercel/project.json
+  #    - VERCEL_PROJECT_ID: Same file as above (.vercel/project.json)
+  #
+  # 3. Vercel env vars (volejbal_KV_REST_API_URL, volejbal_KV_REST_API_TOKEN)
+  #    remain in Vercel Project → Settings → Environment Variables as before.
