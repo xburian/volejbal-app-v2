@@ -13,7 +13,7 @@ import express from 'express';
 config({ path: resolve(process.cwd(), '.env.local') });
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 
 // Adapt express req/res to match the Vercel handler interface
 function wrapHandler(handlerModule: any) {
@@ -34,15 +34,17 @@ async function start() {
   const usersHandler = await import('../api/users.js');
   const eventsHandler = await import('../api/events.js');
   const attendanceHandler = await import('../api/attendance.js');
+  const photosHandler = await import('../api/photos.js');
 
   app.all('/api/users', wrapHandler(usersHandler));
   app.all('/api/events', wrapHandler(eventsHandler));
   app.all('/api/attendance', wrapHandler(attendanceHandler));
+  app.all('/api/photos', wrapHandler(photosHandler));
 
   const PORT = 3001;
   app.listen(PORT, () => {
     console.log(`🚀 Local API server running on http://localhost:${PORT}`);
-    console.log(`   Routes: /api/users, /api/events, /api/attendance`);
+    console.log(`   Routes: /api/users, /api/events, /api/attendance, /api/photos`);
     console.log(`   Redis: ${process.env.volejbal_KV_REST_API_URL ? '✅ connected' : '❌ missing volejbal_KV_REST_API_URL'}`);
   });
 }

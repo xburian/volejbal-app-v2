@@ -93,14 +93,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   };
 
-  // Filter and sort users alphabetically (with diacritic normalization)
+  // Filter users by search (server already returns sorted order)
   const filteredUsers = users
     .filter(user => {
+      if (!searchQuery.trim()) return true;
       const normalizedName = normalizeString(user.name);
       const normalizedQuery = normalizeString(searchQuery);
       return normalizedName.includes(normalizedQuery);
-    })
-    .sort((a, b) => normalizeString(a.name).localeCompare(normalizeString(b.name)));
+    });
 
   return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">

@@ -10,6 +10,8 @@ vi.mock('../services/storage', () => ({
   updateAttendance: vi.fn(),
   getEvents: vi.fn(),
   updateUser: vi.fn(),
+  uploadUserPhoto: vi.fn(),
+  deleteUserPhoto: vi.fn(),
 }));
 
 // Mock clipboard API
@@ -502,10 +504,8 @@ describe('EventDetail Component', () => {
 
   describe('User Photo Upload in EventDetail', () => {
     beforeEach(() => {
-      vi.mocked(storage.updateUser).mockResolvedValue({
-        ...mockCurrentUser,
-        photoUrl: 'data:image/png;base64,test',
-      });
+      vi.mocked(storage.uploadUserPhoto).mockResolvedValue('/api/photos?id=user1&v=123');
+      vi.mocked(storage.deleteUserPhoto).mockResolvedValue(undefined);
     });
 
     it('shows photo upload UI for current user', () => {
@@ -591,7 +591,7 @@ describe('EventDetail Component', () => {
       // Since the upload is async, we should see loading state briefly
       // but it will complete quickly in tests
       await waitFor(() => {
-        expect(vi.mocked(storage.updateUser)).toHaveBeenCalled();
+        expect(vi.mocked(storage.uploadUserPhoto)).toHaveBeenCalled();
       });
     });
 
@@ -616,8 +616,8 @@ describe('EventDetail Component', () => {
         expect(screen.getByText(/příliš velký/i)).toBeInTheDocument();
       });
 
-      // updateUser should not be called for oversized files
-      expect(vi.mocked(storage.updateUser)).not.toHaveBeenCalled();
+      // uploadUserPhoto should not be called for oversized files
+      expect(vi.mocked(storage.uploadUserPhoto)).not.toHaveBeenCalled();
     });
 
     it('maintains backward compatibility with users without photos', () => {

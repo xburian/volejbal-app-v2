@@ -20,7 +20,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   try {
     switch (req.method) {
       case 'GET':
-        return await handleGet(res);
+        return await handleGet(req, res);
       case 'POST':
         return await handlePost(req, res);
       case 'PUT':
@@ -36,8 +36,8 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   }
 }
 
-// GET /api/users — list all users
-async function handleGet(res: ApiResponse) {
+// GET /api/users — list all users (sorted, with lightweight photo URLs)
+async function handleGet(req: ApiRequest, res: ApiResponse) {
   const userIds = await redis.smembers('users:all');
   if (!userIds || userIds.length === 0) {
     return res.status(200).json([]);
@@ -49,7 +49,40 @@ async function handleGet(res: ApiResponse) {
   }
   const results = await pipeline.exec();
 
-  const users = results.filter(Boolean);
+  const users = results.filter(Boolean).map((r: any) => parseJson(r));
+
+  // Lazy migration: extract any remaining base64 photos into separate keys
+  const migrationPipeline = redis.pipeline();
+  let hasMigrations = false;
+
+  for (const user of users) {
+    if (user.photoUrl && user.photoUrl.startsWith('data:')) {
+      migrationPipeline.set(`photo:${user.id}`, user.photoUrl);
+      user.photoUrl = `/api/photos?id=${user.id}&v=${Date.now()}`;
+      migrationPipeline.set(`user:${user.id}`, JSON.stringify(user));
+      hasMigrations = true;
+    }
+  }
+
+  if (hasMigrations) {
+    await migrationPipeline.exec();
+  }
+
+  // Sort alphabetically by name (Czech locale, diacritics-normalized)
+  users.sort((a: any, b: any) => {
+    const na = normalizeString(a.name);
+    const nb = normalizeString(b.name);
+    return na.localeCompare(nb, 'cs');
+  });
+
+  // Optional search filter
+  const search = (req.query?.search as string) || '';
+  if (search.trim()) {
+    const normalizedSearch = normalizeString(search.trim());
+    const filtered = users.filter((u: any) => normalizeString(u.name).includes(normalizedSearch));
+    return res.status(200).json(filtered);
+  }
+
   return res.status(200).json(users);
 }
 
@@ -70,8 +103,15 @@ async function handlePost(req: ApiRequest, res: ApiResponse) {
   const newUser: any = {
     id: id || generateId(),
     name: name.trim(),
-    ...(photoUrl && { photoUrl }),
   };
+
+  // If photoUrl is base64, store separately and use a lightweight URL
+  if (photoUrl && photoUrl.startsWith('data:')) {
+    await redis.set(`photo:${newUser.id}`, photoUrl);
+    newUser.photoUrl = `/api/photos?id=${newUser.id}&v=${Date.now()}`;
+  } else if (photoUrl) {
+    newUser.photoUrl = photoUrl;
+  }
 
   await redis.set(`user:${newUser.id}`, JSON.stringify(newUser));
   await redis.sadd('users:all', newUser.id);
@@ -111,7 +151,10 @@ async function handleDelete(req: ApiRequest, res: ApiResponse) {
   await redis.del(`user:${id}`);
   await redis.srem('users:all', id);
 
-  // 2. Cascade delete attendance records for this user
+  // 2. Delete user's photo
+  await redis.del(`photo:${id}`);
+
+  // 3. Cascade delete attendance records for this user
   const attendanceKeys = await redis.smembers(`attendance:user:${id}`);
   if (attendanceKeys && attendanceKeys.length > 0) {
     const pipeline = redis.pipeline();
@@ -132,6 +175,17 @@ async function handleDelete(req: ApiRequest, res: ApiResponse) {
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substring(2);
+}
+
+function normalizeString(str: string): string {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+function parseJson(val: any): any {
+  if (typeof val === 'string') {
+    try { return JSON.parse(val); } catch { return val; }
+  }
+  return val;
 }
 
 async function getAllUsers(): Promise<any[]> {

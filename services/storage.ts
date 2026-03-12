@@ -153,6 +153,44 @@ export const deleteUser = async (userId: string): Promise<void> => {
   invalidateUsersCache();
 };
 
+// --- User Photos ---
+
+export const uploadUserPhoto = async (userId: string, photoBase64: string): Promise<string> => {
+  if (!useApi()) {
+    const users = getLS<User>(LS_USERS);
+    const idx = users.findIndex(u => u.id === userId);
+    if (idx !== -1) {
+      users[idx].photoUrl = photoBase64;
+      setLS(LS_USERS, users);
+    }
+    return photoBase64;
+  }
+
+  const result = await apiFetch<{ photoUrl: string }>('/photos', {
+    method: 'POST',
+    body: JSON.stringify({ userId, photoBase64 }),
+  });
+  invalidateUsersCache();
+  return result.photoUrl;
+};
+
+export const deleteUserPhoto = async (userId: string): Promise<void> => {
+  if (!useApi()) {
+    const users = getLS<User>(LS_USERS);
+    const idx = users.findIndex(u => u.id === userId);
+    if (idx !== -1) {
+      delete users[idx].photoUrl;
+      setLS(LS_USERS, users);
+    }
+    return;
+  }
+
+  await apiFetch<void>(`/photos?id=${encodeURIComponent(userId)}`, {
+    method: 'DELETE',
+  });
+  invalidateUsersCache();
+};
+
 // --- Attendance ---
 
 export const updateAttendance = async (eventId: string, userId: string, status: Participant['status'], hasPaid?: boolean): Promise<void> => {

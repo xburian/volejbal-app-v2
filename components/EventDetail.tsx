@@ -139,10 +139,10 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, on
     try {
       const reader = new FileReader();
       reader.onloadend = async () => {
-        const photoUrl = reader.result as string;
+        const photoBase64 = reader.result as string;
 
-        // Update user in storage
-        await storage.updateUser(currentUser.id, { photoUrl });
+        // Upload photo via dedicated endpoint
+        await storage.uploadUserPhoto(currentUser.id, photoBase64);
 
         // Refresh event data to get updated participant photos
         await refreshEventData();
@@ -164,7 +164,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, on
     setPhotoError(null);
 
     try {
-      await storage.updateUser(currentUser.id, { photoUrl: undefined });
+      await storage.deleteUserPhoto(currentUser.id);
       await refreshEventData();
       setIsUploadingPhoto(false);
     } catch (err) {
