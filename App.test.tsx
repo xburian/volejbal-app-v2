@@ -16,6 +16,7 @@ vi.mock('./services/storage', () => ({
   updateEvent: vi.fn(),
   deleteEvent: vi.fn(),
   setAttendance: vi.fn(),
+  getBankAccounts: vi.fn(),
 }));
 
 describe('App Integration', () => {
@@ -25,6 +26,7 @@ describe('App Integration', () => {
     // Default mock implementations - return empty arrays for integration tests
     vi.mocked(storage.getUsers).mockResolvedValue([]);
     vi.mocked(storage.getEvents).mockResolvedValue([]);
+    vi.mocked(storage.getBankAccounts).mockResolvedValue([]);
   });
 
   it('shows login screen initially', async () => {

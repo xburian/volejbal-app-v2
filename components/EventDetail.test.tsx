@@ -96,6 +96,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
+          bankAccounts={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -111,6 +112,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
+          bankAccounts={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -126,6 +128,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
+          bankAccounts={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -156,6 +159,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
+          bankAccounts={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -175,6 +179,7 @@ describe('EventDetail Component', () => {
           event={eventWithoutAccount}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
+          bankAccounts={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -190,6 +195,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
+          bankAccounts={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -205,6 +211,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
+          bankAccounts={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -223,6 +230,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
+          bankAccounts={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -253,6 +261,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
+          bankAccounts={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -279,6 +288,7 @@ describe('EventDetail Component', () => {
           event={updatedEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
+          bankAccounts={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -296,6 +306,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
+          bankAccounts={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -335,6 +346,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
+          bankAccounts={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -357,6 +369,7 @@ describe('EventDetail Component', () => {
           event={updatedEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
+          bankAccounts={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -376,6 +389,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
+          bankAccounts={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -402,6 +416,7 @@ describe('EventDetail Component', () => {
           event={updatedEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
+          bankAccounts={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -423,6 +438,7 @@ describe('EventDetail Component', () => {
           event={eventWithZeroCost}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
+          bankAccounts={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -443,6 +459,7 @@ describe('EventDetail Component', () => {
           event={eventNoJoined}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
+          bankAccounts={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -465,6 +482,7 @@ describe('EventDetail Component', () => {
           event={eventWithPhotos}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
+          bankAccounts={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -493,6 +511,7 @@ describe('EventDetail Component', () => {
           event={eventOddCost}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
+          bankAccounts={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -514,6 +533,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
+          bankAccounts={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -539,6 +559,7 @@ describe('EventDetail Component', () => {
           event={eventWithUserPhoto}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
+          bankAccounts={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -561,6 +582,7 @@ describe('EventDetail Component', () => {
           event={eventWithOtherUsers}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
+          bankAccounts={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -578,6 +600,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
+          bankAccounts={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -603,6 +626,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
+          bankAccounts={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -634,6 +658,7 @@ describe('EventDetail Component', () => {
           event={eventWithMixedUsers}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
+          bankAccounts={[]}
           onDelete={mockOnDelete}
         />
       );

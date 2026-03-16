@@ -1,13 +1,14 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { VolleyballEvent, Participant, User } from '../types';
+import { VolleyballEvent, Participant, User, BankAccount } from '../types';
 import * as storage from '../services/storage';
-import { Users, Trash2, Wallet, Hand, AlertTriangle, Edit2, Check, X, Loader2, Copy } from 'lucide-react';
+import { Users, Trash2, Wallet, Hand, AlertTriangle, Edit2, Check, X, Loader2, Copy, ChevronDown } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import { format } from 'date-fns';
 
 interface EventDetailProps {
   event: VolleyballEvent;
   currentUser: User;
+  bankAccounts: BankAccount[];
   onUpdate: (updatedEvent: VolleyballEvent) => void;
   onDelete: (id: string) => void;
 }
@@ -32,9 +33,7 @@ export const convertToCZIBAN = (accountStr: string): string | null => {
   return `CZ${checkDigits}${bban}`;
 };
 
-export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, onUpdate, onDelete }) => {
-  const [isEditingAccount, setIsEditingAccount] = useState(false);
-  const [tempAccountNumber, setTempAccountNumber] = useState(event.accountNumber);
+export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, bankAccounts = [], onUpdate, onDelete }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [isEditingCost, setIsEditingCost] = useState(false);
@@ -42,12 +41,21 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, on
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
 
+  // Determine the selected bank account
+  const selectedBankAccount = useMemo(() => {
+    if (event.selectedBankAccountId) {
+      return bankAccounts.find(a => a.id === event.selectedBankAccountId) || null;
+    }
+    return null;
+  }, [event.selectedBankAccountId, bankAccounts]);
+
+  const effectiveAccountNumber = selectedBankAccount?.accountNumber || event.accountNumber || '';
+  const selectedAccountOwner = selectedBankAccount?.ownerName || '';
+
   useEffect(() => {
-    setTempAccountNumber(event.accountNumber);
-    setIsEditingAccount(false);
     setTempTotalCost(event.totalCost);
     setIsEditingCost(false);
-  }, [event.id, event.accountNumber, event.totalCost]);
+  }, [event.id, event.totalCost]);
 
   const joinedParticipants = event.participants.filter(p => p.status === 'joined');
   const countJoined = joinedParticipants.length;
@@ -56,7 +64,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, on
   const currentUserParticipant = event.participants.find(p => p.userId === currentUser.id);
   const isCurrentUserJoined = currentUserParticipant?.status === 'joined';
 
-  const iban = useMemo(() => convertToCZIBAN(event.accountNumber), [event.accountNumber]);
+  const iban = useMemo(() => convertToCZIBAN(effectiveAccountNumber), [effectiveAccountNumber]);
   const qrString = iban 
     ? `SPD*1.0*ACC:${iban}*AM:${costPerPerson}.00*CC:CZK*MSG:Volejbal ${event.date}`
     : null;
@@ -89,21 +97,18 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, on
     }
   };
 
-  const handleSaveAccount = () => {
-    const updatedEvent = { ...event, accountNumber: tempAccountNumber };
-    onUpdate(updatedEvent);
-    setIsEditingAccount(false);
-  };
-
-  const handleCancelEdit = () => {
-    setTempAccountNumber(event.accountNumber);
-    setIsEditingAccount(false);
+  const handleBankAccountChange = (value: string) => {
+    const selected = bankAccounts.find(a => a.id === value);
+    if (selected) {
+      const updatedEvent = { ...event, selectedBankAccountId: selected.id, accountNumber: selected.accountNumber };
+      onUpdate(updatedEvent);
+    }
   };
 
   const handleCopyToClipboard = async () => {
-    if (event.accountNumber) {
+    if (effectiveAccountNumber) {
       try {
-        await navigator.clipboard.writeText(event.accountNumber);
+        await navigator.clipboard.writeText(effectiveAccountNumber);
         setIsCopied(true);
         setTimeout(() => setIsCopied(false), 2000);
       } catch (err) {
@@ -397,56 +402,59 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, on
           </h3>
           
           <div className="space-y-4">
+            {/* Bank Account Selector */}
             <div className="bg-white p-4 rounded-lg border border-slate-200">
-              <div className="flex justify-between items-center mb-1">
-                 <p className="text-xs text-slate-500 uppercase tracking-wide">Číslo účtu</p>
-                 {!isEditingAccount ? (
-                   <button 
-                    onClick={() => setIsEditingAccount(true)}
-                    className="text-slate-400 hover:text-blue-600 transition-colors p-1"
-                    title="Upravit číslo účtu"
-                   >
-                     <Edit2 size={14} />
-                   </button>
-                 ) : (
-                   <div className="flex gap-2">
-                      <button onClick={handleSaveAccount} className="text-green-600 hover:bg-green-50 p-1 rounded transition-colors"><Check size={16}/></button>
-                      <button onClick={handleCancelEdit} className="text-red-600 hover:bg-red-50 p-1 rounded transition-colors"><X size={16}/></button>
-                   </div>
-                 )}
-              </div>
+              <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Bankovní účet</p>
               
-              {!isEditingAccount ? (
-                <div className="flex items-center gap-2">
-                  <p className="text-xl font-mono text-slate-800 tracking-wider select-all truncate flex-1">
-                    {event.accountNumber || 'Nezadáno'}
-                  </p>
-                  {event.accountNumber && (
-                    <button
-                      onClick={handleCopyToClipboard}
-                      className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 p-2 rounded transition-colors flex-shrink-0"
-                      title="Zkopírovat číslo účtu"
-                    >
-                      {isCopied ? (
-                        <Check size={18} className="text-green-600" />
-                      ) : (
-                        <Copy size={18} />
-                      )}
-                    </button>
-                  )}
+              {bankAccounts.length > 0 ? (
+                <div className="relative">
+                  <select
+                    value={event.selectedBankAccountId || ''}
+                    onChange={(e) => handleBankAccountChange(e.target.value)}
+                    className="w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm appearance-none pr-8 cursor-pointer"
+                  >
+                    <option value="" disabled>Vyberte účet...</option>
+                    {bankAccounts.map(a => (
+                      <option key={a.id} value={a.id}>
+                        {a.ownerName} — {a.accountNumber}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown size={16} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 </div>
               ) : (
-                <input 
-                  type="text"
-                  value={tempAccountNumber}
-                  onChange={(e) => setTempAccountNumber(e.target.value)}
-                  className="w-full text-lg font-mono p-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-200 outline-none bg-white text-slate-900"
-                  placeholder="123456/0100"
-                />
+                <p className="text-sm text-slate-400 italic">
+                  Žádné účty. Přidejte si účet v nastavení (⚙️).
+                </p>
               )}
 
-              {event.accountNumber && !iban && !isEditingAccount && (
-                <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+              {/* Display effective account info */}
+              {effectiveAccountNumber && (
+                <div className="mt-3 flex items-center gap-2">
+                  {selectedAccountOwner && (
+                    <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                      {selectedAccountOwner}
+                    </span>
+                  )}
+                  <p className="text-sm font-mono text-slate-700 tracking-wider select-all truncate flex-1">
+                    {effectiveAccountNumber}
+                  </p>
+                  <button
+                    onClick={handleCopyToClipboard}
+                    className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 p-1.5 rounded transition-colors flex-shrink-0"
+                    title="Zkopírovat číslo účtu"
+                  >
+                    {isCopied ? (
+                      <Check size={16} className="text-green-600" />
+                    ) : (
+                      <Copy size={16} />
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {effectiveAccountNumber && !iban && (
+                <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
                   <AlertTriangle size={12} /> Neplatný formát pro QR platbu
                 </p>
               )}
@@ -457,7 +465,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, on
               <p className="text-3xl font-bold text-blue-600">{costPerPerson} Kč</p>
             </div>
 
-            {countJoined > 0 && event.accountNumber && qrString && (
+            {countJoined > 0 && effectiveAccountNumber && qrString && (
               <div className="flex flex-col items-center bg-white p-4 rounded-lg border border-slate-200">
                 <p className="text-sm text-slate-500 mb-3">QR Platba</p>
                 <div className="bg-white p-2 rounded-lg shadow-sm border border-slate-100">
@@ -474,10 +482,10 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, on
               </div>
             )}
             
-            {(!countJoined || !event.accountNumber || (event.accountNumber && !qrString)) && (
+            {(!countJoined || !effectiveAccountNumber || (effectiveAccountNumber && !qrString)) && (
                <div className="text-center p-4 text-slate-400 text-sm italic">
                  {!countJoined ? "Přidejte účastníky pro výpočet ceny." : 
-                  !event.accountNumber ? "Chybí číslo účtu." : 
+                  !effectiveAccountNumber ? "Vyberte bankovní účet." : 
                   "Nelze vygenerovat QR kód (chybné číslo účtu)."}
                </div>
             )}

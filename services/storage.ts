@@ -1,9 +1,10 @@
-import { VolleyballEvent, User, AttendanceRecord, Participant } from '../types';
+import { VolleyballEvent, User, AttendanceRecord, Participant, BankAccount } from '../types';
 
 // Local Storage Keys (fallback for offline / test / dev:vite mode)
 const LS_USERS = 'volleyball_users_db_v1';
 const LS_EVENTS = 'volleyball_events_db_v1';
 const LS_ATTENDANCE = 'volleyball_attendance_db_v1';
+const LS_BANK_ACCOUNTS = 'volleyball_bank_accounts_db_v1';
 
 // Detect if API is available (running via `vercel dev` or deployed on Vercel)
 const API_BASE = '/api';
@@ -57,9 +58,11 @@ interface CacheEntry<T> {
 
 const USERS_CACHE_TTL = 60_000;  // 60 seconds
 const EVENTS_CACHE_TTL = 30_000; // 30 seconds
+const BANK_ACCOUNTS_CACHE_TTL = 30_000; // 30 seconds
 
 let usersCache: CacheEntry<User[]> | null = null;
 let eventsCache: CacheEntry<VolleyballEvent[]> | null = null;
+let bankAccountsCache: CacheEntry<BankAccount[]> | null = null;
 
 function getCached<T>(entry: CacheEntry<T> | null, ttl: number): T | null {
   if (entry && Date.now() - entry.timestamp < ttl) {
@@ -70,6 +73,7 @@ function getCached<T>(entry: CacheEntry<T> | null, ttl: number): T | null {
 
 export const invalidateUsersCache = () => { usersCache = null; };
 export const invalidateEventsCache = () => { eventsCache = null; };
+export const invalidateBankAccountsCache = () => { bankAccountsCache = null; };
 
 // --- Users ---
 
@@ -315,3 +319,55 @@ export const deleteEvent = async (id: string): Promise<VolleyballEvent[]> => {
   invalidateEventsCache();
   return getEvents();
 };
+
+// --- Bank Accounts ---
+
+export const getBankAccounts = async (): Promise<BankAccount[]> => {
+  if (!useApi()) {
+    return getLS<BankAccount>(LS_BANK_ACCOUNTS);
+  }
+
+  const cached = getCached(bankAccountsCache, BANK_ACCOUNTS_CACHE_TTL);
+  if (cached) return cached;
+
+  try {
+    const data = await apiFetch<BankAccount[]>('/bank-accounts');
+    bankAccountsCache = { data, timestamp: Date.now() };
+    return data;
+  } catch (e) {
+    console.error("Failed to load bank accounts from API", e);
+    return [];
+  }
+};
+
+export const createBankAccount = async (
+  ownerName: string,
+  accountNumber: string,
+  userId: string,
+): Promise<BankAccount> => {
+  if (!useApi()) {
+    const accounts = getLS<BankAccount>(LS_BANK_ACCOUNTS);
+
+    if (accounts.some(a => a.userId === userId)) {
+      throw new Error('Již máte nastavený bankovní účet.');
+    }
+
+    const newAccount: BankAccount = {
+      id: generateId(),
+      ownerName: ownerName.trim(),
+      accountNumber: accountNumber.trim(),
+      userId,
+    };
+    accounts.push(newAccount);
+    setLS(LS_BANK_ACCOUNTS, accounts);
+    return newAccount;
+  }
+
+  const newAccount = await apiFetch<BankAccount>('/bank-accounts', {
+    method: 'POST',
+    body: JSON.stringify({ ownerName, accountNumber, userId }),
+  });
+  invalidateBankAccountsCache();
+  return newAccount;
+};
+

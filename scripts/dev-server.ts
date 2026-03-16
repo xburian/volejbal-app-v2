@@ -35,16 +35,18 @@ async function start() {
   const eventsHandler = await import('../api/events.js');
   const attendanceHandler = await import('../api/attendance.js');
   const photosHandler = await import('../api/photos.js');
+  const bankAccountsHandler = await import('../api/bank-accounts.js');
 
   app.all('/api/users', wrapHandler(usersHandler));
   app.all('/api/events', wrapHandler(eventsHandler));
   app.all('/api/attendance', wrapHandler(attendanceHandler));
   app.all('/api/photos', wrapHandler(photosHandler));
+  app.all('/api/bank-accounts', wrapHandler(bankAccountsHandler));
 
   const PORT = 3001;
   app.listen(PORT, () => {
     console.log(`🚀 Local API server running on http://localhost:${PORT}`);
-    console.log(`   Routes: /api/users, /api/events, /api/attendance, /api/photos`);
+    console.log(`   Routes: /api/users, /api/events, /api/attendance, /api/photos, /api/bank-accounts`);
     console.log(`   Redis: ${process.env.volejbal_KV_REST_API_URL ? '✅ connected' : '❌ missing volejbal_KV_REST_API_URL'}`);
   });
 }

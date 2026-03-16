@@ -4,6 +4,13 @@ export interface User {
   photoUrl?: string; // URL or base64 encoded image
 }
 
+export interface BankAccount {
+  id: string;
+  ownerName: string;
+  accountNumber: string; // e.g., 123456789/0100
+  userId: string; // Personal account belonging to a user
+}
+
 export interface Participant {
   userId: string; // Foreign key to User
   name: string;   // Denormalized name for display
@@ -20,6 +27,7 @@ export interface VolleyballEvent {
   location: string;
   totalCost: number;
   accountNumber: string; // e.g., 123456789/0100
+  selectedBankAccountId?: string; // ID of selected bank account from the bank accounts list
   description?: string;
   participants: Participant[]; // Constructed/Hydrated array, not necessarily stored directly
 }

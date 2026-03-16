@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { VolleyballEvent, User, DebtItem } from './types';
+import { VolleyballEvent, User, DebtItem, BankAccount } from './types';
 import * as storage from './services/storage';
 import { CalendarView } from './components/CalendarView';
 import { EventDetail } from './components/EventDetail';
@@ -7,7 +7,8 @@ import { CreateEventModal } from './components/CreateEventModal';
 import { ConfirmModal } from './components/ConfirmModal';
 import { UnpaidBanner } from './components/UnpaidBanner';
 import { LoginScreen } from './components/LoginScreen';
-import { Plus, Calendar as CalendarIcon, Trophy, LogOut, Trash2, ListFilter, ArrowLeft, Loader2 } from 'lucide-react';
+import { BankAccountSettingsModal } from './components/BankAccountSettingsModal';
+import { Plus, Calendar as CalendarIcon, Trophy, LogOut, Trash2, ListFilter, ArrowLeft, Loader2, Settings } from 'lucide-react';
 import { format, isSameDay, differenceInCalendarDays, startOfDay } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
@@ -31,6 +32,10 @@ const App: React.FC = () => {
   // State for unpaid debts
   const [unpaidDebts, setUnpaidDebts] = useState<DebtItem[]>([]);
 
+  // State for bank accounts
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
   // Load events helper
   const loadEvents = async () => {
     setIsLoading(true);
@@ -44,10 +49,21 @@ const App: React.FC = () => {
     }
   };
 
-  // Load events only when user is logged in (skip on login screen)
+  // Load bank accounts helper
+  const loadBankAccounts = async () => {
+    try {
+      const data = await storage.getBankAccounts();
+      setBankAccounts(data);
+    } catch (error) {
+      console.error("Failed to load bank accounts", error);
+    }
+  };
+
+  // Load events and bank accounts only when user is logged in
   useEffect(() => {
     if (!currentUser) return;
     loadEvents();
+    loadBankAccounts();
   }, [currentUser]);
 
   // Automatically select first upcoming event when events load or user logs in
@@ -236,6 +252,13 @@ const App: React.FC = () => {
                <Plus size={20} />
              </button>
              <button 
+               onClick={() => setIsSettingsOpen(true)}
+               className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
+               title="Bankovní účty"
+             >
+               <Settings size={20} />
+             </button>
+             <button 
                onClick={handleLogout}
                className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
              >
@@ -267,6 +290,13 @@ const App: React.FC = () => {
                />
              )}
              <span className="text-sm font-medium text-slate-600">Ahoj, {currentUser.name}</span>
+             <button 
+                onClick={() => setIsSettingsOpen(true)}
+                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                title="Bankovní účty"
+             >
+               <Settings size={20} />
+             </button>
              <button 
                 onClick={handleLogout}
                 className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
@@ -395,6 +425,7 @@ const App: React.FC = () => {
           <EventDetail 
             event={selectedEvent} 
             currentUser={currentUser}
+            bankAccounts={bankAccounts}
             onUpdate={handleUpdateEvent}
             onDelete={handleRequestDelete}
           />
@@ -427,6 +458,16 @@ const App: React.FC = () => {
         onConfirm={confirmDelete}
         onCancel={() => setEventToDelete(null)}
       />
+
+      {currentUser && (
+        <BankAccountSettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          currentUser={currentUser}
+          bankAccounts={bankAccounts}
+          onBankAccountsChange={setBankAccounts}
+        />
+      )}
     </div>
   );
 };
