@@ -487,10 +487,10 @@ describe('EventDetail Component', () => {
         />
       );
 
-      // Check that photo img is rendered for user with photo
-      const photoImg = screen.getByAltText('User With Photo');
-      expect(photoImg).toBeInTheDocument();
-      expect(photoImg).toHaveAttribute('src', 'https://example.com/photo.jpg');
+      // Check that photo img is rendered for user with photo (may appear in participant list and team split)
+      const photoImgs = screen.getAllByAltText('User With Photo');
+      expect(photoImgs.length).toBeGreaterThan(0);
+      expect(photoImgs[0]).toHaveAttribute('src', 'https://example.com/photo.jpg');
 
       // Check that initial is displayed for user without photo
       expect(screen.getByText('U')).toBeInTheDocument(); // "U" from "User Without Photo"
@@ -668,9 +668,9 @@ describe('EventDetail Component', () => {
       expect(screen.getAllByText(/Test User/).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Jan Novák/).length).toBeGreaterThan(0);
 
-      // Verify photo is displayed for user with photo
-      const photoImg = screen.getByAltText('Test User');
-      expect(photoImg).toHaveAttribute('src', 'https://example.com/photo.jpg');
+      // Verify photo is displayed for user with photo (may appear in participant list and team split)
+      const photoImgs = screen.getAllByAltText('Test User');
+      expect(photoImgs[0]).toHaveAttribute('src', 'https://example.com/photo.jpg');
 
       // User without photo should show initial (J from Jan Novák)
       const janInitial = screen.getAllByText('J').find(el =>

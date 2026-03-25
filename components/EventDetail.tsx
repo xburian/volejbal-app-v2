@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { VolleyballEvent, Participant, User, BankAccount } from '../types';
 import * as storage from '../services/storage';
-import { Users, Trash2, Wallet, Hand, AlertTriangle, Edit2, Check, X, Loader2, Copy, ChevronDown } from 'lucide-react';
+import { Users, Trash2, Wallet, Hand, AlertTriangle, Edit2, Check, X, Loader2, Copy, ChevronDown, Shuffle, RefreshCw } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import { format } from 'date-fns';
 
@@ -52,12 +52,28 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
   const effectiveAccountNumber = selectedBankAccount?.accountNumber || event.accountNumber || '';
   const selectedAccountOwner = selectedBankAccount?.ownerName || '';
 
+  const [teams, setTeams] = useState<[Participant[], Participant[]] | null>(null);
+
   useEffect(() => {
     setTempTotalCost(event.totalCost);
     setIsEditingCost(false);
   }, [event.id, event.totalCost]);
 
   const joinedParticipants = event.participants.filter(p => p.status === 'joined');
+
+  const shuffleTeams = () => {
+    const shuffled = [...joinedParticipants].sort(() => Math.random() - 0.5);
+    const mid = Math.ceil(shuffled.length / 2);
+    setTeams([shuffled.slice(0, mid), shuffled.slice(mid)]);
+  };
+
+  useEffect(() => {
+    if (joinedParticipants.length >= 2) {
+      shuffleTeams();
+    } else {
+      setTeams(null);
+    }
+  }, [event.id, joinedParticipants.length]);
   const countJoined = joinedParticipants.length;
   const costPerPerson = countJoined > 0 ? Math.ceil(event.totalCost / countJoined) : 0;
   
@@ -392,6 +408,48 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
               )}
             </div>
           </div>
+
+          {/* Team Split */}
+          {countJoined >= 2 && teams && (
+            <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold text-slate-700 flex items-center gap-2">
+                  <Shuffle size={18} className="text-indigo-500" />
+                  Rozdělení do týmů
+                </h3>
+                <button
+                  onClick={shuffleTeams}
+                  className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors"
+                >
+                  <RefreshCw size={14} />
+                  Zamíchat
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {teams.map((team, teamIdx) => (
+                  <div key={teamIdx} className={`rounded-lg border p-3 ${teamIdx === 0 ? 'bg-blue-50 border-blue-200' : 'bg-orange-50 border-orange-200'}`}>
+                    <h4 className={`text-sm font-bold mb-2 ${teamIdx === 0 ? 'text-blue-700' : 'text-orange-700'}`}>
+                      Tým {teamIdx + 1} ({team.length})
+                    </h4>
+                    <div className="space-y-1.5">
+                      {team.map(p => (
+                        <div key={p.userId} className="flex items-center gap-2">
+                          {p.photoUrl ? (
+                            <img src={p.photoUrl} alt={p.name} className="w-6 h-6 rounded-full object-cover" />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">
+                              {p.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                            </div>
+                          )}
+                          <span className="text-sm text-slate-700">{p.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right Column: Payment Info */}
