@@ -283,6 +283,7 @@ describe('Calendar Date Selection', () => {
 
     vi.mocked(storage.getUsers).mockResolvedValue([testUser]);
     vi.mocked(storage.getEvents).mockResolvedValue(testEvents);
+    vi.mocked(storage.getBankAccounts).mockResolvedValue([]);
 
     await act(async () => {
       render(<App />);
@@ -302,23 +303,26 @@ describe('Calendar Date Selection', () => {
       fireEvent.click(screen.getByText('TestUser'));
     });
 
-    // Wait for main app to load
+    // Wait for main app to load and events to render
     await waitFor(() => {
       expect(screen.getByText('Volejbal Plánovač')).toBeInTheDocument();
+      expect(screen.getAllByText('Večerní volejbal').length).toBeGreaterThan(0);
     }, { timeout: 5000 });
 
-    // Click on today's date in the calendar
+    // Click on today's date in the calendar (exclude non-current-month days which have text-slate-300)
     const todayDay = format(today, 'd');
     const calendarButtons = screen.getAllByRole('button');
     const todayButton = calendarButtons.find(btn =>
-      btn.textContent === todayDay && btn.closest('.grid-cols-7')
+      btn.textContent === todayDay &&
+      btn.closest('.grid-cols-7') &&
+      !btn.className.includes('text-slate-300')
     );
 
-    if (todayButton) {
-      await act(async () => {
-        fireEvent.click(todayButton);
-      });
-    }
+    expect(todayButton).toBeDefined();
+
+    await act(async () => {
+      fireEvent.click(todayButton!);
+    });
 
     // Verify the EARLIEST event (09:00 - Ranní volejbal) is auto-selected
     // The selected event card should have the blue highlight class

@@ -47,3 +47,41 @@ export interface DebtItem {
 }
 
 export type ViewMode = 'calendar' | 'list';
+
+export interface UserStats {
+  userId: string;
+  name: string;
+  photoUrl?: string;
+  totalEvents: number;        // events where user has any participation record
+  eventsJoined: number;
+  eventsDeclined: number;
+  eventsMaybe: number;
+  attendanceRate: number;     // eventsJoined / totalEvents (0-1)
+  paymentRate: number;        // timesPaid / eventsJoined (0-1)
+  totalPaid: number;          // sum of cost-per-person for paid events (CZK)
+  totalOwed: number;          // sum of cost-per-person for unpaid joined events (CZK)
+  longestStreak: number;      // consecutive joined events by date
+  currentStreak: number;
+  favoriteLocation: string;
+}
+
+export interface MonthlyTrend {
+  month: string;              // 'YYYY-MM'
+  label: string;              // e.g. 'Led 2026'
+  eventCount: number;
+  averageAttendance: number;
+  totalParticipants: number;
+}
+
+export type BadgeType = 'ironman' | 'ghost' | 'maybeMaster' | 'quickPayer' | 'socialButterfly';
+
+export interface Badge {
+  type: BadgeType;
+  label: string;
+  description: string;
+  iconName: string;
+  userId: string;
+  userName: string;
+  photoUrl?: string;
+  value: string;
+}

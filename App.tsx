@@ -8,7 +8,8 @@ import { ConfirmModal } from './components/ConfirmModal';
 import { UnpaidBanner } from './components/UnpaidBanner';
 import { LoginScreen } from './components/LoginScreen';
 import { BankAccountSettingsModal } from './components/BankAccountSettingsModal';
-import { Plus, Calendar as CalendarIcon, Trophy, LogOut, Trash2, ListFilter, ArrowLeft, Loader2, Settings } from 'lucide-react';
+import { StatsPage } from './components/StatsPage';
+import { Plus, Calendar as CalendarIcon, Trophy, LogOut, Trash2, ListFilter, ArrowLeft, Loader2, Settings, BarChart3 } from 'lucide-react';
 import { format, isSameDay, differenceInCalendarDays, startOfDay } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
@@ -35,6 +36,7 @@ const App: React.FC = () => {
   // State for bank accounts
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [showStats, setShowStats] = useState(false);
 
   // Load events helper
   const loadEvents = async () => {
@@ -251,14 +253,21 @@ const App: React.FC = () => {
              >
                <Plus size={20} />
              </button>
-             <button 
+             <button
+               onClick={() => setShowStats(true)}
+               className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
+               title="Statistiky"
+             >
+               <BarChart3 size={20} />
+             </button>
+             <button
                onClick={() => setIsSettingsOpen(true)}
                className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
                title="Bankovní účty"
              >
                <Settings size={20} />
              </button>
-             <button 
+             <button
                onClick={handleLogout}
                className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
              >
@@ -290,14 +299,21 @@ const App: React.FC = () => {
                />
              )}
              <span className="text-sm font-medium text-slate-600">Ahoj, {currentUser.name}</span>
-             <button 
+             <button
+                onClick={() => setShowStats(true)}
+                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                title="Statistiky"
+             >
+               <BarChart3 size={20} />
+             </button>
+             <button
                 onClick={() => setIsSettingsOpen(true)}
                 className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                 title="Bankovní účty"
              >
                <Settings size={20} />
              </button>
-             <button 
+             <button
                 onClick={handleLogout}
                 className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                 title="Odhlásit"
@@ -421,9 +437,16 @@ const App: React.FC = () => {
       </div>
 
       <div className="flex-1 bg-slate-100 p-4 md:p-8 overflow-y-auto h-auto md:h-screen">
-        {selectedEvent ? (
-          <EventDetail 
-            event={selectedEvent} 
+        {showStats ? (
+          <StatsPage
+            events={events}
+            currentUser={currentUser}
+            isLoading={isLoading}
+            onClose={() => setShowStats(false)}
+          />
+        ) : selectedEvent ? (
+          <EventDetail
+            event={selectedEvent}
             currentUser={currentUser}
             bankAccounts={bankAccounts}
             onUpdate={handleUpdateEvent}
@@ -435,8 +458,8 @@ const App: React.FC = () => {
               <CalendarIcon size={32} className="text-slate-400" />
             </div>
             <p className="text-lg font-medium text-center max-w-sm">
-              {isUpcomingMode 
-                ? 'Vyberte událost ze seznamu nadcházejících.' 
+              {isUpcomingMode
+                ? 'Vyberte událost ze seznamu nadcházejících.'
                 : 'Vyberte událost z vybraného dne.'}
             </p>
           </div>
