@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { VolleyballEvent, User, UserStats, MonthlyTrend, Badge } from '../types';
-import { format } from 'date-fns';
+import { format, startOfDay } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
 interface StatisticsResult {
@@ -263,7 +263,22 @@ export function useStatistics(
       };
     }
 
-    const statsMap = computeUserStats(events);
+    // Only include past and today's events in statistics
+    const today = startOfDay(new Date());
+    const pastEvents = events.filter(e => new Date(e.date) <= today);
+
+    if (pastEvents.length === 0) {
+      return {
+        leaderboard: [],
+        paymentRanking: [],
+        personalStats: null,
+        monthlyTrends: [],
+        badges: [],
+        isReady: true,
+      };
+    }
+
+    const statsMap = computeUserStats(pastEvents);
     const allStats = Array.from(statsMap.values());
 
     // Leaderboard: sorted by attendance rate, then by total joined
@@ -279,7 +294,7 @@ export function useStatistics(
     const personalStats = currentUser ? statsMap.get(currentUser.id) || null : null;
 
     // Monthly trends
-    const monthlyTrends = computeMonthlyTrends(events);
+    const monthlyTrends = computeMonthlyTrends(pastEvents);
 
     // Badges
     const badges = computeBadges(statsMap);
