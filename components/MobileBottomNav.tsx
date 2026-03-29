@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, BarChart3, Settings, Plus } from 'lucide-react';
+import { Calendar, BarChart3, Settings, PlusCircle } from 'lucide-react';
 
 export type MobileView = 'calendar' | 'detail' | 'stats' | 'changelog';
 
@@ -34,16 +34,15 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           <span className="text-[10px] font-medium">Kalendář</span>
         </button>
 
-        {/* Center FAB placeholder — keeps grid balanced */}
-        <div className="relative flex items-center justify-center">
-          <button
-            data-testid="nav-create"
-            onClick={onCreateEvent}
-            className="absolute -top-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-300/50 flex items-center justify-center active:scale-95 transition-transform"
-          >
-            <Plus size={26} strokeWidth={2.5} />
-          </button>
-        </div>
+        {/* Add Event Tab */}
+        <button
+          data-testid="nav-create"
+          onClick={onCreateEvent}
+          className="flex flex-col items-center justify-center gap-0.5 transition-colors duration-200 text-slate-400 active:text-blue-600"
+        >
+          <PlusCircle size={22} />
+          <span className="text-[10px] font-medium">Přidat</span>
+        </button>
 
         {/* Stats Tab */}
         <button
