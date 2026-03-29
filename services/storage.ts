@@ -296,9 +296,12 @@ export const updateEvent = async (updatedEvent: VolleyballEvent): Promise<Volley
     return getEvents();
   }
 
+  // Use custom replacer so that undefined → null survives JSON serialization.
+  // Without this, JSON.stringify strips undefined keys and the API merge
+  // would keep stale values (e.g. winningTeam from the previous round).
   await apiFetch('/events', {
     method: 'PUT',
-    body: JSON.stringify(eventData),
+    body: JSON.stringify(eventData, (_key, value) => (value === undefined ? null : value)),
   });
   invalidateEventsCache();
   return getEvents();

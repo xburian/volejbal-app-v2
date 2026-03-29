@@ -103,8 +103,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     });
 
   return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden relative">
+    <div className="min-h-screen bg-slate-100 md:flex md:items-center md:justify-center md:p-4">
+      <div className="bg-white md:rounded-2xl shadow-xl w-full md:max-w-2xl overflow-hidden relative min-h-screen md:min-h-0">
         {isLoading && (
           <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-50 flex items-center justify-center">
              <Loader2 className="animate-spin text-blue-600" />
@@ -119,7 +119,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
           <p className="text-blue-100 mt-2">Kdo dnes přišel?</p>
         </div>
 
-        <div className="p-6">
+        <div className="p-6 md:p-8">
           {/* User List */}
           <div className="mb-6">
              <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Vyberte svůj profil</h2>
@@ -136,7 +136,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                />
              </div>
 
-             <div className="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto custom-scrollbar">
+             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-[50vh] md:max-h-80 overflow-y-auto custom-scrollbar">
                {filteredUsers.map(user => (
                  <div key={user.id} className="relative group">
                    <button
@@ -147,10 +147,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                        <img
                          src={user.photoUrl}
                          alt={user.name}
-                         className="w-8 h-8 rounded-full object-cover shrink-0"
+                         className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover shrink-0"
                        />
                      ) : (
-                       <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold text-sm group-hover:bg-blue-200 group-hover:text-blue-700 shrink-0">
+                       <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold text-sm group-hover:bg-blue-200 group-hover:text-blue-700 shrink-0">
                          {user.name.charAt(0).toUpperCase()}
                        </div>
                      )}
@@ -171,13 +171,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                ))}
 
                {!isLoading && filteredUsers.length === 0 && users.length > 0 && (
-                 <div className="col-span-2 text-center text-slate-400 text-sm py-4 italic">
+                 <div className="col-span-2 md:col-span-3 text-center text-slate-400 text-sm py-4 italic">
                    Žádný hráč nenalezen.
                  </div>
                )}
 
                {!isLoading && users.length === 0 && (
-                 <div className="col-span-2 text-center text-slate-400 text-sm py-4 italic">
+                 <div className="col-span-2 md:col-span-3 text-center text-slate-400 text-sm py-4 italic">
                    Zatím žádní uživatelé. Vytvořte prvního.
                  </div>
                )}

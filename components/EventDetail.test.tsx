@@ -79,6 +79,10 @@ describe('EventDetail Component', () => {
       { userId: 'user2', name: 'Jan Novák', status: 'joined', hasPaid: true },
       { userId: 'user3', name: 'Petr Svoboda', status: 'declined', hasPaid: false },
     ],
+    teams: [
+      [{ userId: 'user1', name: 'Test User' }],
+      [{ userId: 'user2', name: 'Jan Novák' }],
+    ],
   };
 
   const mockOnUpdate = vi.fn();

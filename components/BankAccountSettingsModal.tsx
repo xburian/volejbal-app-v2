@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { BankAccount, User } from '../types';
 import * as storage from '../services/storage';
-import { X, Landmark, UserCircle, Loader2, AlertTriangle } from 'lucide-react';
+import { X, Landmark, UserCircle, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
 
 interface BankAccountSettingsModalProps {
   isOpen: boolean;
@@ -9,6 +9,7 @@ interface BankAccountSettingsModalProps {
   currentUser: User;
   bankAccounts: BankAccount[];
   onBankAccountsChange: (accounts: BankAccount[]) => void;
+  onShowChangelog?: () => void;
 }
 
 export const BankAccountSettingsModal: React.FC<BankAccountSettingsModalProps> = ({
@@ -17,6 +18,7 @@ export const BankAccountSettingsModal: React.FC<BankAccountSettingsModalProps> =
   currentUser,
   bankAccounts,
   onBankAccountsChange,
+  onShowChangelog,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -148,13 +150,22 @@ export const BankAccountSettingsModal: React.FC<BankAccountSettingsModalProps> =
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex-shrink-0">
+        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex-shrink-0 space-y-2">
           <button
             onClick={onClose}
             className="w-full px-4 py-2 bg-slate-200 text-slate-700 font-medium rounded-lg hover:bg-slate-300 transition-colors"
           >
             Zavřít
           </button>
+          {onShowChangelog && (
+            <button
+              onClick={() => { onClose(); onShowChangelog(); }}
+              className="w-full px-4 py-2 text-slate-400 hover:text-amber-600 text-sm font-medium flex items-center justify-center gap-1.5 transition-colors"
+            >
+              <Sparkles size={14} />
+              Seznam změn (v1.2.0)
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { VolleyballEvent, User, UserStats, MonthlyTrend, Badge } from '../types';
+import { VolleyballEvent, User, UserStats, MonthlyTrend, Badge, DuoStats, GameRound } from '../types';
 import { format, startOfDay } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
@@ -9,6 +9,7 @@ interface StatisticsResult {
   personalStats: UserStats | null;
   monthlyTrends: MonthlyTrend[];
   badges: Badge[];
+  duoStats: DuoStats[];
   isReady: boolean;
 }
 
@@ -39,6 +40,11 @@ function computeUserStats(events: VolleyballEvent[]): Map<string, UserStats> {
           longestStreak: 0,
           currentStreak: 0,
           favoriteLocation: '',
+          gamesPlayed: 0,
+          gamesWon: 0,
+          winRate: 0,
+          winStreak: 0,
+          longestWinStreak: 0,
         });
       }
     }
@@ -53,8 +59,6 @@ function computeUserStats(events: VolleyballEvent[]): Map<string, UserStats> {
     const joinedCount = event.participants.filter(p => p.status === 'joined').length;
     const costPerPerson = joinedCount > 0 ? Math.ceil(event.totalCost / joinedCount) : 0;
 
-    // Track which users have a record in this event
-    new Set(event.participants.map(p => p.userId));
     for (const p of event.participants) {
       const stats = statsMap.get(p.userId)!;
       stats.totalEvents++;
@@ -96,6 +100,54 @@ function computeUserStats(events: VolleyballEvent[]): Map<string, UserStats> {
         streak.current = 0;
       }
     }
+
+    // Win tracking: count all completed rounds (history + current)
+    const allRounds: GameRound[] = [...(event.gameHistory || [])];
+    if (event.teams && event.winningTeam !== undefined) {
+      allRounds.push({ teams: event.teams, winningTeam: event.winningTeam });
+    }
+    for (const round of allRounds) {
+      if (round.winningTeam === undefined) continue;
+      const winningTeam = round.teams[round.winningTeam];
+      const losingTeam = round.teams[1 - round.winningTeam];
+      const allTeamMembers = [...winningTeam, ...losingTeam];
+
+      for (const member of allTeamMembers) {
+        const stats = statsMap.get(member.userId);
+        if (!stats) continue;
+        stats.gamesPlayed++;
+        const isWinner = winningTeam.some(m => m.userId === member.userId);
+        if (isWinner) stats.gamesWon++;
+      }
+    }
+  }
+
+  // Win streak tracking (separate pass since we need chronological order)
+  const winStreaks = new Map<string, { current: number; longest: number }>();
+  for (const event of sortedEvents) {
+    const allRounds: GameRound[] = [...(event.gameHistory || [])];
+    if (event.teams && event.winningTeam !== undefined) {
+      allRounds.push({ teams: event.teams, winningTeam: event.winningTeam });
+    }
+    for (const round of allRounds) {
+      if (round.winningTeam === undefined) continue;
+      const winningTeam = round.teams[round.winningTeam];
+      const losingTeam = round.teams[1 - round.winningTeam];
+      const allTeamMembers = [...winningTeam, ...losingTeam];
+
+      for (const member of allTeamMembers) {
+        if (!winStreaks.has(member.userId)) {
+          winStreaks.set(member.userId, { current: 0, longest: 0 });
+        }
+        const ws = winStreaks.get(member.userId)!;
+        if (winningTeam.some(m => m.userId === member.userId)) {
+          ws.current++;
+          if (ws.current > ws.longest) ws.longest = ws.current;
+        } else {
+          ws.current = 0;
+        }
+      }
+    }
   }
 
   // Finalize rates, streaks, and locations
@@ -125,6 +177,14 @@ function computeUserStats(events: VolleyballEvent[]): Map<string, UserStats> {
         }
       }
       stats.favoriteLocation = favLoc;
+    }
+
+    // Win rate and win streak
+    stats.winRate = stats.gamesPlayed > 0 ? stats.gamesWon / stats.gamesPlayed : 0;
+    const ws = winStreaks.get(userId);
+    if (ws) {
+      stats.winStreak = ws.current;
+      stats.longestWinStreak = ws.longest;
     }
   }
 
@@ -243,7 +303,83 @@ function computeBadges(statsMap: Map<string, UserStats>): Badge[] {
     });
   }
 
+  // Lucky Player: highest win rate (min 3 games)
+  const eligibleWinners = allStats.filter(s => s.gamesPlayed >= 3);
+  if (eligibleWinners.length > 0) {
+    const luckyPlayer = eligibleWinners.reduce((best, s) => s.winRate > best.winRate ? s : best);
+    if (luckyPlayer.winRate > 0) {
+      badges.push({
+        type: 'luckyPlayer',
+        label: 'Šťastný Hráč',
+        description: 'Nejvyšší procento výher (min. 3 zápasy)',
+        iconName: 'Star',
+        userId: luckyPlayer.userId,
+        userName: luckyPlayer.name,
+        photoUrl: luckyPlayer.photoUrl,
+        value: `${Math.round(luckyPlayer.winRate * 100)}% výher`,
+      });
+    }
+  }
+
   return badges;
+}
+
+function computeDuoStats(events: VolleyballEvent[]): DuoStats[] {
+  // Track co-wins for every pair of players
+  const pairMap = new Map<string, { players: [string, string]; names: [string, string]; photos: [string | undefined, string | undefined]; played: number; won: number }>();
+
+  for (const event of events) {
+    // Collect all completed rounds (history + current)
+    const allRounds: GameRound[] = [...(event.gameHistory || [])];
+    if (event.teams && event.winningTeam !== undefined) {
+      allRounds.push({ teams: event.teams, winningTeam: event.winningTeam });
+    }
+
+    for (const round of allRounds) {
+      if (round.winningTeam === undefined) continue;
+
+      // Both teams played together
+      for (let teamIdx = 0; teamIdx < 2; teamIdx++) {
+        const team = round.teams[teamIdx];
+        const isWinning = teamIdx === round.winningTeam;
+
+        for (let i = 0; i < team.length; i++) {
+          for (let j = i + 1; j < team.length; j++) {
+            const ids = [team[i].userId, team[j].userId].sort();
+            const key = ids.join('_');
+            if (!pairMap.has(key)) {
+              const p1 = ids[0] === team[i].userId ? team[i] : team[j];
+              const p2 = ids[0] === team[i].userId ? team[j] : team[i];
+              pairMap.set(key, {
+                players: [p1.userId, p2.userId],
+                names: [p1.name, p2.name],
+                photos: [p1.photoUrl, p2.photoUrl],
+                played: 0,
+                won: 0,
+              });
+            }
+            const pair = pairMap.get(key)!;
+            pair.played++;
+            if (isWinning) pair.won++;
+          }
+        }
+      }
+    }
+  }
+
+  return Array.from(pairMap.values())
+    .filter(p => p.played >= 2)
+    .sort((a, b) => b.won - a.won || (b.won / b.played) - (a.won / a.played))
+    .slice(0, 3)
+    .map(p => ({
+      players: [
+        { userId: p.players[0], name: p.names[0], photoUrl: p.photos[0] },
+        { userId: p.players[1], name: p.names[1], photoUrl: p.photos[1] },
+      ],
+      gamesPlayed: p.played,
+      gamesWon: p.won,
+      winRate: p.played > 0 ? p.won / p.played : 0,
+    }));
 }
 
 export function useStatistics(
@@ -259,6 +395,7 @@ export function useStatistics(
         personalStats: null,
         monthlyTrends: [],
         badges: [],
+        duoStats: [],
         isReady: !isLoading && events.length > 0,
       };
     }
@@ -274,6 +411,7 @@ export function useStatistics(
         personalStats: null,
         monthlyTrends: [],
         badges: [],
+        duoStats: [],
         isReady: true,
       };
     }
@@ -299,12 +437,16 @@ export function useStatistics(
     // Badges
     const badges = computeBadges(statsMap);
 
+    // Duo stats
+    const duoStats = computeDuoStats(pastEvents);
+
     return {
       leaderboard,
       paymentRanking,
       personalStats,
       monthlyTrends,
       badges,
+      duoStats,
       isReady: true,
     };
   }, [events, currentUser, isLoading]);

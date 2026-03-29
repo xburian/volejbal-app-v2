@@ -416,9 +416,9 @@ describe('Calendar Date Selection', () => {
       });
     }
 
-    // Verify the empty state message is shown
+    // Verify the empty state message is shown (appears in both mobile + desktop layouts)
     await waitFor(() => {
-      expect(screen.getByText('Žádné události pro tento den.')).toBeInTheDocument();
+      expect(screen.getAllByText('Žádné události pro tento den.').length).toBeGreaterThan(0);
     }, { timeout: 3000 });
   });
 });

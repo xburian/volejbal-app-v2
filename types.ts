@@ -19,6 +19,17 @@ export interface Participant {
   hasPaid: boolean;
 }
 
+export interface TeamMember {
+  userId: string;
+  name: string;
+  photoUrl?: string;
+}
+
+export interface GameRound {
+  teams: [TeamMember[], TeamMember[]];
+  winningTeam?: 0 | 1;
+}
+
 export interface VolleyballEvent {
   id: string;
   title: string;
@@ -30,6 +41,9 @@ export interface VolleyballEvent {
   selectedBankAccountId?: string; // ID of selected bank account from the bank accounts list
   description?: string;
   participants: Participant[]; // Constructed/Hydrated array, not necessarily stored directly
+  teams?: [TeamMember[], TeamMember[]]; // current round team split
+  winningTeam?: 0 | 1; // current round winner
+  gameHistory?: GameRound[]; // completed previous rounds
 }
 
 export interface AttendanceRecord {
@@ -63,6 +77,11 @@ export interface UserStats {
   longestStreak: number;      // consecutive joined events by date
   currentStreak: number;
   favoriteLocation: string;
+  gamesPlayed: number;        // events with teams + winner recorded
+  gamesWon: number;
+  winRate: number;             // gamesWon / gamesPlayed (0-1)
+  winStreak: number;           // current consecutive wins
+  longestWinStreak: number;
 }
 
 export interface MonthlyTrend {
@@ -73,7 +92,14 @@ export interface MonthlyTrend {
   totalParticipants: number;
 }
 
-export type BadgeType = 'ironman' | 'ghost' | 'maybeMaster' | 'quickPayer' | 'socialButterfly';
+export interface DuoStats {
+  players: [{ userId: string; name: string; photoUrl?: string }, { userId: string; name: string; photoUrl?: string }];
+  gamesPlayed: number;
+  gamesWon: number;
+  winRate: number;
+}
+
+export type BadgeType = 'ironman' | 'ghost' | 'maybeMaster' | 'quickPayer' | 'socialButterfly' | 'luckyPlayer';
 
 export interface Badge {
   type: BadgeType;

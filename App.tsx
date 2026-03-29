@@ -1,49 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import { VolleyballEvent, User, DebtItem, BankAccount } from './types';
 import * as storage from './services/storage';
+import { calculateDebts } from './utils/debt';
 import { CalendarView } from './components/CalendarView';
 import { EventDetail } from './components/EventDetail';
+import { EventList } from './components/EventList';
 import { CreateEventModal } from './components/CreateEventModal';
 import { ConfirmModal } from './components/ConfirmModal';
 import { UnpaidBanner } from './components/UnpaidBanner';
 import { LoginScreen } from './components/LoginScreen';
 import { BankAccountSettingsModal } from './components/BankAccountSettingsModal';
 import { StatsPage } from './components/StatsPage';
-import { Plus, Calendar as CalendarIcon, Trophy, LogOut, Trash2, ListFilter, ArrowLeft, Loader2, Settings, BarChart3 } from 'lucide-react';
-import { format, isSameDay, differenceInCalendarDays, startOfDay } from 'date-fns';
-import { cs } from 'date-fns/locale';
+import { ReleaseNotesPage } from './components/ReleaseNotesPage';
+import { MobileBottomNav, MobileView } from './components/MobileBottomNav';
+import { MobileHeader } from './components/MobileHeader';
+import { Calendar as CalendarIcon, Trophy, LogOut, Loader2, Settings, BarChart3, Info } from 'lucide-react';
+import { isSameDay, startOfDay } from 'date-fns';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [events, setEvents] = useState<VolleyballEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // viewDate controls which month is shown in the calendar
+
   const [viewDate, setViewDate] = useState<Date>(new Date());
-  
-  // selectedDate controls filtering. If null, we show "Upcoming"
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
-  // State for delete confirmation
   const [eventToDelete, setEventToDelete] = useState<string | null>(null);
-
-  // State for unpaid debts
   const [unpaidDebts, setUnpaidDebts] = useState<DebtItem[]>([]);
-
-  // State for bank accounts
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showChangelog, setShowChangelog] = useState(false);
+  const [mobileView, setMobileView] = useState<MobileView>('calendar');
 
-  // Load events helper
+  // ── Data loading ──
+
   const loadEvents = async () => {
     setIsLoading(true);
     try {
-      const data = await storage.getEvents();
-      setEvents(data);
+      setEvents(await storage.getEvents());
     } catch (error) {
       console.error("Failed to load events", error);
     } finally {
@@ -51,101 +47,53 @@ const App: React.FC = () => {
     }
   };
 
-  // Load bank accounts helper
   const loadBankAccounts = async () => {
     try {
-      const data = await storage.getBankAccounts();
-      setBankAccounts(data);
+      setBankAccounts(await storage.getBankAccounts());
     } catch (error) {
       console.error("Failed to load bank accounts", error);
     }
   };
 
-  // Load events and bank accounts only when user is logged in
   useEffect(() => {
     if (!currentUser) return;
     loadEvents();
     loadBankAccounts();
   }, [currentUser]);
 
-  // Automatically select first upcoming event when events load or user logs in
+  // Auto-select first upcoming event
   useEffect(() => {
-    if (!currentUser || events.length === 0) return;
-
-    // Only auto-select if no event is currently selected
-    if (selectedEventId) return;
-
+    if (!currentUser || events.length === 0 || selectedEventId) return;
     const today = startOfDay(new Date());
-    const upcomingEvents = events
+    const upcoming = events
       .filter(e => new Date(e.date) >= today)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    if (upcomingEvents.length > 0) {
-      setSelectedEventId(upcomingEvents[0].id);
-    }
+    if (upcoming.length > 0) setSelectedEventId(upcoming[0].id);
   }, [currentUser, events, selectedEventId]);
 
-  // Check for debts whenever user or events change
+  // Recalculate debts using extracted pure function
   useEffect(() => {
     if (!currentUser || events.length === 0) {
       setUnpaidDebts([]);
       return;
     }
+    setUnpaidDebts(calculateDebts(events, currentUser));
+  }, [currentUser, events]);
 
-    const today = new Date();
-    const debts: DebtItem[] = [];
-
-    events.forEach(event => {
-      // Determine if event is overdue
-      let isOverdue = false;
-      let daysOverdue = 0;
-
-      // Fallback Logic: Overdue if more than 6 days past the event (assuming weekly games)
-      const eventDate = new Date(event.date);
-      const diff = differenceInCalendarDays(today, eventDate);
-      
-      // Simple logic: if event was more than 1 day ago and I joined but haven't paid
-      if (diff > 1) {
-        isOverdue = true;
-        daysOverdue = diff;
-      }
-
-      if (isOverdue) {
-        const myParticipation = event.participants.find(p => p.userId === currentUser.id);
-
-        // Condition: User joined AND has NOT paid
-        if (myParticipation && myParticipation.status === 'joined' && !myParticipation.hasPaid) {
-          
-          // Calculate cost per person for this specific event
-          const joinedCount = event.participants.filter(p => p.status === 'joined').length;
-          const costPerPerson = joinedCount > 0 ? Math.ceil(event.totalCost / joinedCount) : 0;
-
-          debts.push({
-            event,
-            amount: costPerPerson,
-            daysOverdue
-          });
-        }
-      }
-    });
-
-    setUnpaidDebts(debts);
-
-  }, [currentUser, events]); 
+  // ── Handlers ──
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
-    // Events are loaded automatically by the useEffect([currentUser]) hook
-    
-    // Reset views on login
-    setSelectedDate(null); 
+    setSelectedDate(null);
     setViewDate(new Date());
+    setMobileView('calendar');
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
     setSelectedEventId(null);
     setUnpaidDebts([]);
+    setMobileView('calendar');
   };
 
   const handleCreateEvent = async (newEvent: VolleyballEvent) => {
@@ -153,81 +101,77 @@ const App: React.FC = () => {
     const updatedList = await storage.createEvent(newEvent);
     setEvents(updatedList);
     setIsLoading(false);
-    
     setIsModalOpen(false);
-    setSelectedEventId(newEvent.id); 
-    
+    setSelectedEventId(newEvent.id);
     if (selectedDate) {
       setSelectedDate(new Date(newEvent.date));
       setViewDate(new Date(newEvent.date));
     }
+    setMobileView('detail');
   };
 
   const handleUpdateEvent = async (updatedEvent: VolleyballEvent) => {
-    // Optimistic update could go here, but let's keep it safe
-    const updatedList = await storage.updateEvent(updatedEvent);
-    setEvents(updatedList);
+    setEvents(await storage.updateEvent(updatedEvent));
   };
 
-  const handleRequestDelete = (id: string) => {
-    setEventToDelete(id);
-  };
+  const handleRequestDelete = (id: string) => setEventToDelete(id);
 
   const confirmDelete = async () => {
-    if (eventToDelete) {
-      setIsLoading(true);
-      const updatedList = await storage.deleteEvent(eventToDelete);
-      setEvents(updatedList);
-      setIsLoading(false);
-      
-      if (selectedEventId === eventToDelete) {
-        setSelectedEventId(null);
-      }
-      setEventToDelete(null);
+    if (!eventToDelete) return;
+    setIsLoading(true);
+    const updatedList = await storage.deleteEvent(eventToDelete);
+    setEvents(updatedList);
+    setIsLoading(false);
+    if (selectedEventId === eventToDelete) {
+      setSelectedEventId(null);
+      setMobileView('calendar');
     }
+    setEventToDelete(null);
   };
 
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
-    setViewDate(date); 
-
-    // Find all events for the selected day and sort by time
+    setViewDate(date);
     const eventsOnDay = events
       .filter(e => isSameDay(new Date(e.date), date))
       .sort((a, b) => a.time.localeCompare(b.time));
-
-    if (eventsOnDay.length > 0) {
-      // Auto-select the first event of the day
-      setSelectedEventId(eventsOnDay[0].id);
-    } else {
-      // No events on this day - clear the selection
-      setSelectedEventId(null);
-    }
+    setSelectedEventId(eventsOnDay.length > 0 ? eventsOnDay[0].id : null);
   };
 
   const handleShowUpcoming = () => {
     setSelectedDate(null);
-    setViewDate(new Date()); 
+    setViewDate(new Date());
     setSelectedEventId(null);
   };
 
-  if (!currentUser) {
-    return <LoginScreen onLogin={handleLogin} />;
-  }
+  const handleMobileEventSelect = (eventId: string) => {
+    setSelectedEventId(eventId);
+    setMobileView('detail');
+  };
 
-  // Filter events logic
-  let displayedEvents: VolleyballEvent[];
+  const handleMobileNavigate = (view: MobileView) => {
+    setShowStats(view === 'stats');
+    setShowChangelog(view === 'changelog');
+    setMobileView(view);
+  };
+
+  const handleMobileBack = () => {
+    setMobileView('calendar');
+    setShowStats(false);
+    setShowChangelog(false);
+  };
+
+  // ── Derived state ──
+
+  if (!currentUser) return <LoginScreen onLogin={handleLogin} />;
+
   const isUpcomingMode = selectedDate === null;
+  const displayedEvents = isUpcomingMode
+    ? events
+        .filter(e => new Date(e.date) >= startOfDay(new Date()))
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    : events.filter(e => isSameDay(new Date(e.date), selectedDate));
 
-  if (isUpcomingMode) {
-    const today = startOfDay(new Date());
-    displayedEvents = events
-      .filter(e => new Date(e.date) >= today)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  } else {
-    displayedEvents = events.filter(e => isSameDay(new Date(e.date), selectedDate));
-  }
-  
   const selectedEvent = events.find(e => e.id === selectedEventId);
 
   return (
@@ -238,98 +182,130 @@ const App: React.FC = () => {
           <Loader2 className="animate-spin text-blue-600" size={48} />
         </div>
       )}
-      
-      {/* Mobile Header */}
-      <div className="md:hidden flex flex-col shadow-md z-20 relative">
-        <div className="bg-blue-700 text-white p-4 flex items-center justify-between">
-           <div className="flex items-center gap-2 font-bold text-lg">
-             <Trophy size={24} />
-             <span>Volejbal</span>
-           </div>
-           <div className="flex items-center gap-2">
-             <button 
-               onClick={() => setIsModalOpen(true)}
-               className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
-             >
-               <Plus size={20} />
-             </button>
-             <button
-               onClick={() => setShowStats(true)}
-               className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
-               title="Statistiky"
-             >
-               <BarChart3 size={20} />
-             </button>
-             <button
-               onClick={() => setIsSettingsOpen(true)}
-               className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
-               title="Bankovní účty"
-             >
-               <Settings size={20} />
-             </button>
-             <button
-               onClick={handleLogout}
-               className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
-             >
-               <LogOut size={20} />
-             </button>
-           </div>
-        </div>
-        <UnpaidBanner debts={unpaidDebts} />
+
+      {/* ═══════════════════════════════════════════ */}
+      {/*  MOBILE LAYOUT (md:hidden)                 */}
+      {/* ═══════════════════════════════════════════ */}
+      <div className="md:hidden flex flex-col min-h-screen pb-16">
+        <MobileHeader
+          mobileView={mobileView}
+          currentUser={currentUser}
+          selectedEvent={selectedEvent}
+          onBack={handleMobileBack}
+          onLogout={handleLogout}
+        />
+
+        {mobileView === 'calendar' && <UnpaidBanner debts={unpaidDebts} />}
+
+        {/* Mobile: Calendar View */}
+        {mobileView === 'calendar' && (
+          <div className="flex-1 overflow-y-auto p-4 animate-fade-in-up">
+            <section className="mb-6">
+              <CalendarView
+                currentDate={viewDate}
+                selectedDate={selectedDate}
+                onDateChange={handleDateSelect}
+                onMonthChange={setViewDate}
+                events={events}
+              />
+            </section>
+            <section>
+              <EventList
+                events={displayedEvents}
+                selectedEventId={selectedEventId}
+                selectedDate={selectedDate}
+                onSelectEvent={handleMobileEventSelect}
+                onDeleteEvent={handleRequestDelete}
+                onShowUpcoming={handleShowUpcoming}
+                onCreateEvent={() => setIsModalOpen(true)}
+                showChevron
+                showAddButton={false}
+              />
+            </section>
+          </div>
+        )}
+
+        {/* Mobile: Event Detail View */}
+        {mobileView === 'detail' && (
+          <div className="flex-1 overflow-y-auto animate-slide-in-right">
+            {selectedEvent ? (
+              <EventDetail
+                event={selectedEvent}
+                currentUser={currentUser}
+                bankAccounts={bankAccounts}
+                onUpdate={handleUpdateEvent}
+                onDelete={handleRequestDelete}
+              />
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4 p-8 min-h-[50vh]">
+                <CalendarIcon size={32} className="text-slate-300" />
+                <p className="text-center text-sm">Vyberte událost z kalendáře.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Mobile: Stats View */}
+        {mobileView === 'stats' && (
+          <div className="flex-1 overflow-y-auto p-4 animate-slide-in-right">
+            <StatsPage
+              events={events}
+              currentUser={currentUser}
+              isLoading={isLoading}
+              onClose={handleMobileBack}
+            />
+          </div>
+        )}
+
+        {/* Mobile: Changelog View */}
+        {mobileView === 'changelog' && (
+          <div className="flex-1 overflow-y-auto p-4 animate-slide-in-right">
+            <ReleaseNotesPage onClose={handleMobileBack} />
+          </div>
+        )}
+
+        <MobileBottomNav
+          activeView={mobileView}
+          onNavigate={handleMobileNavigate}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onCreateEvent={() => setIsModalOpen(true)}
+        />
       </div>
 
-      {/* Sidebar */}
-      <div className="w-full md:w-[400px] lg:w-[450px] flex flex-col bg-white border-r border-slate-200 h-auto md:h-screen md:sticky md:top-0 overflow-hidden">
-        
+      {/* ═══════════════════════════════════════════ */}
+      {/*  DESKTOP LAYOUT (hidden md:flex/md:block)  */}
+      {/* ═══════════════════════════════════════════ */}
+
+      {/* Desktop Sidebar */}
+      <div className="hidden md:flex w-[400px] lg:w-[450px] flex-col bg-white border-r border-slate-200 h-screen sticky top-0 overflow-hidden">
         {/* Desktop Header */}
-        <div className="hidden md:flex p-6 border-b border-slate-100 items-center justify-between bg-slate-50">
-           <div className="flex items-center gap-3 font-bold text-xl text-slate-800">
-             <div className="bg-blue-600 text-white p-2 rounded-lg">
-               <Trophy size={20} />
-             </div>
-             Volejbal Plánovač
-           </div>
-           
-           <div className="flex items-center gap-3">
-             {currentUser.photoUrl && (
-               <img
-                 src={currentUser.photoUrl}
-                 alt={currentUser.name}
-                 className="w-8 h-8 rounded-full object-cover"
-               />
-             )}
-             <span className="text-sm font-medium text-slate-600">Ahoj, {currentUser.name}</span>
-             <button
-                onClick={() => setShowStats(true)}
-                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                title="Statistiky"
-             >
-               <BarChart3 size={20} />
-             </button>
-             <button
-                onClick={() => setIsSettingsOpen(true)}
-                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                title="Bankovní účty"
-             >
-               <Settings size={20} />
-             </button>
-             <button
-                onClick={handleLogout}
-                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                title="Odhlásit"
-             >
-               <LogOut size={20} />
-             </button>
-           </div>
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+          <div className="flex items-center gap-3 font-bold text-xl text-slate-800">
+            <div className="bg-blue-600 text-white p-2 rounded-lg"><Trophy size={20} /></div>
+            Volejbal Plánovač
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-slate-600">Ahoj, {currentUser.name}</span>
+            <button onClick={() => setShowStats(true)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Statistiky">
+              <BarChart3 size={20} />
+            </button>
+            <button onClick={() => setIsSettingsOpen(true)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Bankovní účty">
+              <Settings size={20} />
+            </button>
+            <button onClick={() => { setShowChangelog(true); setShowStats(false); }} className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Seznam změn">
+              <Info size={20} />
+            </button>
+            <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Odhlásit">
+              <LogOut size={20} />
+            </button>
+          </div>
         </div>
 
-        <div className="hidden md:block">
-          <UnpaidBanner debts={unpaidDebts} />
-        </div>
+        <UnpaidBanner debts={unpaidDebts} />
 
         <div className="p-4 overflow-y-auto custom-scrollbar flex-1">
           <div className="mb-6">
-            <CalendarView 
+            <CalendarView
               currentDate={viewDate}
               selectedDate={selectedDate}
               onDateChange={handleDateSelect}
@@ -337,143 +313,42 @@ const App: React.FC = () => {
               events={events}
             />
           </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-4 px-2">
-              <div className="flex flex-col">
-                <h3 className="font-semibold text-slate-700 flex items-center gap-2">
-                  {isUpcomingMode ? (
-                    <>
-                      <ListFilter size={18} className="text-blue-500"/>
-                      Nadcházející
-                    </>
-                  ) : (
-                    <>
-                      <CalendarIcon size={18} className="text-blue-500"/>
-                      {selectedDate && format(selectedDate, 'd. MMMM', { locale: cs })}
-                    </>
-                  )}
-                </h3>
-                
-                {!isUpcomingMode && (
-                  <button 
-                    onClick={handleShowUpcoming}
-                    className="text-xs text-slate-500 hover:text-blue-600 flex items-center gap-1 mt-1 font-medium transition-colors"
-                  >
-                    <ArrowLeft size={12} />
-                    Zobrazit všechny nadcházející
-                  </button>
-                )}
-              </div>
-
-              <button 
-                onClick={() => setIsModalOpen(true)}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors"
-              >
-                <Plus size={16} /> Přidat
-              </button>
-            </div>
-
-            <div className="space-y-3 pb-8">
-              {displayedEvents.length === 0 ? (
-                <div className="text-center py-12 text-slate-400 border-2 border-dashed border-slate-100 rounded-xl">
-                  <p className="text-sm">
-                    {isUpcomingMode 
-                      ? 'Žádné nadcházející události.' 
-                      : 'Žádné události pro tento den.'}
-                  </p>
-                  <button onClick={() => setIsModalOpen(true)} className="mt-2 text-blue-600 text-sm hover:underline font-medium">
-                    Vytvořit novou
-                  </button>
-                </div>
-              ) : (
-                displayedEvents.map(event => (
-                  <div 
-                    key={event.id}
-                    onClick={() => setSelectedEventId(event.id)}
-                    className={`
-                      p-4 rounded-xl border transition-all cursor-pointer group relative
-                      ${selectedEventId === event.id 
-                        ? 'bg-blue-50 border-blue-200 shadow-sm ring-1 ring-blue-200' 
-                        : 'bg-white border-slate-100 hover:border-blue-300 hover:shadow-md'}
-                    `}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className={`font-bold pr-6 ${selectedEventId === event.id ? 'text-blue-900' : 'text-slate-800'}`}>{event.title}</h4>
-                      
-                      <div className="flex flex-col items-end gap-1">
-                        <span className={`text-xs font-bold ${selectedEventId === event.id ? 'text-blue-600' : 'text-slate-500'}`}>
-                           {format(new Date(event.date), 'd. M.', { locale: cs })}
-                        </span>
-                        <span className="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
-                          {event.time}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between text-sm text-slate-500 mt-2">
-                      <span className="truncate max-w-[150px]">{event.location}</span>
-                      <div className="flex items-center gap-3">
-                         <UsersIcon count={event.participants.filter(p => p.status === 'joined').length} />
-                         
-                         <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRequestDelete(event.id);
-                            }}
-                            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors z-10"
-                            title="Smazat událost"
-                         >
-                           <Trash2 size={16} />
-                         </button>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+          <EventList
+            events={displayedEvents}
+            selectedEventId={selectedEventId}
+            selectedDate={selectedDate}
+            onSelectEvent={setSelectedEventId}
+            onDeleteEvent={handleRequestDelete}
+            onShowUpcoming={handleShowUpcoming}
+            onCreateEvent={() => setIsModalOpen(true)}
+          />
         </div>
       </div>
 
-      <div className="flex-1 bg-slate-100 p-4 md:p-8 overflow-y-auto h-auto md:h-screen">
-        {showStats ? (
-          <StatsPage
-            events={events}
-            currentUser={currentUser}
-            isLoading={isLoading}
-            onClose={() => setShowStats(false)}
-          />
+      {/* Desktop Main Content */}
+      <div className="hidden md:block flex-1 bg-slate-100 p-4 md:p-8 overflow-y-auto h-screen">
+        {showChangelog ? (
+          <ReleaseNotesPage onClose={() => setShowChangelog(false)} />
+        ) : showStats ? (
+          <StatsPage events={events} currentUser={currentUser} isLoading={isLoading} onClose={() => setShowStats(false)} />
         ) : selectedEvent ? (
-          <EventDetail
-            event={selectedEvent}
-            currentUser={currentUser}
-            bankAccounts={bankAccounts}
-            onUpdate={handleUpdateEvent}
-            onDelete={handleRequestDelete}
-          />
+          <EventDetail event={selectedEvent} currentUser={currentUser} bankAccounts={bankAccounts} onUpdate={handleUpdateEvent} onDelete={handleRequestDelete} />
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4 min-h-[50vh]">
             <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center">
               <CalendarIcon size={32} className="text-slate-400" />
             </div>
             <p className="text-lg font-medium text-center max-w-sm">
-              {isUpcomingMode
-                ? 'Vyberte událost ze seznamu nadcházejících.'
-                : 'Vyberte událost z vybraného dne.'}
+              {isUpcomingMode ? 'Vyberte událost ze seznamu nadcházejících.' : 'Vyberte událost z vybraného dne.'}
             </p>
           </div>
         )}
       </div>
 
+      {/* ═══ MODALS (shared) ═══ */}
       {isModalOpen && (
-        <CreateEventModal 
-          selectedDate={selectedDate || new Date()} 
-          onClose={() => setIsModalOpen(false)} 
-          onCreate={handleCreateEvent} 
-        />
+        <CreateEventModal selectedDate={selectedDate || new Date()} onClose={() => setIsModalOpen(false)} onCreate={handleCreateEvent} />
       )}
-
       <ConfirmModal
         isOpen={!!eventToDelete}
         title="Smazat událost?"
@@ -481,7 +356,6 @@ const App: React.FC = () => {
         onConfirm={confirmDelete}
         onCancel={() => setEventToDelete(null)}
       />
-
       {currentUser && (
         <BankAccountSettingsModal
           isOpen={isSettingsOpen}
@@ -489,24 +363,12 @@ const App: React.FC = () => {
           currentUser={currentUser}
           bankAccounts={bankAccounts}
           onBankAccountsChange={setBankAccounts}
+          onShowChangelog={() => { setShowChangelog(true); setMobileView('changelog'); }}
         />
       )}
     </div>
   );
 };
 
-const UsersIcon = ({ count }: { count: number }) => (
-  <div className="flex items-center gap-1 text-xs font-medium">
-    <div className="flex -space-x-2">
-       {[...Array(Math.min(count, 3))].map((_, i) => (
-         <div key={i} className="w-5 h-5 rounded-full bg-blue-100 border-2 border-white flex items-center justify-center text-[8px] text-blue-600">
-           U
-         </div>
-       ))}
-    </div>
-    {count > 0 && <span>{count}</span>}
-    {count === 0 && <span>0</span>}
-  </div>
-);
-
 export default App;
+

@@ -1,9 +1,9 @@
 import React from 'react';
-import { VolleyballEvent, User, UserStats, Badge } from '../types';
+import { VolleyballEvent, User, UserStats, Badge, DuoStats } from '../types';
 import { useStatistics } from '../services/useStatistics';
 import {
   ArrowLeft, Loader2, Trophy, Flame, Ghost, HelpCircle, Wallet,
-  PartyPopper, TrendingUp, Calendar, Users, CreditCard, MapPin, Target, BarChart3
+  PartyPopper, TrendingUp, Calendar, Users, CreditCard, MapPin, Target, BarChart3, Star, Swords
 } from 'lucide-react';
 
 interface StatsPageProps {
@@ -19,6 +19,7 @@ const badgeIcons: Record<string, React.ReactNode> = {
   HelpCircle: <HelpCircle size={24} />,
   Wallet: <Wallet size={24} />,
   PartyPopper: <PartyPopper size={24} />,
+  Star: <Star size={24} />,
 };
 
 const badgeColors: Record<string, string> = {
@@ -27,6 +28,7 @@ const badgeColors: Record<string, string> = {
   maybeMaster: 'bg-yellow-50 border-yellow-200 text-yellow-600',
   quickPayer: 'bg-green-50 border-green-200 text-green-600',
   socialButterfly: 'bg-pink-50 border-pink-200 text-pink-600',
+  luckyPlayer: 'bg-amber-50 border-amber-200 text-amber-600',
 };
 
 function Avatar({ name, photoUrl, size = 32 }: { name: string; photoUrl?: string; size?: number }) {
@@ -59,6 +61,7 @@ function PersonalStatsCard({ stats }: { stats: UserStats }) {
     { icon: <Wallet size={18} />, label: 'Zaplaceno', value: `${stats.totalPaid} Kč`, color: 'text-green-600' },
     { icon: <TrendingUp size={18} />, label: 'Dluh', value: `${stats.totalOwed} Kč`, color: stats.totalOwed > 0 ? 'text-red-600' : 'text-slate-400' },
     { icon: <MapPin size={18} />, label: 'Oblíbené', value: stats.favoriteLocation || '–', color: 'text-amber-600' },
+    ...(stats.gamesPlayed > 0 ? [{ icon: <Trophy size={18} />, label: 'Výhry', value: `${stats.gamesWon}/${stats.gamesPlayed} (${Math.round(stats.winRate * 100)}%)`, color: 'text-indigo-600' }] : []),
   ];
 
   return (
@@ -168,8 +171,41 @@ function Leaderboard({ stats, title, icon, valueKey }: {
   );
 }
 
+function BestDuos({ duos }: { duos: DuoStats[] }) {
+  if (duos.length === 0) return null;
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+      <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+        <Swords size={18} className="text-indigo-500" />
+        Nejlepší dvojice
+      </h3>
+      <div className="space-y-3">
+        {duos.map((duo, i) => (
+          <div key={i} className={`flex items-center gap-3 p-3 rounded-lg ${i === 0 ? 'bg-yellow-50 ring-1 ring-yellow-200' : 'bg-slate-50'}`}>
+            <span className={`w-6 text-right text-sm font-bold ${i === 0 ? 'text-yellow-600' : 'text-slate-400'}`}>
+              {i === 0 ? '🏆' : `${i + 1}.`}
+            </span>
+            <div className="flex -space-x-2">
+              <Avatar name={duo.players[0].name} photoUrl={duo.players[0].photoUrl} size={28} />
+              <Avatar name={duo.players[1].name} photoUrl={duo.players[1].photoUrl} size={28} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-slate-700 truncate">
+                {duo.players[0].name} & {duo.players[1].name}
+              </div>
+              <div className="text-xs text-slate-500">
+                {duo.gamesWon} výher z {duo.gamesPlayed} zápasů ({Math.round(duo.winRate * 100)}%)
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export const StatsPage: React.FC<StatsPageProps> = ({ events, currentUser, isLoading, onClose }) => {
-  const { leaderboard, paymentRanking, personalStats, badges } = useStatistics(events, currentUser, false);
+  const { leaderboard, paymentRanking, personalStats, badges, duoStats } = useStatistics(events, currentUser, false);
 
   const hasEnoughData = events.length >= 3;
 
@@ -226,7 +262,8 @@ export const StatsPage: React.FC<StatsPageProps> = ({ events, currentUser, isLoa
             />
           </div>
 
-
+          {/* Best Duos */}
+          <BestDuos duos={duoStats} />
         </div>
       )}
     </div>

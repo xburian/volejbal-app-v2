@@ -126,6 +126,13 @@ async function handlePut(req: ApiRequest, res: ApiResponse) {
   const parsed = parseJson(existing);
   const updated = { ...parsed, ...eventData };
 
+  // Remove keys explicitly set to null (e.g. winningTeam cleared between rounds)
+  for (const key of Object.keys(updated)) {
+    if (updated[key] === null) {
+      delete updated[key];
+    }
+  }
+
   await redis.set(`event:${eventData.id}`, JSON.stringify(updated));
   return res.status(200).json({ success: true });
 }

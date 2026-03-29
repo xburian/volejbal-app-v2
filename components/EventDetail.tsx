@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { VolleyballEvent, Participant, User, BankAccount } from '../types';
+import { VolleyballEvent, Participant, User, BankAccount, TeamMember } from '../types';
 import * as storage from '../services/storage';
-import { Users, Trash2, Wallet, Hand, AlertTriangle, Edit2, Check, X, Loader2, Copy, ChevronDown, Shuffle, RefreshCw } from 'lucide-react';
+import { Users, Trash2, Wallet, Hand, AlertTriangle, Edit2, Check, X, Loader2, Copy, ChevronDown, Shuffle, RefreshCw, Trophy } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import { format } from 'date-fns';
 
@@ -35,6 +35,7 @@ export const convertToCZIBAN = (accountStr: string): string | null => {
 
 export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, bankAccounts = [], onUpdate, onDelete }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [savingUsers, setSavingUsers] = useState<Set<string>>(new Set());
   const [isCopied, setIsCopied] = useState(false);
   const [isEditingCost, setIsEditingCost] = useState(false);
   const [tempTotalCost, setTempTotalCost] = useState(event.totalCost);
@@ -52,28 +53,46 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
   const effectiveAccountNumber = selectedBankAccount?.accountNumber || event.accountNumber || '';
   const selectedAccountOwner = selectedBankAccount?.ownerName || '';
 
-  const [teams, setTeams] = useState<[Participant[], Participant[]] | null>(null);
-
   useEffect(() => {
     setTempTotalCost(event.totalCost);
     setIsEditingCost(false);
   }, [event.id, event.totalCost]);
 
-  const joinedParticipants = event.participants.filter(p => p.status === 'joined');
+  // Stable sort by name (Czech locale) so participant order never jumps on reload/sync
+  const sortedParticipants = useMemo(
+    () => [...event.participants].sort((a, b) => a.name.localeCompare(b.name, 'cs')),
+    [event.participants]
+  );
 
-  const shuffleTeams = () => {
+  const joinedParticipants = sortedParticipants.filter(p => p.status === 'joined');
+
+  const shuffleTeams = async () => {
     const shuffled = [...joinedParticipants].sort(() => Math.random() - 0.5);
     const mid = Math.ceil(shuffled.length / 2);
-    setTeams([shuffled.slice(0, mid), shuffled.slice(mid)]);
+    const newTeams: [TeamMember[], TeamMember[]] = [
+      shuffled.slice(0, mid).map(p => ({ userId: p.userId, name: p.name, photoUrl: p.photoUrl })),
+      shuffled.slice(mid).map(p => ({ userId: p.userId, name: p.name, photoUrl: p.photoUrl })),
+    ];
+
+    // If current round has a winner, save it to history before starting new round
+    const history = [...(event.gameHistory || [])];
+    if (event.teams && event.winningTeam !== undefined) {
+      history.push({ teams: event.teams, winningTeam: event.winningTeam });
+    }
+
+    onUpdate({ ...event, teams: newTeams, winningTeam: undefined, gameHistory: history });
   };
 
+  const setWinner = (teamIdx: 0 | 1) => {
+    onUpdate({ ...event, winningTeam: teamIdx });
+  };
+
+  // Auto-generate teams on first load if none saved
   useEffect(() => {
-    if (joinedParticipants.length >= 2) {
+    if (!event.teams && joinedParticipants.length >= 2) {
       shuffleTeams();
-    } else {
-      setTeams(null);
     }
-  }, [event.id, joinedParticipants.length]);
+  }, [event.id]);
   const countJoined = joinedParticipants.length;
   const costPerPerson = countJoined > 0 ? Math.ceil(event.totalCost / countJoined) : 0;
   
@@ -98,18 +117,66 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
     setIsLoading(false);
   };
 
+  // Helper to mark a user as saving / done saving
+  const startSaving = (userId: string) => setSavingUsers(prev => new Set(prev).add(userId));
+  const stopSaving = (userId: string) => setSavingUsers(prev => { const next = new Set(prev); next.delete(userId); return next; });
+
   const handleStatusChange = async (userId: string, status: Participant['status']) => {
-    setIsLoading(true);
-    await storage.updateAttendance(event.id, userId, status);
-    await refreshEventData();
+    const prevParticipants = event.participants;
+    const existing = prevParticipants.find(p => p.userId === userId);
+
+    // Build optimistic participants list
+    let optimisticParticipants: Participant[];
+    if (existing) {
+      optimisticParticipants = prevParticipants.map(p =>
+        p.userId === userId ? { ...p, status } : p
+      );
+    } else {
+      // New participant (current user joining for the first time)
+      optimisticParticipants = [
+        ...prevParticipants,
+        { userId, name: currentUser.name, photoUrl: currentUser.photoUrl, status, hasPaid: false },
+      ];
+    }
+
+    // Optimistic UI update
+    onUpdate({ ...event, participants: optimisticParticipants });
+    startSaving(userId);
+
+    try {
+      await storage.updateAttendance(event.id, userId, status);
+      // Background sync to get authoritative state (e.g. other users' changes)
+      const allEvents = await storage.getEvents();
+      const refreshed = allEvents.find(e => e.id === event.id);
+      if (refreshed) onUpdate(refreshed);
+    } catch {
+      // Rollback on error
+      onUpdate({ ...event, participants: prevParticipants });
+    } finally {
+      stopSaving(userId);
+    }
   };
 
   const handlePaymentToggle = async (userId: string, currentStatus: boolean) => {
     const participant = event.participants.find(p => p.userId === userId);
-    if (participant) {
-      setIsLoading(true);
+    if (!participant) return;
+
+    const prevParticipants = event.participants;
+
+    // Optimistic UI update — flip hasPaid immediately
+    const optimisticParticipants = prevParticipants.map(p =>
+      p.userId === userId ? { ...p, hasPaid: !currentStatus } : p
+    );
+    onUpdate({ ...event, participants: optimisticParticipants });
+    startSaving(userId);
+
+    try {
       await storage.updateAttendance(event.id, userId, participant.status, !currentStatus);
-      await refreshEventData();
+    } catch {
+      // Rollback on error
+      onUpdate({ ...event, participants: prevParticipants });
+    } finally {
+      stopSaving(userId);
     }
   };
 
@@ -203,15 +270,15 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
       )}
 
       {/* Header */}
-      <div className="p-6 bg-slate-50 border-b border-slate-100 flex justify-between items-start">
-        <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold text-slate-800">{event.title}</h2>
-            <span className="text-lg text-slate-500 font-medium">
+      <div className="p-4 sm:p-6 bg-slate-50 border-b border-slate-100 flex justify-between items-start">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-800">{event.title}</h2>
+            <span className="text-base sm:text-lg text-slate-500 font-medium">
               {format(new Date(event.date), 'dd.MM.yyyy')}
             </span>
           </div>
-          <div className="flex items-center gap-4 text-slate-500 mt-2 text-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-slate-500 mt-2 text-sm">
             <span className="flex items-center gap-1"><Users size={16} /> {event.location}</span>
             <div className="flex items-center gap-1">
               <Wallet size={16} />
@@ -257,7 +324,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 grid lg:grid-cols-2 gap-8">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 grid lg:grid-cols-2 gap-6 lg:gap-8">
         
         {/* Left Column: Participants */}
         <div className="space-y-6">
@@ -281,18 +348,23 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
             {!isCurrentUserJoined && (
               <button 
                 onClick={() => handleStatusChange(currentUser.id, 'joined')}
-                disabled={isLoading}
+                disabled={savingUsers.has(currentUser.id)}
                 className="w-full mb-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md shadow-blue-200 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
               >
-                <Hand size={20} />
+                {savingUsers.has(currentUser.id) ? (
+                  <Loader2 size={20} className="animate-spin" />
+                ) : (
+                  <Hand size={20} />
+                )}
                 Jdu hrát
               </button>
             )}
 
             <div className="space-y-2">
-              {event.participants.map(p => {
+              {sortedParticipants.map(p => {
                 const isMe = p.userId === currentUser.id;
-                
+                const isSaving = savingUsers.has(p.userId);
+
                 return (
                   <div key={p.userId} className={`flex items-center justify-between p-2 border rounded-lg shadow-sm hover:shadow-md transition-shadow group ${isMe ? 'bg-blue-50 border-blue-200 ring-1 ring-blue-100' : 'bg-white border-slate-100'}`}>
                     <div className="flex items-center gap-3">
@@ -363,13 +435,13 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
                         {isMe ? (
                           <div className="flex gap-2 text-xs mt-0.5">
                             <button 
-                              disabled={isLoading}
+                              disabled={isSaving}
                               onClick={() => handleStatusChange(p.userId, 'joined')}
                               className={`hover:underline ${p.status === 'joined' ? 'font-bold text-green-600' : 'text-slate-400'}`}
                             >Jdu</button>
                              <span className="text-slate-300">|</span>
                             <button 
-                              disabled={isLoading}
+                              disabled={isSaving}
                               onClick={() => handleStatusChange(p.userId, 'declined')}
                               className={`hover:underline ${p.status === 'declined' ? 'font-bold text-red-600' : 'text-slate-400'}`}
                             >Nejdu</button>
@@ -383,17 +455,22 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                       {p.status === 'joined' && (
                         <label className="flex items-center gap-2 cursor-pointer select-none group/checkbox p-1 rounded hover:bg-slate-50 transition-colors">
-                           <input 
-                             type="checkbox" 
-                             checked={p.hasPaid}
-                             disabled={isLoading}
-                             onChange={() => handlePaymentToggle(p.userId, p.hasPaid)}
-                             className="w-4 h-4 rounded border-slate-300 text-green-600 focus:ring-green-500 cursor-pointer disabled:opacity-50"
-                           />
-                           <span className={`text-xs ${p.hasPaid ? 'text-green-600 font-medium' : 'text-slate-500'}`}>
+                           <span className="w-4 h-4 flex items-center justify-center shrink-0">
+                             {isSaving ? (
+                               <Loader2 size={16} className="animate-spin text-blue-500" />
+                             ) : (
+                               <input
+                                 type="checkbox"
+                                 checked={p.hasPaid}
+                                 onChange={() => handlePaymentToggle(p.userId, p.hasPaid)}
+                                 className="w-4 h-4 rounded border-slate-300 text-green-600 focus:ring-green-500 cursor-pointer"
+                               />
+                             )}
+                           </span>
+                           <span className={`text-xs w-[4.5rem] ${p.hasPaid ? 'text-green-600 font-medium' : 'text-slate-500'}`}>
                              {p.hasPaid ? 'Zaplaceno' : 'Nezaplaceno'}
                            </span>
                         </label>
@@ -403,51 +480,120 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
                 );
               })}
 
-              {event.participants.length === 0 && (
+              {sortedParticipants.length === 0 && (
                 <p className="text-center text-slate-400 py-4 italic">Zatím žádní účastníci.</p>
               )}
             </div>
           </div>
 
           {/* Team Split */}
-          {countJoined >= 2 && teams && (
+          {event.teams && (
             <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold text-slate-700 flex items-center gap-2">
                   <Shuffle size={18} className="text-indigo-500" />
                   Rozdělení do týmů
+                  {(event.gameHistory?.length || 0) > 0 && (
+                    <span className="text-xs font-normal text-slate-400">
+                      Hra {(event.gameHistory?.length || 0) + 1}
+                    </span>
+                  )}
                 </h3>
                 <button
                   onClick={shuffleTeams}
-                  className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors"
+                  disabled={countJoined < 2}
+                  className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <RefreshCw size={14} />
-                  Zamíchat
+                  {event.winningTeam !== undefined ? 'Nová hra' : 'Zamíchat'}
                 </button>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                {teams.map((team, teamIdx) => (
-                  <div key={teamIdx} className={`rounded-lg border p-3 ${teamIdx === 0 ? 'bg-blue-50 border-blue-200' : 'bg-orange-50 border-orange-200'}`}>
-                    <h4 className={`text-sm font-bold mb-2 ${teamIdx === 0 ? 'text-blue-700' : 'text-orange-700'}`}>
-                      Tým {teamIdx + 1} ({team.length})
-                    </h4>
-                    <div className="space-y-1.5">
-                      {team.map(p => (
-                        <div key={p.userId} className="flex items-center gap-2">
-                          {p.photoUrl ? (
-                            <img src={p.photoUrl} alt={p.name} className="w-6 h-6 rounded-full object-cover" />
-                          ) : (
-                            <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">
-                              {p.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                            </div>
-                          )}
-                          <span className="text-sm text-slate-700">{p.name}</span>
-                        </div>
-                      ))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {event.teams.map((team, teamIdx) => {
+                  const isWinner = event.winningTeam === teamIdx;
+                  return (
+                    <div key={teamIdx} className={`rounded-lg border-2 p-3 transition-all ${
+                      isWinner
+                        ? 'bg-green-50 border-green-400 ring-1 ring-green-200'
+                        : teamIdx === 0 ? 'bg-blue-50 border-blue-200' : 'bg-orange-50 border-orange-200'
+                    }`}>
+                      <h4 className={`text-sm font-bold mb-2 flex items-center gap-1.5 ${
+                        isWinner ? 'text-green-700' : teamIdx === 0 ? 'text-blue-700' : 'text-orange-700'
+                      }`}>
+                        {isWinner && <Trophy size={14} />}
+                        Tým {teamIdx + 1} ({team.length})
+                        {isWinner && <span className="text-xs font-normal ml-1">— Výherce</span>}
+                      </h4>
+                      <div className="space-y-1.5">
+                        {team.map(p => (
+                          <div key={p.userId} className="flex items-center gap-2">
+                            {p.photoUrl ? (
+                              <img src={p.photoUrl} alt={p.name} className="w-6 h-6 rounded-full object-cover" />
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">
+                                {p.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                              </div>
+                            )}
+                            <span className="text-sm text-slate-700">{p.name}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
+              {/* Winner buttons — only show when no winner yet */}
+              {event.winningTeam === undefined && (
+                <div className="grid grid-cols-2 gap-2 mt-3">
+                  {[0, 1].map(idx => (
+                    <button
+                      key={idx}
+                      onClick={() => setWinner(idx as 0 | 1)}
+                      className="py-2 px-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    >
+                      <Trophy size={14} />
+                      Tým {idx + 1} vyhrál
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* Winner announced — prompt for new game */}
+              {event.winningTeam !== undefined && (
+                <div className="mt-3 text-center text-sm text-green-600 font-medium flex items-center justify-center gap-1.5">
+                  <Trophy size={14} />
+                  Tým {event.winningTeam + 1} vyhrál! Klikněte „Nová hra" pro další kolo.
+                </div>
+              )}
+
+              {/* Game History */}
+              {event.gameHistory && event.gameHistory.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-slate-200">
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                    Předchozí hry ({event.gameHistory.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {[...event.gameHistory].reverse().map((round, idx) => {
+                      const roundNum = event.gameHistory!.length - idx;
+                      return (
+                        <div key={idx} className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
+                          <span className="font-bold text-slate-400 w-6 shrink-0">#{roundNum}</span>
+                          <div className="flex-1 flex items-center gap-1.5 min-w-0">
+                            <span className={`font-medium truncate ${round.winningTeam === 0 ? 'text-green-600' : 'text-slate-500'}`}>
+                              {round.winningTeam === 0 && '🏆 '}
+                              {round.teams[0].map(p => p.name.split(' ')[0]).join(', ')}
+                            </span>
+                            <span className="text-slate-300 font-bold shrink-0">vs</span>
+                            <span className={`font-medium truncate ${round.winningTeam === 1 ? 'text-green-600' : 'text-slate-500'}`}>
+                              {round.winningTeam === 1 && '🏆 '}
+                              {round.teams[1].map(p => p.name.split(' ')[0]).join(', ')}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -554,3 +700,4 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
     </div>
   );
 };
+
