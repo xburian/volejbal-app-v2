@@ -96,6 +96,12 @@ const App: React.FC = () => {
     setMobileView('calendar');
   };
 
+  const handleUserUpdate = (updatedUser: User) => {
+    setCurrentUser(updatedUser);
+    // Reload events so participant names/photos reflect the change
+    loadEvents();
+  };
+
   const handleCreateEvent = async (newEvent: VolleyballEvent) => {
     setIsLoading(true);
     const updatedList = await storage.createEvent(newEvent);
@@ -363,6 +369,7 @@ const App: React.FC = () => {
           currentUser={currentUser}
           bankAccounts={bankAccounts}
           onBankAccountsChange={setBankAccounts}
+          onUserUpdate={handleUserUpdate}
           onShowChangelog={() => { setShowChangelog(true); setMobileView('changelog'); }}
         />
       )}

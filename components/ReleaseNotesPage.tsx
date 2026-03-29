@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Zap, CheckCircle2, Smartphone, Layout, FlaskConical, CreditCard, ArrowLeft, Trophy, BookOpen } from 'lucide-react';
+import { Sparkles, Zap, CheckCircle2, Smartphone, Layout, FlaskConical, CreditCard, ArrowLeft, Trophy, BookOpen, UserCircle } from 'lucide-react';
 
 interface ReleaseNotesPageProps {
   onClose: () => void;
@@ -42,6 +42,15 @@ const versions: { version: string; date: string; title: string; changes: ChangeE
         items: [
           'Nová stránka „Seznam změn" s přehledem všech verzí',
           'Přístupná z desktopové hlavičky (ℹ️) i z mobilního nastavení',
+        ],
+      },
+      {
+        icon: <UserCircle size={16} />,
+        title: 'Úprava profilu',
+        items: [
+          'Změna jména přímo v nastavení — klikněte na tužku vedle jména',
+          'Změna nebo odebrání profilové fotky v nastavení',
+          'Nastavení přejmenováno na „Nastavení" s profilem i bankovním účtem na jednom místě',
         ],
       },
       {
