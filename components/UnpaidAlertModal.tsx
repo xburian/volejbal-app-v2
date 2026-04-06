@@ -1,11 +1,11 @@
 import React from 'react';
-import { VolleyballEvent } from '../types';
+import { SportEvent } from '../types';
 import { AlertCircle, Calendar, Wallet } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
 export interface DebtItem {
-  event: VolleyballEvent;
+  event: SportEvent;
   amount: number;
   daysOverdue: number;
 }

@@ -1,15 +1,18 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { VolleyballEvent, Participant, User, BankAccount, TeamMember } from '../types';
+import { SportEvent, Participant, User, BankAccount, TeamMember, SportConfig, TEAM_COLOR_NAMES, maskAccountNumber } from '../types';
 import * as storage from '../services/storage';
-import { Users, Trash2, Wallet, Hand, AlertTriangle, Edit2, Check, X, Loader2, Copy, ChevronDown, Shuffle, RefreshCw, Trophy } from 'lucide-react';
+import { balanceTeams } from '../utils/teamBalancer';
+import { Users, Trash2, Wallet, Hand, AlertTriangle, Edit2, Check, X, Loader2, Copy, ChevronDown, Shuffle, RefreshCw, Trophy, Pencil, Plus, Minus } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import { format } from 'date-fns';
 
 interface EventDetailProps {
-  event: VolleyballEvent;
+  event: SportEvent;
   currentUser: User;
   bankAccounts: BankAccount[];
-  onUpdate: (updatedEvent: VolleyballEvent) => void;
+  sportConfigs: SportConfig[];
+  allEvents: SportEvent[];
+  onUpdate: (updatedEvent: SportEvent) => void;
   onDelete: (id: string) => void;
 }
 
@@ -33,7 +36,7 @@ export const convertToCZIBAN = (accountStr: string): string | null => {
   return `CZ${checkDigits}${bban}`;
 };
 
-export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, bankAccounts = [], onUpdate, onDelete }) => {
+export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, bankAccounts = [], sportConfigs = [], allEvents = [], onUpdate, onDelete }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [savingUsers, setSavingUsers] = useState<Set<string>>(new Set());
   const [isCopied, setIsCopied] = useState(false);
@@ -41,6 +44,23 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
   const [tempTotalCost, setTempTotalCost] = useState(event.totalCost);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [capacityError, setCapacityError] = useState<string | null>(null);
+  const [editingTeamNameIdx, setEditingTeamNameIdx] = useState<0 | 1 | null>(null);
+  const [tempTeamName, setTempTeamName] = useState('');
+  const [setScores, setSetScores] = useState<[number, number][]>([]);
+  const [isEditingScore, setIsEditingScore] = useState(false);
+
+  /** Pick two random distinct team color names */
+  const pickRandomTeamNames = (): [string, string] => {
+    const shuffled = [...TEAM_COLOR_NAMES].sort(() => Math.random() - 0.5);
+    return [shuffled[0], shuffled[1]];
+  };
+
+  // Resolve sport config for this event
+  const sportConfig = useMemo(() => {
+    const type = event.sportType ?? 'volejbal';
+    return sportConfigs.find(c => c.type === type) ?? { type: 'volejbal' as const, label: 'Volejbal', maxPlayers: 12, defaultCost: 1000, defaultLocation: 'Hala', teamSize: null };
+  }, [event.sportType, sportConfigs]);
 
   // Determine the selected bank account
   const selectedBankAccount = useMemo(() => {
@@ -65,43 +85,181 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
   );
 
   const joinedParticipants = sortedParticipants.filter(p => p.status === 'joined');
+  const waitlistedParticipants = sortedParticipants.filter(p => p.status === 'waitlist');
+
+  /**
+   * Incrementally update existing teams when participants join or leave.
+   * - Removes team members who are no longer in the joined list.
+   * - Adds new joined participants to the smaller team.
+   * - Keeps existing assignments stable (no full re-shuffle).
+   * Returns null if teams don't exist or there aren't enough players.
+   */
+  const updateTeamsForParticipantChange = (
+    currentTeams: [TeamMember[], TeamMember[]] | undefined,
+    newJoined: Participant[],
+  ): [TeamMember[], TeamMember[]] | null => {
+    if (!currentTeams) return null;
+
+    const joinedIds = new Set(newJoined.map(p => p.userId));
+
+    // Remove players who left from their teams
+    let team0 = currentTeams[0].filter(m => joinedIds.has(m.userId));
+    let team1 = currentTeams[1].filter(m => joinedIds.has(m.userId));
+
+    // Find newly joined players not yet assigned to any team
+    const assignedIds = new Set([...team0, ...team1].map(m => m.userId));
+    const newPlayers = newJoined.filter(p => !assignedIds.has(p.userId));
+
+    // Add each new player to the smaller team
+    for (const p of newPlayers) {
+      const member: TeamMember = { userId: p.userId, name: p.name, photoUrl: p.photoUrl };
+      if (team0.length <= team1.length) {
+        team0 = [...team0, member];
+      } else {
+        team1 = [...team1, member];
+      }
+    }
+
+    // If not enough players for teams, clear them
+    const teamSize = sportConfig.teamSize;
+    const minPlayers = teamSize !== null ? teamSize * 2 : 2;
+    if (team0.length + team1.length < minPlayers) return null;
+
+    return [team0, team1];
+  };
 
   const shuffleTeams = async () => {
-    const shuffled = [...joinedParticipants].sort(() => Math.random() - 0.5);
-    const mid = Math.ceil(shuffled.length / 2);
-    const newTeams: [TeamMember[], TeamMember[]] = [
-      shuffled.slice(0, mid).map(p => ({ userId: p.userId, name: p.name, photoUrl: p.photoUrl })),
-      shuffled.slice(mid).map(p => ({ userId: p.userId, name: p.name, photoUrl: p.photoUrl })),
-    ];
+    const teamSize = sportConfig.teamSize;
+
+    // Use the balanced algorithm that considers player performance history
+    const balanced = balanceTeams(joinedParticipants, allEvents, {
+      teamSize,
+    });
+
+    let newTeams: [TeamMember[], TeamMember[]];
+    if (balanced) {
+      newTeams = balanced;
+    } else {
+      // Fallback: random split (shouldn't happen if canShuffleTeams is true)
+      const shuffled = [...joinedParticipants].sort(() => Math.random() - 0.5);
+      if (teamSize !== null) {
+        newTeams = [
+          shuffled.slice(0, teamSize).map(p => ({ userId: p.userId, name: p.name, photoUrl: p.photoUrl })),
+          shuffled.slice(teamSize, teamSize * 2).map(p => ({ userId: p.userId, name: p.name, photoUrl: p.photoUrl })),
+        ];
+      } else {
+        const mid = Math.ceil(shuffled.length / 2);
+        newTeams = [
+          shuffled.slice(0, mid).map(p => ({ userId: p.userId, name: p.name, photoUrl: p.photoUrl })),
+          shuffled.slice(mid).map(p => ({ userId: p.userId, name: p.name, photoUrl: p.photoUrl })),
+        ];
+      }
+    }
 
     // If current round has a winner, save it to history before starting new round
     const history = [...(event.gameHistory || [])];
     if (event.teams && event.winningTeam !== undefined) {
-      history.push({ teams: event.teams, winningTeam: event.winningTeam });
+      history.push({ teams: event.teams, teamNames: event.teamNames, winningTeam: event.winningTeam, score: event.score });
     }
 
-    onUpdate({ ...event, teams: newTeams, winningTeam: undefined, gameHistory: history });
+    const newTeamNames = pickRandomTeamNames();
+    setSetScores([]);
+    setIsEditingScore(false);
+    onUpdate({ ...event, teams: newTeams, teamNames: newTeamNames, winningTeam: undefined, score: undefined, gameHistory: history });
   };
 
   const setWinner = (teamIdx: 0 | 1) => {
     onUpdate({ ...event, winningTeam: teamIdx });
   };
 
+  const handleStartEditTeamName = (idx: 0 | 1) => {
+    setEditingTeamNameIdx(idx);
+    setTempTeamName(event.teamNames?.[idx] ?? `Tým ${idx + 1}`);
+  };
+
+  const handleSaveTeamName = () => {
+    if (editingTeamNameIdx === null || !event.teamNames) return;
+    const newNames: [string, string] = [...event.teamNames] as [string, string];
+    newNames[editingTeamNameIdx] = tempTeamName.trim() || newNames[editingTeamNameIdx];
+    onUpdate({ ...event, teamNames: newNames });
+    setEditingTeamNameIdx(null);
+    setTempTeamName('');
+  };
+
+  const handleCancelEditTeamName = () => {
+    setEditingTeamNameIdx(null);
+    setTempTeamName('');
+  };
+
+  // ── Score/set tracking handlers ──
+
+  const handleAddSet = () => {
+    setSetScores(prev => [...prev, [0, 0]]);
+  };
+
+  const handleRemoveSet = (idx: number) => {
+    setSetScores(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleSetScoreChange = (setIdx: number, teamIdx: 0 | 1, value: number) => {
+    setSetScores(prev => prev.map((s, i) => {
+      if (i !== setIdx) return s;
+      const updated: [number, number] = [...s] as [number, number];
+      updated[teamIdx] = value;
+      return updated;
+    }));
+  };
+
+  const handleSaveScore = () => {
+    const validSets = setScores.filter(([a, b]) => a > 0 || b > 0);
+    onUpdate({ ...event, score: validSets.length > 0 ? validSets : undefined });
+    setIsEditingScore(false);
+  };
+
+  const handleCancelScore = () => {
+    setSetScores(event.score ? [...event.score] : []);
+    setIsEditingScore(false);
+  };
+
+  const handleStartEditScore = () => {
+    setSetScores(event.score ? [...event.score] : [[0, 0]]);
+    setIsEditingScore(true);
+  };
+
   // Auto-generate teams on first load if none saved
-  useEffect(() => {
-    if (!event.teams && joinedParticipants.length >= 2) {
-      shuffleTeams();
-    }
-  }, [event.id]);
   const countJoined = joinedParticipants.length;
   const costPerPerson = countJoined > 0 ? Math.ceil(event.totalCost / countJoined) : 0;
-  
+  const minPlayersForTeams = sportConfig.teamSize !== null ? sportConfig.teamSize * 2 : 2;
+  const canShuffleTeams = countJoined >= minPlayersForTeams;
+  const isAtCapacity = countJoined >= sportConfig.maxPlayers;
+
+  useEffect(() => {
+    if (!event.teams && joinedParticipants.length >= minPlayersForTeams) {
+      // Auto-generate teams on first load if none saved and enough players
+      shuffleTeams();
+    } else if (event.teams) {
+      // Teams exist — incrementally update to reflect participant changes
+      const updatedTeams = updateTeamsForParticipantChange(event.teams, joinedParticipants);
+      if (updatedTeams === null) {
+        // Not enough players left for teams — clear them
+        onUpdate({ ...event, teams: undefined, teamNames: undefined, winningTeam: undefined });
+      } else {
+        // Check if teams actually changed (avoid infinite loop)
+        const currentIds = event.teams.flatMap(t => t.map(m => m.userId)).sort().join(',');
+        const newIds = updatedTeams.flatMap(t => t.map(m => m.userId)).sort().join(',');
+        if (currentIds !== newIds) {
+          onUpdate({ ...event, teams: updatedTeams });
+        }
+      }
+    }
+  }, [event.id, joinedParticipants.length]);
+
   const currentUserParticipant = event.participants.find(p => p.userId === currentUser.id);
   const isCurrentUserJoined = currentUserParticipant?.status === 'joined';
 
   const iban = useMemo(() => convertToCZIBAN(effectiveAccountNumber), [effectiveAccountNumber]);
   const qrString = iban 
-    ? `SPD*1.0*ACC:${iban}*AM:${costPerPerson}.00*CC:CZK*MSG:Volejbal ${event.date}`
+    ? `SPD*1.0*ACC:${iban}*AM:${costPerPerson}.00*CC:CZK*MSG:${sportConfig.label} ${event.date}`
     : null;
 
   const refreshEventData = async () => {
@@ -122,6 +280,19 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
   const stopSaving = (userId: string) => setSavingUsers(prev => { const next = new Set(prev); next.delete(userId); return next; });
 
   const handleStatusChange = async (userId: string, status: Participant['status']) => {
+    // Check capacity before allowing join — auto-waitlist when full
+    let effectiveStatus = status;
+    if (status === 'joined') {
+      const currentJoined = event.participants.filter(p => p.status === 'joined');
+      const isAlreadyJoined = currentJoined.some(p => p.userId === userId);
+      if (!isAlreadyJoined && currentJoined.length >= sportConfig.maxPlayers) {
+        effectiveStatus = 'waitlist';
+        setCapacityError(`Kapacita ${sportConfig.maxPlayers} hráčů je plná — zařazeni do čekací listiny.`);
+        setTimeout(() => setCapacityError(null), 3000);
+      }
+    }
+    setCapacityError(null);
+
     const prevParticipants = event.participants;
     const existing = prevParticipants.find(p => p.userId === userId);
 
@@ -129,22 +300,48 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
     let optimisticParticipants: Participant[];
     if (existing) {
       optimisticParticipants = prevParticipants.map(p =>
-        p.userId === userId ? { ...p, status } : p
+        p.userId === userId ? { ...p, status: effectiveStatus } : p
       );
     } else {
       // New participant (current user joining for the first time)
       optimisticParticipants = [
         ...prevParticipants,
-        { userId, name: currentUser.name, photoUrl: currentUser.photoUrl, status, hasPaid: false },
+        { userId, name: currentUser.name, photoUrl: currentUser.photoUrl, status: effectiveStatus, hasPaid: false },
       ];
     }
 
-    // Optimistic UI update
-    onUpdate({ ...event, participants: optimisticParticipants });
+    // Auto-promote first waitlisted user when someone leaves/declines
+    if ((status === 'declined' || status === 'maybe') && existing?.status === 'joined') {
+      const waitlisted = optimisticParticipants.filter(p => p.status === 'waitlist');
+      if (waitlisted.length > 0) {
+        const promoted = waitlisted[0];
+        optimisticParticipants = optimisticParticipants.map(p =>
+          p.userId === promoted.userId ? { ...p, status: 'joined' as const } : p
+        );
+        // Persist promoted user's status change in background
+        storage.updateAttendance(event.id, promoted.userId, 'joined').catch(() => {});
+      }
+    }
+
+    // Optimistic UI update — also update teams to reflect participant change
+    const optimisticJoined = optimisticParticipants.filter(p => p.status === 'joined');
+    const updatedTeams = updateTeamsForParticipantChange(event.teams, optimisticJoined);
+    const teamUpdates: Partial<SportEvent> = {};
+    if (event.teams) {
+      if (updatedTeams === null) {
+        // Not enough players left — clear teams
+        teamUpdates.teams = undefined;
+        teamUpdates.teamNames = undefined;
+        teamUpdates.winningTeam = undefined;
+      } else {
+        teamUpdates.teams = updatedTeams;
+      }
+    }
+    onUpdate({ ...event, participants: optimisticParticipants, ...teamUpdates });
     startSaving(userId);
 
     try {
-      await storage.updateAttendance(event.id, userId, status);
+      await storage.updateAttendance(event.id, userId, effectiveStatus);
       // Background sync to get authoritative state (e.g. other users' changes)
       const allEvents = await storage.getEvents();
       const refreshed = allEvents.find(e => e.id === event.id);
@@ -330,7 +527,12 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
         <div className="space-y-6">
           <div>
             <h3 className="text-lg font-semibold text-slate-700 mb-4 flex items-center justify-between">
-              Účastníci ({countJoined})
+              <span className="flex items-center gap-2">
+                Účastníci ({countJoined}/{sportConfig.maxPlayers})
+                {isAtCapacity && (
+                  <span className="text-xs font-normal text-red-500 bg-red-50 px-2 py-0.5 rounded-full">Plná kapacita</span>
+                )}
+              </span>
               <span className="text-sm font-normal text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
                 {costPerPerson} Kč / os.
               </span>
@@ -344,24 +546,38 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
               </div>
             )}
 
+            {/* Capacity Error Message */}
+            {capacityError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm flex items-center gap-2">
+                <AlertTriangle size={16} />
+                {capacityError}
+              </div>
+            )}
+
             {/* Quick Join Button for Current User */}
-            {!isCurrentUserJoined && (
-              <button 
+            {!isCurrentUserJoined && currentUserParticipant?.status !== 'waitlist' && (
+              <button
                 onClick={() => handleStatusChange(currentUser.id, 'joined')}
                 disabled={savingUsers.has(currentUser.id)}
-                className="w-full mb-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md shadow-blue-200 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+                className={`w-full mb-4 py-3 text-white rounded-xl font-bold shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed ${
+                  isAtCapacity
+                    ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-200'
+                    : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200'
+                }`}
               >
                 {savingUsers.has(currentUser.id) ? (
                   <Loader2 size={20} className="animate-spin" />
                 ) : (
                   <Hand size={20} />
                 )}
-                Jdu hrát
+                {isAtCapacity ? 'Na čekací listinu' : 'Jdu hrát'}
               </button>
             )}
 
             <div className="space-y-2">
-              {sortedParticipants.map(p => {
+              {sortedParticipants
+                .filter(p => p.status !== 'declined' || p.userId === currentUser.id)
+                .map(p => {
                 const isMe = p.userId === currentUser.id;
                 const isSaving = savingUsers.has(p.userId);
 
@@ -370,7 +586,8 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
                     <div className="flex items-center gap-3">
                       <div className={`w-1.5 h-8 rounded-full ${
                         p.status === 'joined' ? 'bg-green-500' : 
-                        p.status === 'declined' ? 'bg-red-500' : 'bg-yellow-400'
+                        p.status === 'declined' ? 'bg-red-500' : 
+                        p.status === 'waitlist' ? 'bg-amber-500' : 'bg-yellow-400'
                       }`}></div>
 
                       {/* Photo with upload option for current user */}
@@ -449,7 +666,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
                         ) : (
                           // Read-only status for others
                           <div className="text-xs mt-0.5 font-medium text-slate-500 flex items-center gap-1">
-                            {p.status === 'joined' ? 'Jde hrát' : p.status === 'declined' ? 'Nejde' : 'Možná'}
+                            {p.status === 'joined' ? 'Jde hrát' : p.status === 'declined' ? 'Nejde' : p.status === 'waitlist' ? 'Čeká na místo' : 'Možná'}
                           </div>
                         )}
                       </div>
@@ -484,6 +701,39 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
                 <p className="text-center text-slate-400 py-4 italic">Zatím žádní účastníci.</p>
               )}
             </div>
+
+            {/* Waitlist Section */}
+            {waitlistedParticipants.length > 0 && (
+              <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3" data-testid="waitlist-section">
+                <h4 className="text-sm font-semibold text-amber-700 mb-2 flex items-center gap-1.5">
+                  <Users size={14} />
+                  Čekací listina ({waitlistedParticipants.length})
+                </h4>
+                <div className="space-y-1.5">
+                  {waitlistedParticipants.map((p, idx) => (
+                    <div key={p.userId} className="flex items-center gap-2 text-sm text-amber-800">
+                      <span className="w-5 h-5 rounded-full bg-amber-200 text-amber-700 flex items-center justify-center text-[10px] font-bold">
+                        {idx + 1}
+                      </span>
+                      {p.photoUrl ? (
+                        <img src={p.photoUrl} alt={p.name} className="w-6 h-6 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-amber-200 flex items-center justify-center text-[10px] font-bold text-amber-700">
+                          {p.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <span>{p.name}</span>
+                      {p.userId === currentUser.id && (
+                        <span className="text-xs text-amber-600">(Já)</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-amber-600 mt-2 italic">
+                  Automaticky zařazeni při uvolnění místa.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Team Split */}
@@ -501,7 +751,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
                 </h3>
                 <button
                   onClick={shuffleTeams}
-                  disabled={countJoined < 2}
+                  disabled={!canShuffleTeams}
                   className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <RefreshCw size={14} />
@@ -511,6 +761,8 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {event.teams.map((team, teamIdx) => {
                   const isWinner = event.winningTeam === teamIdx;
+                  const teamName = event.teamNames?.[teamIdx] ?? `Tým ${teamIdx + 1}`;
+                  const isEditingThisTeam = editingTeamNameIdx === teamIdx;
                   return (
                     <div key={teamIdx} className={`rounded-lg border-2 p-3 transition-all ${
                       isWinner
@@ -521,8 +773,38 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
                         isWinner ? 'text-green-700' : teamIdx === 0 ? 'text-blue-700' : 'text-orange-700'
                       }`}>
                         {isWinner && <Trophy size={14} />}
-                        Tým {teamIdx + 1} ({team.length})
-                        {isWinner && <span className="text-xs font-normal ml-1">— Výherce</span>}
+                        {isEditingThisTeam ? (
+                          <span className="flex items-center gap-1">
+                            <input
+                              type="text"
+                              value={tempTeamName}
+                              onChange={e => setTempTeamName(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Enter') handleSaveTeamName(); if (e.key === 'Escape') handleCancelEditTeamName(); }}
+                              className="w-24 px-1.5 py-0.5 text-sm border border-blue-300 rounded focus:ring-1 focus:ring-blue-200 outline-none bg-white"
+                              autoFocus
+                              data-testid={`team-name-input-${teamIdx}`}
+                            />
+                            <button onClick={handleSaveTeamName} className="text-green-600 hover:bg-green-50 p-0.5 rounded" data-testid={`team-name-save-${teamIdx}`}>
+                              <Check size={12} />
+                            </button>
+                            <button onClick={handleCancelEditTeamName} className="text-red-500 hover:bg-red-50 p-0.5 rounded" data-testid={`team-name-cancel-${teamIdx}`}>
+                              <X size={12} />
+                            </button>
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 group/teamname">
+                            {teamName} ({team.length})
+                            <button
+                              onClick={() => handleStartEditTeamName(teamIdx as 0 | 1)}
+                              className="opacity-0 group-hover/teamname:opacity-100 text-slate-400 hover:text-blue-600 p-0.5 rounded transition-opacity"
+                              title="Přejmenovat tým"
+                              data-testid={`team-name-edit-${teamIdx}`}
+                            >
+                              <Pencil size={10} />
+                            </button>
+                          </span>
+                        )}
+                        {isWinner && !isEditingThisTeam && <span className="text-xs font-normal ml-1">— Výherce</span>}
                       </h4>
                       <div className="space-y-1.5">
                         {team.map(p => (
@@ -545,23 +827,152 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
               {/* Winner buttons — only show when no winner yet */}
               {event.winningTeam === undefined && (
                 <div className="grid grid-cols-2 gap-2 mt-3">
-                  {[0, 1].map(idx => (
-                    <button
-                      key={idx}
-                      onClick={() => setWinner(idx as 0 | 1)}
-                      className="py-2 px-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    >
-                      <Trophy size={14} />
-                      Tým {idx + 1} vyhrál
-                    </button>
-                  ))}
+                  {[0, 1].map(idx => {
+                    const btnTeamName = event.teamNames?.[idx] ?? `Tým ${idx + 1}`;
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => setWinner(idx as 0 | 1)}
+                        className="py-2 px-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        data-testid={`winner-btn-${idx}`}
+                      >
+                        <Trophy size={14} />
+                        {btnTeamName} vyhrál
+                      </button>
+                    );
+                  })}
                 </div>
               )}
+              {/* Score tracking — show below teams when they exist */}
+              {event.teams && (
+                <div className="mt-3 bg-slate-50 rounded-lg border border-slate-200 p-3" data-testid="score-section">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                      Skóre setů
+                    </h4>
+                    {!isEditingScore ? (
+                      <button
+                        onClick={handleStartEditScore}
+                        className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1 px-2 py-1 rounded hover:bg-indigo-50 transition-colors"
+                        data-testid="score-edit-btn"
+                      >
+                        <Edit2 size={12} />
+                        {event.score ? 'Upravit' : 'Zadat skóre'}
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={handleSaveScore}
+                          className="text-xs text-green-600 hover:bg-green-50 px-2 py-1 rounded font-medium flex items-center gap-1 transition-colors"
+                          data-testid="score-save-btn"
+                        >
+                          <Check size={12} />
+                          Uložit
+                        </button>
+                        <button
+                          onClick={handleCancelScore}
+                          className="text-xs text-red-500 hover:bg-red-50 px-2 py-1 rounded font-medium flex items-center gap-1 transition-colors"
+                          data-testid="score-cancel-btn"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {isEditingScore ? (
+                    <div className="space-y-2">
+                      {/* Team name headers */}
+                      <div className="grid grid-cols-[auto_1fr_auto_1fr_auto] gap-2 items-center text-xs text-slate-500 font-medium">
+                        <span className="w-12"></span>
+                        <span className="text-center truncate">{event.teamNames?.[0] ?? 'Tým 1'}</span>
+                        <span></span>
+                        <span className="text-center truncate">{event.teamNames?.[1] ?? 'Tým 2'}</span>
+                        <span className="w-6"></span>
+                      </div>
+                      {setScores.map(([s0, s1], idx) => (
+                        <div key={idx} className="grid grid-cols-[auto_1fr_auto_1fr_auto] gap-2 items-center" data-testid={`score-set-${idx}`}>
+                          <span className="text-xs font-bold text-slate-400 w-12">Set {idx + 1}</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={s0}
+                            onChange={e => handleSetScoreChange(idx, 0, Math.max(0, Number(e.target.value)))}
+                            className="w-full px-2 py-1.5 text-sm text-center border border-slate-300 rounded focus:ring-1 focus:ring-blue-300 outline-none"
+                            data-testid={`score-set-${idx}-team-0`}
+                          />
+                          <span className="text-xs text-slate-300 font-bold">:</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={s1}
+                            onChange={e => handleSetScoreChange(idx, 1, Math.max(0, Number(e.target.value)))}
+                            className="w-full px-2 py-1.5 text-sm text-center border border-slate-300 rounded focus:ring-1 focus:ring-blue-300 outline-none"
+                            data-testid={`score-set-${idx}-team-1`}
+                          />
+                          <button
+                            onClick={() => handleRemoveSet(idx)}
+                            className="text-red-400 hover:text-red-600 p-0.5 rounded hover:bg-red-50 transition-colors"
+                            title="Odebrat set"
+                            data-testid={`score-remove-set-${idx}`}
+                          >
+                            <Minus size={14} />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        onClick={handleAddSet}
+                        className="w-full py-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center justify-center gap-1 border border-dashed border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
+                        data-testid="score-add-set-btn"
+                      >
+                        <Plus size={12} />
+                        Přidat set
+                      </button>
+                    </div>
+                  ) : event.score && event.score.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {/* Read-only score display */}
+                      <div className="grid grid-cols-[auto_1fr_auto_1fr] gap-2 items-center text-xs text-slate-500 font-medium">
+                        <span className="w-12"></span>
+                        <span className="text-center truncate">{event.teamNames?.[0] ?? 'Tým 1'}</span>
+                        <span></span>
+                        <span className="text-center truncate">{event.teamNames?.[1] ?? 'Tým 2'}</span>
+                      </div>
+                      {event.score.map(([s0, s1], idx) => (
+                        <div key={idx} className="grid grid-cols-[auto_1fr_auto_1fr] gap-2 items-center" data-testid={`score-display-set-${idx}`}>
+                          <span className="text-xs font-bold text-slate-400 w-12">Set {idx + 1}</span>
+                          <span className={`text-sm text-center font-mono font-semibold ${s0 > s1 ? 'text-green-600' : 'text-slate-600'}`}>{s0}</span>
+                          <span className="text-xs text-slate-300 font-bold">:</span>
+                          <span className={`text-sm text-center font-mono font-semibold ${s1 > s0 ? 'text-green-600' : 'text-slate-600'}`}>{s1}</span>
+                        </div>
+                      ))}
+                      {/* Set tally */}
+                      {(() => {
+                        const won0 = event.score.filter(([a, b]) => a > b).length;
+                        const won1 = event.score.filter(([a, b]) => b > a).length;
+                        return (
+                          <div className="pt-1.5 border-t border-slate-200 flex justify-center gap-2 text-xs font-semibold">
+                            <span className={won0 > won1 ? 'text-green-600' : 'text-slate-500'}>{won0}</span>
+                            <span className="text-slate-300">:</span>
+                            <span className={won1 > won0 ? 'text-green-600' : 'text-slate-500'}>{won1}</span>
+                            <span className="text-slate-400 font-normal ml-1">na sety</span>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-400 italic text-center py-1">
+                      Zatím žádné skóre.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Winner announced — prompt for new game */}
               {event.winningTeam !== undefined && (
                 <div className="mt-3 text-center text-sm text-green-600 font-medium flex items-center justify-center gap-1.5">
                   <Trophy size={14} />
-                  Tým {event.winningTeam + 1} vyhrál! Klikněte „Nová hra" pro další kolo.
+                  {event.teamNames?.[event.winningTeam] ?? `Tým ${event.winningTeam + 1}`} vyhrál! Klikněte „Nová hra" pro další kolo.
                 </div>
               )}
 
@@ -574,19 +985,37 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
                   <div className="space-y-2">
                     {[...event.gameHistory].reverse().map((round, idx) => {
                       const roundNum = event.gameHistory!.length - idx;
+                      const name0 = round.teamNames?.[0] ?? round.teams[0].map(p => p.name.split(' ')[0]).join(', ');
+                      const name1 = round.teamNames?.[1] ?? round.teams[1].map(p => p.name.split(' ')[0]).join(', ');
+                      const tooltip0 = round.teams[0].map(p => p.name).join(', ');
+                      const tooltip1 = round.teams[1].map(p => p.name).join(', ');
+                      const scoreStr = round.score && round.score.length > 0
+                        ? round.score.map(([a, b]) => `${a}:${b}`).join(', ')
+                        : null;
                       return (
-                        <div key={idx} className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
+                        <div key={idx} className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2" data-testid={`game-history-${roundNum}`}>
                           <span className="font-bold text-slate-400 w-6 shrink-0">#{roundNum}</span>
                           <div className="flex-1 flex items-center gap-1.5 min-w-0">
-                            <span className={`font-medium truncate ${round.winningTeam === 0 ? 'text-green-600' : 'text-slate-500'}`}>
+                            <span
+                              className={`font-medium truncate ${round.winningTeam === 0 ? 'text-green-600' : 'text-slate-500'}`}
+                              title={tooltip0}
+                            >
                               {round.winningTeam === 0 && '🏆 '}
-                              {round.teams[0].map(p => p.name.split(' ')[0]).join(', ')}
+                              {name0}
                             </span>
                             <span className="text-slate-300 font-bold shrink-0">vs</span>
-                            <span className={`font-medium truncate ${round.winningTeam === 1 ? 'text-green-600' : 'text-slate-500'}`}>
+                            <span
+                              className={`font-medium truncate ${round.winningTeam === 1 ? 'text-green-600' : 'text-slate-500'}`}
+                              title={tooltip1}
+                            >
                               {round.winningTeam === 1 && '🏆 '}
-                              {round.teams[1].map(p => p.name.split(' ')[0]).join(', ')}
+                              {name1}
                             </span>
+                            {scoreStr && (
+                              <span className="text-slate-400 font-mono ml-1 shrink-0" title="Skóre setů">
+                                ({scoreStr})
+                              </span>
+                            )}
                           </div>
                         </div>
                       );
@@ -620,7 +1049,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
                     <option value="" disabled>Vyberte účet...</option>
                     {bankAccounts.map(a => (
                       <option key={a.id} value={a.id}>
-                        {a.ownerName} — {a.accountNumber}
+                        {a.ownerName} — {maskAccountNumber(a.accountNumber)}
                       </option>
                     ))}
                   </select>
@@ -641,7 +1070,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, currentUser, ba
                     </span>
                   )}
                   <p className="text-sm font-mono text-slate-700 tracking-wider select-all truncate flex-1">
-                    {effectiveAccountNumber}
+                    {maskAccountNumber(effectiveAccountNumber)}
                   </p>
                   <button
                     onClick={handleCopyToClipboard}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { VolleyballEvent, User, DebtItem, BankAccount } from './types';
+import { SportEvent, User, DebtItem, BankAccount, SportConfig, SportType } from './types';
 import * as storage from './services/storage';
 import { calculateDebts } from './utils/debt';
 import { CalendarView } from './components/CalendarView';
@@ -19,7 +19,7 @@ import { isSameDay, startOfDay } from 'date-fns';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [events, setEvents] = useState<VolleyballEvent[]>([]);
+  const [events, setEvents] = useState<SportEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const [viewDate, setViewDate] = useState<Date>(new Date());
@@ -33,6 +33,8 @@ const App: React.FC = () => {
   const [showStats, setShowStats] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
   const [mobileView, setMobileView] = useState<MobileView>('calendar');
+  const [sportConfigs, setSportConfigs] = useState<SportConfig[]>([]);
+  const [sportFilter, setSportFilter] = useState<SportType | null>(null);
 
   // ── Data loading ──
 
@@ -55,10 +57,19 @@ const App: React.FC = () => {
     }
   };
 
+  const loadSportConfigs = async () => {
+    try {
+      setSportConfigs(await storage.getSportConfigs());
+    } catch (error) {
+      console.error("Failed to load sport configs", error);
+    }
+  };
+
   useEffect(() => {
     if (!currentUser) return;
     loadEvents();
     loadBankAccounts();
+    loadSportConfigs();
   }, [currentUser]);
 
   // Auto-select first upcoming event
@@ -102,7 +113,7 @@ const App: React.FC = () => {
     loadEvents();
   };
 
-  const handleCreateEvent = async (newEvent: VolleyballEvent) => {
+  const handleCreateEvent = async (newEvent: SportEvent) => {
     setIsLoading(true);
     const updatedList = await storage.createEvent(newEvent);
     setEvents(updatedList);
@@ -116,7 +127,7 @@ const App: React.FC = () => {
     setMobileView('detail');
   };
 
-  const handleUpdateEvent = async (updatedEvent: VolleyballEvent) => {
+  const handleUpdateEvent = async (updatedEvent: SportEvent) => {
     setEvents(await storage.updateEvent(updatedEvent));
   };
 
@@ -226,6 +237,9 @@ const App: React.FC = () => {
                 onCreateEvent={() => setIsModalOpen(true)}
                 showChevron
                 showAddButton={false}
+                sportConfigs={sportConfigs}
+                sportFilter={sportFilter}
+                onSportFilterChange={setSportFilter}
               />
             </section>
           </div>
@@ -239,6 +253,8 @@ const App: React.FC = () => {
                 event={selectedEvent}
                 currentUser={currentUser}
                 bankAccounts={bankAccounts}
+                sportConfigs={sportConfigs}
+                allEvents={events}
                 onUpdate={handleUpdateEvent}
                 onDelete={handleRequestDelete}
               />
@@ -259,6 +275,7 @@ const App: React.FC = () => {
               currentUser={currentUser}
               isLoading={isLoading}
               onClose={handleMobileBack}
+              sportConfigs={sportConfigs}
             />
           </div>
         )}
@@ -288,7 +305,7 @@ const App: React.FC = () => {
         <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
           <div className="flex items-center gap-3 font-bold text-xl text-slate-800">
             <div className="bg-blue-600 text-white p-2 rounded-lg"><Trophy size={20} /></div>
-            Volejbal Plánovač
+            Sport Plánovač
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm font-medium text-slate-600">Ahoj, {currentUser.name}</span>
@@ -327,6 +344,9 @@ const App: React.FC = () => {
             onDeleteEvent={handleRequestDelete}
             onShowUpcoming={handleShowUpcoming}
             onCreateEvent={() => setIsModalOpen(true)}
+            sportConfigs={sportConfigs}
+            sportFilter={sportFilter}
+            onSportFilterChange={setSportFilter}
           />
         </div>
       </div>
@@ -336,9 +356,9 @@ const App: React.FC = () => {
         {showChangelog ? (
           <ReleaseNotesPage onClose={() => setShowChangelog(false)} />
         ) : showStats ? (
-          <StatsPage events={events} currentUser={currentUser} isLoading={isLoading} onClose={() => setShowStats(false)} />
+          <StatsPage events={events} currentUser={currentUser} isLoading={isLoading} onClose={() => setShowStats(false)} sportConfigs={sportConfigs} />
         ) : selectedEvent ? (
-          <EventDetail event={selectedEvent} currentUser={currentUser} bankAccounts={bankAccounts} onUpdate={handleUpdateEvent} onDelete={handleRequestDelete} />
+          <EventDetail event={selectedEvent} currentUser={currentUser} bankAccounts={bankAccounts} sportConfigs={sportConfigs} allEvents={events} onUpdate={handleUpdateEvent} onDelete={handleRequestDelete} />
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4 min-h-[50vh]">
             <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center">
@@ -353,7 +373,7 @@ const App: React.FC = () => {
 
       {/* ═══ MODALS (shared) ═══ */}
       {isModalOpen && (
-        <CreateEventModal selectedDate={selectedDate || new Date()} onClose={() => setIsModalOpen(false)} onCreate={handleCreateEvent} />
+        <CreateEventModal selectedDate={selectedDate || new Date()} onClose={() => setIsModalOpen(false)} onCreate={handleCreateEvent} sportConfigs={sportConfigs} bankAccounts={bankAccounts} />
       )}
       <ConfirmModal
         isOpen={!!eventToDelete}
@@ -371,6 +391,8 @@ const App: React.FC = () => {
           onBankAccountsChange={setBankAccounts}
           onUserUpdate={handleUserUpdate}
           onShowChangelog={() => { setShowChangelog(true); setMobileView('changelog'); }}
+          sportConfigs={sportConfigs}
+          onSportConfigsChange={setSportConfigs}
         />
       )}
     </div>

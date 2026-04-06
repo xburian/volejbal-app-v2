@@ -2,9 +2,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EventCard } from './EventCard';
-import { VolleyballEvent } from '../types';
+import { SportEvent } from '../types';
 
-const mockEvent: VolleyballEvent = {
+const mockEvent: SportEvent = {
   id: 'evt-1',
   title: 'Volejbal Pondělí',
   date: '2026-03-30',
@@ -12,6 +12,7 @@ const mockEvent: VolleyballEvent = {
   location: 'Sportovní hala',
   totalCost: 1000,
   accountNumber: '123/0100',
+  sportType: 'volejbal',
   participants: [
     { userId: 'u1', name: 'Alice', status: 'joined', hasPaid: false },
     { userId: 'u2', name: 'Bob', status: 'joined', hasPaid: true },
@@ -93,5 +94,27 @@ describe('EventCard', () => {
     );
     expect(screen.getByTitle('Smazat událost')).toBeInTheDocument();
   });
-});
 
+  it('shows sport emoji for volejbal', () => {
+    render(
+      <EventCard event={mockEvent} isSelected={false} onSelect={vi.fn()} onDelete={vi.fn()} />
+    );
+    expect(screen.getByTestId('sport-emoji')).toHaveTextContent('🏐');
+  });
+
+  it('shows sport emoji for tenis', () => {
+    const tenisEvent: SportEvent = { ...mockEvent, sportType: 'tenis' };
+    render(
+      <EventCard event={tenisEvent} isSelected={false} onSelect={vi.fn()} onDelete={vi.fn()} />
+    );
+    expect(screen.getByTestId('sport-emoji')).toHaveTextContent('🎾');
+  });
+
+  it('defaults to volejbal emoji when sportType is undefined', () => {
+    const noTypeEvent: SportEvent = { ...mockEvent, sportType: undefined };
+    render(
+      <EventCard event={noTypeEvent} isSelected={false} onSelect={vi.fn()} onDelete={vi.fn()} />
+    );
+    expect(screen.getByTestId('sport-emoji')).toHaveTextContent('🏐');
+  });
+});

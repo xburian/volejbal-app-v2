@@ -13,14 +13,14 @@ import {
 } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { VolleyballEvent } from '../types';
+import { SportEvent } from '../types';
 
 interface CalendarViewProps {
   currentDate: Date; // The month currently being viewed
   selectedDate: Date | null; // The specifically selected day (if any)
   onDateChange: (date: Date) => void;
   onMonthChange: (date: Date) => void; // New prop to handle month navigation separately
-  events: VolleyballEvent[];
+  events: SportEvent[];
 }
 
 export const CalendarView: React.FC<CalendarViewProps> = ({ 

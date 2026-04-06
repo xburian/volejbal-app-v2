@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as storage from './storage';
-import { VolleyballEvent } from '../types';
+import { SportEvent } from '../types';
 
 // Spy on fetch to guarantee tests never hit the real API
 const fetchSpy = vi.spyOn(globalThis, 'fetch');
@@ -97,7 +97,7 @@ describe('Storage Service (localStorage)', () => {
   // ---- Events ----
 
   describe('Events', () => {
-    const makeEvent = (overrides: Partial<VolleyballEvent> = {}): VolleyballEvent => ({
+    const makeEvent = (overrides: Partial<SportEvent> = {}): SportEvent => ({
       id: 'evt-' + Date.now() + Math.random(),
       title: 'Test Match',
       date: '2024-06-15',
@@ -394,6 +394,49 @@ describe('Storage Service (localStorage)', () => {
       const allAttendance = JSON.parse(localStorage.getItem('volleyball_attendance_db_v1') || '[]');
       const orphaned = allAttendance.filter((a: any) => a.eventId === 'evt-to-delete');
       expect(orphaned).toHaveLength(0);
+    });
+  });
+
+  // ---- Sport Configs ----
+
+  describe('Sport Configs', () => {
+    it('returns default configs when none stored', async () => {
+      const configs = await storage.getSportConfigs();
+      expect(configs.length).toBeGreaterThan(0);
+      expect(configs[0].type).toBe('volejbal');
+      expect(configs[0].maxPlayers).toBe(12);
+    });
+
+    it('persists and retrieves updated configs', async () => {
+      const configs = await storage.getSportConfigs();
+      const updated = configs.map(c =>
+        c.type === 'tenis' ? { ...c, maxPlayers: 6 } : c
+      );
+      await storage.updateSportConfigs(updated);
+
+      const fetched = await storage.getSportConfigs();
+      const tenis = fetched.find(c => c.type === 'tenis');
+      expect(tenis?.maxPlayers).toBe(6);
+    });
+  });
+
+  // ---- Backward Compat ----
+
+  describe('Backward compatibility', () => {
+    it('hydrates events without sportType with volejbal fallback', async () => {
+      const rawEvents = [{
+        id: 'evt-old',
+        title: 'Legacy Game',
+        date: '2024-01-01',
+        time: '12:00',
+        location: 'Old Hall',
+        totalCost: 500,
+        accountNumber: '',
+      }];
+      localStorage.setItem('volleyball_events_db_v1', JSON.stringify(rawEvents));
+
+      const events = await storage.getEvents();
+      expect(events[0].sportType).toBe('volejbal');
     });
   });
 });

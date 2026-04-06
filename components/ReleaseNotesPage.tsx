@@ -107,7 +107,7 @@ const versions: { version: string; date: string; title: string; changes: ChangeE
         icon: <Sparkles size={16} />,
         title: 'Funkce',
         items: [
-          'Správa volejbalových událostí — vytváření, úprava, mazání',
+          'Správa sportovních událostí — vytváření, úprava, mazání',
           'Kalendářové zobrazení s přehledem nadcházejících akcí',
           'Účast hráčů — Jdu / Nejdu s automatickým počítáním',
           'Platby — sledování zaplacení, výpočet částky na osobu',
@@ -152,7 +152,7 @@ export const ReleaseNotesPage: React.FC<ReleaseNotesPageProps> = ({ onClose }) =
             <Sparkles size={24} className="text-amber-500" />
             Seznam změn
           </h1>
-          <p className="text-sm text-slate-500 mt-0.5">Co je nového ve Volejbal Plánovači</p>
+          <p className="text-sm text-slate-500 mt-0.5">Co je nového v Sport Plánovači</p>
         </div>
       </div>
 
@@ -211,7 +211,7 @@ export const ReleaseNotesPage: React.FC<ReleaseNotesPageProps> = ({ onClose }) =
 
       {/* Footer */}
       <div className="mt-8 text-center text-xs text-slate-400 pb-4">
-        Volejbal Plánovač — vytvořeno s ❤️ pro hráče
+        Sport Plánovač — vytvořeno s ❤️ pro hráče
       </div>
     </div>
   );

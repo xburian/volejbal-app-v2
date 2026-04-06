@@ -111,12 +111,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
           </div>
         )}
 
-        <div className="bg-blue-600 p-8 text-center text-white">
-          <div className="inline-block p-3 bg-white/20 rounded-full mb-4">
-            <Trophy size={40} />
+        <div className="bg-blue-600 px-6 py-4 text-center text-white flex items-center justify-center gap-3">
+          <div className="p-2 bg-white/20 rounded-full shrink-0">
+            <Trophy size={24} />
           </div>
-          <h1 className="text-2xl font-bold">Vítejte ve Volejbalu</h1>
-          <p className="text-blue-100 mt-2">Kdo dnes přišel?</p>
+          <div className="text-left">
+            <h1 className="text-xl font-bold leading-tight">Vítejte v Sport Plánovači</h1>
+            <p className="text-blue-100 text-sm">Kdo dnes přišel?</p>
+          </div>
         </div>
 
         <div className="p-6 md:p-8">

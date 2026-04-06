@@ -1,5 +1,5 @@
-import React from 'react';
-import { VolleyballEvent, User, UserStats, Badge, DuoStats } from '../types';
+import React, { useState, useMemo } from 'react';
+import { SportEvent, User, UserStats, Badge, DuoStats, SportConfig, SportType, SPORT_EMOJI } from '../types';
 import { useStatistics } from '../services/useStatistics';
 import {
   ArrowLeft, Loader2, Trophy, Flame, Ghost, HelpCircle, Wallet,
@@ -7,10 +7,11 @@ import {
 } from 'lucide-react';
 
 interface StatsPageProps {
-  events: VolleyballEvent[];
+  events: SportEvent[];
   currentUser: User;
   isLoading: boolean;
   onClose: () => void;
+  sportConfigs?: SportConfig[];
 }
 
 const badgeIcons: Record<string, React.ReactNode> = {
@@ -204,10 +205,59 @@ function BestDuos({ duos }: { duos: DuoStats[] }) {
   );
 }
 
-export const StatsPage: React.FC<StatsPageProps> = ({ events, currentUser, isLoading, onClose }) => {
-  const { leaderboard, paymentRanking, personalStats, badges, duoStats } = useStatistics(events, currentUser, false);
+function SportBreakdown({ events, sportConfigs }: { events: SportEvent[]; sportConfigs: SportConfig[] }) {
+  const breakdown = useMemo(() => {
+    const counts: Record<string, number> = {};
+    events.forEach(e => {
+      const t = e.sportType ?? 'volejbal';
+      counts[t] = (counts[t] || 0) + 1;
+    });
+    return sportConfigs
+      .map(c => ({ ...c, count: counts[c.type] || 0 }))
+      .filter(c => c.count > 0)
+      .sort((a, b) => b.count - a.count);
+  }, [events, sportConfigs]);
 
-  const hasEnoughData = events.length >= 3;
+  if (breakdown.length <= 1) return null;
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm" data-testid="sport-breakdown">
+      <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+        <BarChart3 size={18} className="text-indigo-500" />
+        Podle sportu
+      </h3>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {breakdown.map(s => (
+          <div key={s.type} className="bg-slate-50 rounded-xl p-3 flex items-center gap-2">
+            <span className="text-xl">{SPORT_EMOJI[s.type] ?? '🏅'}</span>
+            <div>
+              <div className="text-sm font-bold text-slate-700">{s.count}</div>
+              <div className="text-xs text-slate-500">{s.label}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export const StatsPage: React.FC<StatsPageProps> = ({ events, currentUser, isLoading, onClose, sportConfigs = [] }) => {
+  const [sportFilter, setSportFilter] = useState<SportType | null>(null);
+
+  const filteredEvents = useMemo(
+    () => sportFilter ? events.filter(e => (e.sportType ?? 'volejbal') === sportFilter) : events,
+    [events, sportFilter]
+  );
+
+  const { leaderboard, paymentRanking, personalStats, badges, duoStats } = useStatistics(filteredEvents, currentUser, false);
+
+  const hasEnoughData = filteredEvents.length >= 3;
+
+  // Compute which sports actually have events (for filter pills)
+  const activeSports = useMemo(() => {
+    const types = new Set(events.map(e => e.sportType ?? 'volejbal'));
+    return sportConfigs.filter(c => types.has(c.type));
+  }, [events, sportConfigs]);
 
   return (
     <div className="relative max-w-3xl mx-auto w-full">
@@ -232,14 +282,51 @@ export const StatsPage: React.FC<StatsPageProps> = ({ events, currentUser, isLoa
         </h2>
       </div>
 
+      {/* Sport Filter Tabs */}
+      {activeSports.length > 1 && (
+        <div className="flex flex-wrap gap-1.5 mb-6" data-testid="stats-sport-filter">
+          <button
+            onClick={() => setSportFilter(null)}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
+              sportFilter === null
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'
+            }`}
+          >
+            Vše
+          </button>
+          {activeSports.map(config => (
+            <button
+              key={config.type}
+              onClick={() => setSportFilter(sportFilter === config.type ? null : config.type)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border flex items-center gap-1 ${
+                sportFilter === config.type
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'
+              }`}
+            >
+              <span>{SPORT_EMOJI[config.type] ?? '🏅'}</span>
+              {config.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {!hasEnoughData ? (
         <div className="text-center py-16 text-slate-400 border-2 border-dashed border-slate-200 rounded-2xl">
           <BarChart3 size={48} className="mx-auto mb-4 text-slate-300" />
           <p className="text-lg font-medium">Zatím není dostatek dat</p>
-          <p className="text-sm mt-1">Vytvořte více událostí pro zobrazení statistik.</p>
+          <p className="text-sm mt-1">
+            {sportFilter ? 'Pro tento sport nemáte dostatek událostí.' : 'Vytvořte více událostí pro zobrazení statistik.'}
+          </p>
         </div>
       ) : (
         <div className="space-y-6">
+          {/* Sport Breakdown (only when showing all) */}
+          {!sportFilter && sportConfigs.length > 0 && (
+            <SportBreakdown events={events} sportConfigs={sportConfigs} />
+          )}
+
           {/* Personal Stats */}
           {personalStats && <PersonalStatsCard stats={personalStats} />}
 

@@ -1,12 +1,12 @@
 import React from 'react';
 import { Trophy, LogOut, ArrowLeft } from 'lucide-react';
 import { MobileView } from './MobileBottomNav';
-import { User, VolleyballEvent } from '../types';
+import { User, SportEvent } from '../types';
 
 interface MobileHeaderProps {
   mobileView: MobileView;
   currentUser: User;
-  selectedEvent: VolleyballEvent | undefined;
+  selectedEvent: SportEvent | undefined;
   onBack: () => void;
   onLogout: () => void;
 }
@@ -66,7 +66,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
           <>
             <div className="flex items-center gap-2 font-bold text-lg">
               <Trophy size={24} />
-              <span>Volejbal</span>
+              <span>Sport Plánovač</span>
             </div>
             <div className="flex items-center gap-2">
               {currentUser.photoUrl && (

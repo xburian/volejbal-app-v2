@@ -1,11 +1,11 @@
 import React from 'react';
-import { VolleyballEvent } from '../types';
+import { SportEvent, SPORT_EMOJI, SportType } from '../types';
 import { Trash2, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
 interface EventCardProps {
-  event: VolleyballEvent;
+  event: SportEvent;
   isSelected: boolean;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
@@ -21,6 +21,8 @@ export const EventCard: React.FC<EventCardProps> = ({
   showChevron = false,
 }) => {
   const joinedCount = event.participants.filter(p => p.status === 'joined').length;
+  const sportType = (event.sportType ?? 'volejbal') as SportType;
+  const emoji = SPORT_EMOJI[sportType] ?? '🏅';
 
   return (
     <div
@@ -34,7 +36,8 @@ export const EventCard: React.FC<EventCardProps> = ({
       `}
     >
       <div className="flex justify-between items-start mb-2">
-        <h4 className={`font-bold pr-6 ${isSelected ? 'text-blue-900' : 'text-slate-800'}`}>
+        <h4 className={`font-bold pr-6 flex items-center gap-1.5 ${isSelected ? 'text-blue-900' : 'text-slate-800'}`}>
+          <span data-testid="sport-emoji">{emoji}</span>
           {event.title}
         </h4>
         <div className="flex flex-col items-end gap-1">

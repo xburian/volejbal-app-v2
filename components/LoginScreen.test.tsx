@@ -24,7 +24,7 @@ describe('LoginScreen - Photo Upload Feature', () => {
     render(<LoginScreen onLogin={mockOnLogin} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Vítejte ve Volejbalu')).toBeInTheDocument();
+      expect(screen.getByText('Vítejte v Sport Plánovači')).toBeInTheDocument();
     });
 
     expect(screen.getByText(/Přidat/)).toBeInTheDocument();
@@ -40,7 +40,7 @@ describe('LoginScreen - Photo Upload Feature', () => {
     render(<LoginScreen onLogin={mockOnLogin} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Vítejte ve Volejbalu')).toBeInTheDocument();
+      expect(screen.getByText('Vítejte v Sport Plánovači')).toBeInTheDocument();
     });
 
     const input = screen.getByPlaceholderText('Vaše jméno...');
@@ -81,7 +81,7 @@ describe('LoginScreen - Photo Upload Feature', () => {
     render(<LoginScreen onLogin={mockOnLogin} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Vítejte ve Volejbalu')).toBeInTheDocument();
+      expect(screen.getByText('Vítejte v Sport Plánovači')).toBeInTheDocument();
     });
 
     // Find the file input

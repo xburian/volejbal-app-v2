@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { calculateDebts } from './debt';
-import { VolleyballEvent, User } from '../types';
+import { SportEvent, User } from '../types';
 
 describe('calculateDebts', () => {
   const user: User = { id: 'u1', name: 'Alice' };
 
-  const makeEvent = (overrides: Partial<VolleyballEvent> = {}): VolleyballEvent => ({
+  const makeEvent = (overrides: Partial<SportEvent> = {}): SportEvent => ({
     id: 'e1',
     title: 'Game',
     date: '2026-03-20',
@@ -14,6 +14,7 @@ describe('calculateDebts', () => {
     totalCost: 1000,
     accountNumber: '123/0100',
     participants: [],
+    sportType: 'volejbal',
     ...overrides,
   });
 
@@ -121,5 +122,48 @@ describe('calculateDebts', () => {
     const debts = calculateDebts(events, user);
     expect(debts[0].amount).toBe(1000); // only 1 joined
   });
-});
 
+  it('returns empty array when user is on waitlist', () => {
+    const events = [makeEvent({
+      date: '2026-03-20',
+      participants: [{ userId: 'u1', name: 'Alice', status: 'waitlist', hasPaid: false }],
+    })];
+    expect(calculateDebts(events, user)).toEqual([]);
+  });
+
+  it('ignores waitlisted participants in cost split', () => {
+    const events = [makeEvent({
+      date: '2026-03-20', totalCost: 1000,
+      participants: [
+        { userId: 'u1', name: 'Alice', status: 'joined', hasPaid: false },
+        { userId: 'u2', name: 'Bob', status: 'joined', hasPaid: true },
+        { userId: 'u3', name: 'Carl', status: 'waitlist', hasPaid: false },
+      ],
+    })];
+    const debts = calculateDebts(events, user);
+    expect(debts[0].amount).toBe(500); // 1000/2, waitlisted Carl excluded
+  });
+
+  it('calculates debts correctly for different sport types', () => {
+    const events = [
+      makeEvent({
+        id: 'e1', date: '2026-03-20', totalCost: 500, sportType: 'tenis',
+        participants: [
+          { userId: 'u1', name: 'Alice', status: 'joined', hasPaid: false },
+          { userId: 'u2', name: 'Bob', status: 'joined', hasPaid: true },
+        ],
+      }),
+      makeEvent({
+        id: 'e2', date: '2026-03-15', totalCost: 1000, sportType: 'volejbal',
+        participants: [
+          { userId: 'u1', name: 'Alice', status: 'joined', hasPaid: false },
+          { userId: 'u2', name: 'Bob', status: 'joined', hasPaid: true },
+        ],
+      }),
+    ];
+    const debts = calculateDebts(events, user);
+    expect(debts).toHaveLength(2);
+    expect(debts[0].amount).toBe(250); // tenis: 500/2
+    expect(debts[1].amount).toBe(500); // volejbal: 1000/2
+  });
+});

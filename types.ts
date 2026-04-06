@@ -1,3 +1,36 @@
+export type SportType = 'volejbal' | 'tenis' | 'badminton';
+
+/** Runtime array of allowed sport types — used for validation / filtering */
+export const VALID_SPORT_TYPES: SportType[] = ['volejbal', 'tenis', 'badminton'];
+
+export const SPORT_EMOJI: Record<SportType, string> = {
+  volejbal: '🏐',
+  tenis: '🎾',
+  badminton: '🏸',
+};
+
+/** Mask a bank account number, showing only the last 8 characters */
+export const maskAccountNumber = (accountNumber: string): string => {
+  if (accountNumber.length <= 8) return accountNumber;
+  return '•••' + accountNumber.slice(-8);
+};
+
+export interface SportConfig {
+  type: SportType;
+  label: string;
+  maxPlayers: number;
+  defaultCost: number;
+  defaultLocation: string;
+  /** null = split evenly into 2 teams, number = fixed team size (e.g. 2 for doubles) */
+  teamSize: number | null;
+}
+
+export const DEFAULT_SPORT_CONFIGS: SportConfig[] = [
+  { type: 'volejbal', label: 'Volejbal', maxPlayers: 12, defaultCost: 1000, defaultLocation: 'Hala', teamSize: null },
+  { type: 'tenis', label: 'Tenis', maxPlayers: 4, defaultCost: 500, defaultLocation: 'Tenisový kurt', teamSize: 2 },
+  { type: 'badminton', label: 'Badminton', maxPlayers: 4, defaultCost: 400, defaultLocation: 'Sportovní centrum', teamSize: 2 },
+];
+
 export interface User {
   id: string;
   name: string;
@@ -15,7 +48,7 @@ export interface Participant {
   userId: string; // Foreign key to User
   name: string;   // Denormalized name for display
   photoUrl?: string; // Denormalized photo for display
-  status: 'joined' | 'declined' | 'maybe';
+  status: 'joined' | 'declined' | 'maybe' | 'waitlist';
   hasPaid: boolean;
 }
 
@@ -25,12 +58,20 @@ export interface TeamMember {
   photoUrl?: string;
 }
 
+/** Default team color names — randomly assigned on shuffle */
+export const TEAM_COLOR_NAMES = [
+  'Červení', 'Modří', 'Zelení', 'Žlutí', 'Oranžoví', 'Fialový',
+] as const;
+
 export interface GameRound {
   teams: [TeamMember[], TeamMember[]];
+  teamNames?: [string, string];
   winningTeam?: 0 | 1;
+  /** Set scores for the round, e.g. [[25,20],[25,18],[22,25]] */
+  score?: [number, number][];
 }
 
-export interface VolleyballEvent {
+export interface SportEvent {
   id: string;
   title: string;
   date: string; // ISO string YYYY-MM-DD
@@ -42,20 +83,27 @@ export interface VolleyballEvent {
   description?: string;
   participants: Participant[]; // Constructed/Hydrated array, not necessarily stored directly
   teams?: [TeamMember[], TeamMember[]]; // current round team split
+  teamNames?: [string, string]; // current round team names
   winningTeam?: 0 | 1; // current round winner
+  /** Set scores for the current round */
+  score?: [number, number][];
   gameHistory?: GameRound[]; // completed previous rounds
+  sportType?: SportType; // optional for backward compat — defaults to 'volejbal'
 }
+
+/** @deprecated Use SportEvent instead */
+export type VolleyballEvent = SportEvent;
 
 export interface AttendanceRecord {
   eventId: string;
   userId: string;
-  status: 'joined' | 'declined' | 'maybe';
+  status: 'joined' | 'declined' | 'maybe' | 'waitlist';
   hasPaid: boolean;
   timestamp: number;
 }
 
 export interface DebtItem {
-  event: VolleyballEvent;
+  event: SportEvent;
   amount: number;
   daysOverdue: number;
 }

@@ -17,6 +17,7 @@ vi.mock('./services/storage', () => ({
   deleteEvent: vi.fn(),
   setAttendance: vi.fn(),
   getBankAccounts: vi.fn(),
+  getSportConfigs: vi.fn(),
 }));
 
 describe('App Integration', () => {
@@ -27,6 +28,7 @@ describe('App Integration', () => {
     vi.mocked(storage.getUsers).mockResolvedValue([]);
     vi.mocked(storage.getEvents).mockResolvedValue([]);
     vi.mocked(storage.getBankAccounts).mockResolvedValue([]);
+    vi.mocked(storage.getSportConfigs).mockResolvedValue([]);
   });
 
   it('shows login screen initially', async () => {
@@ -35,7 +37,7 @@ describe('App Integration', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('Vítejte ve Volejbalu')).toBeInTheDocument();
+      expect(screen.getByText('Vítejte v Sport Plánovači')).toBeInTheDocument();
       expect(screen.getByText('Nový hráč')).toBeInTheDocument();
     });
   });
@@ -51,7 +53,7 @@ describe('App Integration', () => {
 
     // Wait for the login screen to fully load
     await waitFor(() => {
-      expect(screen.getByText('Vítejte ve Volejbalu')).toBeInTheDocument();
+      expect(screen.getByText('Vítejte v Sport Plánovači')).toBeInTheDocument();
       expect(screen.getByText('Nový hráč')).toBeInTheDocument();
     });
 
@@ -63,7 +65,7 @@ describe('App Integration', () => {
 
     // Wait for app to transition to main screen and show user greeting
     await waitFor(() => {
-      expect(screen.getByText('Volejbal Plánovač')).toBeInTheDocument();
+      expect(screen.getAllByText('Sport Plánovač').length).toBeGreaterThan(0);
     }, { timeout: 5000 });
 
     // Check that user greeting is present - it's rendered as "Ahoj, Honza" together
@@ -83,7 +85,7 @@ describe('App Integration', () => {
     
     // 2. Wait for login screen to load and show the user
     await waitFor(() => {
-      expect(screen.getByText('Vítejte ve Volejbalu')).toBeInTheDocument();
+      expect(screen.getByText('Vítejte v Sport Plánovači')).toBeInTheDocument();
     });
 
     // Wait a bit for users to load
@@ -97,7 +99,7 @@ describe('App Integration', () => {
 
     // Wait for main app to load
     await waitFor(() => {
-      expect(screen.getByText('Volejbal Plánovač')).toBeInTheDocument();
+      expect(screen.getAllByText('Sport Plánovač').length).toBeGreaterThan(0);
     }, { timeout: 5000 });
 
     // 3. Open Modal - find the Přidat button
@@ -153,7 +155,7 @@ describe('App Integration', () => {
     
     // Wait for login screen to load
     await waitFor(() => {
-      expect(screen.getByText('Vítejte ve Volejbalu')).toBeInTheDocument();
+      expect(screen.getByText('Vítejte v Sport Plánovači')).toBeInTheDocument();
     });
 
     // Wait for user to appear and click it
@@ -204,7 +206,7 @@ describe('Calendar Date Selection', () => {
 
     // Wait for login screen to load
     await waitFor(() => {
-      expect(screen.getByText('Vítejte ve Volejbalu')).toBeInTheDocument();
+      expect(screen.getByText('Vítejte v Sport Plánovači')).toBeInTheDocument();
     });
 
     // Wait for users to load
@@ -218,7 +220,7 @@ describe('Calendar Date Selection', () => {
 
     // Wait for main app to load
     await waitFor(() => {
-      expect(screen.getByText('Volejbal Plánovač')).toBeInTheDocument();
+      expect(screen.getAllByText('Sport Plánovač').length).toBeGreaterThan(0);
     }, { timeout: 5000 });
 
     // Click on today's date in the calendar
@@ -291,7 +293,7 @@ describe('Calendar Date Selection', () => {
 
     // Wait for login screen to load
     await waitFor(() => {
-      expect(screen.getByText('Vítejte ve Volejbalu')).toBeInTheDocument();
+      expect(screen.getByText('Vítejte v Sport Plánovači')).toBeInTheDocument();
     });
 
     // Wait for users to load
@@ -305,7 +307,7 @@ describe('Calendar Date Selection', () => {
 
     // Wait for main app to load and events to render
     await waitFor(() => {
-      expect(screen.getByText('Volejbal Plánovač')).toBeInTheDocument();
+      expect(screen.getAllByText('Sport Plánovač').length).toBeGreaterThan(0);
       expect(screen.getAllByText('Večerní volejbal').length).toBeGreaterThan(0);
     }, { timeout: 5000 });
 
@@ -365,7 +367,7 @@ describe('Calendar Date Selection', () => {
 
     // Wait for login screen to load
     await waitFor(() => {
-      expect(screen.getByText('Vítejte ve Volejbalu')).toBeInTheDocument();
+      expect(screen.getByText('Vítejte v Sport Plánovači')).toBeInTheDocument();
     });
 
     // Wait for users to load
@@ -379,7 +381,7 @@ describe('Calendar Date Selection', () => {
 
     // Wait for main app to load - event should be auto-selected (upcoming)
     await waitFor(() => {
-      expect(screen.getByText('Volejbal Plánovač')).toBeInTheDocument();
+      expect(screen.getAllByText('Sport Plánovač').length).toBeGreaterThan(0);
     }, { timeout: 5000 });
 
     // First click on tomorrow to select the event
