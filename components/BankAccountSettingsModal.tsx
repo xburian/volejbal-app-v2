@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { BankAccount, User } from '../types';
+import { BankAccount, User, SportConfig, maskAccountNumber } from '../types';
 import * as storage from '../services/storage';
-import { X, Landmark, UserCircle, Loader2, AlertTriangle, Sparkles, Camera, Pencil, Check, Trash2, Settings as Settings2Icon } from 'lucide-react';
+import { X, Landmark, UserCircle, Loader2, AlertTriangle, Sparkles, Camera, Pencil, Check, Trash2, Settings as Settings2Icon, Dumbbell } from 'lucide-react';
 
 interface BankAccountSettingsModalProps {
   isOpen: boolean;
@@ -11,6 +11,8 @@ interface BankAccountSettingsModalProps {
   onBankAccountsChange: (accounts: BankAccount[]) => void;
   onUserUpdate: (user: User) => void;
   onShowChangelog?: () => void;
+  sportConfigs?: SportConfig[];
+  onSportConfigsChange?: (configs: SportConfig[]) => void;
 }
 
 export const BankAccountSettingsModal: React.FC<BankAccountSettingsModalProps> = ({
@@ -21,6 +23,8 @@ export const BankAccountSettingsModal: React.FC<BankAccountSettingsModalProps> =
   onBankAccountsChange,
   onUserUpdate,
   onShowChangelog,
+  sportConfigs = [],
+  onSportConfigsChange,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +39,11 @@ export const BankAccountSettingsModal: React.FC<BankAccountSettingsModalProps> =
   // My account form
   const [myOwnerName, setMyOwnerName] = useState(currentUser.name);
   const [myAccountNumber, setMyAccountNumber] = useState('');
+
+  // Sport config editing
+  const [editingSport, setEditingSport] = useState<string | null>(null);
+  const [tempMaxPlayers, setTempMaxPlayers] = useState(0);
+  const [tempDefaultCost, setTempDefaultCost] = useState(0);
 
   if (!isOpen) return null;
 
@@ -126,6 +135,25 @@ export const BankAccountSettingsModal: React.FC<BankAccountSettingsModalProps> =
       setMyAccountNumber('');
     } catch (err: any) {
       setError(err.message || 'Chyba při vytváření účtu.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSaveSportConfig = async (type: string) => {
+    const updated = sportConfigs.map(c =>
+      c.type === type ? { ...c, maxPlayers: tempMaxPlayers, defaultCost: tempDefaultCost } : c
+    );
+    setIsLoading(true);
+    setError(null);
+    try {
+      const saved = await storage.updateSportConfigs(updated);
+      onSportConfigsChange?.(saved);
+      setEditingSport(null);
+      setSuccessMessage('Nastavení sportu uloženo.');
+      setTimeout(() => setSuccessMessage(null), 2500);
+    } catch (err: any) {
+      setError(err.message || 'Chyba při ukládání nastavení sportu.');
     } finally {
       setIsLoading(false);
     }
@@ -292,7 +320,7 @@ export const BankAccountSettingsModal: React.FC<BankAccountSettingsModalProps> =
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-slate-500">Číslo účtu</p>
-                    <p className="font-mono font-medium text-slate-800">{myAccount.accountNumber}</p>
+                    <p className="font-mono font-medium text-slate-800">{maskAccountNumber(myAccount.accountNumber)}</p>
                   </div>
                 </div>
                 <p className="text-xs text-slate-400 mt-2 italic">
@@ -339,6 +367,89 @@ export const BankAccountSettingsModal: React.FC<BankAccountSettingsModalProps> =
               </form>
             )}
           </div>
+
+          {/* ---- SPORT CONFIGS ---- */}
+          {sportConfigs.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+                <Dumbbell size={16} className="text-blue-500" />
+                Typy sportů
+              </h4>
+
+              <div className="space-y-2">
+                {sportConfigs.map(config => (
+                  <div key={config.type} className="bg-slate-50 border border-slate-200 rounded-lg p-3" data-testid={`sport-config-${config.type}`}>
+                    {editingSport === config.type ? (
+                      <div className="space-y-2">
+                        <p className="font-medium text-slate-800 text-sm">{config.label}</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-xs text-slate-500 mb-0.5">Max hráčů</label>
+                            <input
+                              type="number"
+                              min="2"
+                              value={tempMaxPlayers}
+                              onChange={e => setTempMaxPlayers(Number(e.target.value))}
+                              className="w-full px-2 py-1 border border-blue-300 rounded text-sm focus:ring-1 focus:ring-blue-200 outline-none"
+                              data-testid={`sport-max-players-input-${config.type}`}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-500 mb-0.5">Výchozí cena (Kč)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={tempDefaultCost}
+                              onChange={e => setTempDefaultCost(Number(e.target.value))}
+                              className="w-full px-2 py-1 border border-blue-300 rounded text-sm focus:ring-1 focus:ring-blue-200 outline-none"
+                              data-testid={`sport-default-cost-input-${config.type}`}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleSaveSportConfig(config.type)}
+                            disabled={isLoading}
+                            className="text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                            data-testid={`sport-save-btn-${config.type}`}
+                          >
+                            <Check size={16} />
+                          </button>
+                          <button
+                            onClick={() => setEditingSport(null)}
+                            className="text-red-500 hover:bg-red-50 p-1 rounded transition-colors"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-slate-800 text-sm">{config.label}</p>
+                          <p className="text-xs text-slate-500">
+                            Max: {config.maxPlayers} hráčů • {config.defaultCost} Kč
+                            {config.teamSize && ` • Tým: ${config.teamSize}`}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setEditingSport(config.type);
+                            setTempMaxPlayers(config.maxPlayers);
+                            setTempDefaultCost(config.defaultCost);
+                          }}
+                          className="text-slate-400 hover:text-blue-600 p-1 rounded transition-colors"
+                          data-testid={`sport-edit-btn-${config.type}`}
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

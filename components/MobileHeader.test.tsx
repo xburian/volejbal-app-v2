@@ -2,10 +2,10 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MobileHeader } from './MobileHeader';
-import { User, VolleyballEvent } from '../types';
+import { User, SportEvent } from '../types';
 
 const mockUser: User = { id: 'u1', name: 'Honza', photoUrl: 'photo.jpg' };
-const mockEvent: VolleyballEvent = {
+const mockEvent: SportEvent = {
   id: 'e1',
   title: 'Volejbal Pondělí',
   date: '2026-03-30',
@@ -27,7 +27,7 @@ describe('MobileHeader', () => {
         onLogout={vi.fn()}
       />
     );
-    expect(screen.getByText('Volejbal')).toBeInTheDocument();
+    expect(screen.getByText('Sport Plánovač')).toBeInTheDocument();
     expect(screen.getByTestId('mobile-logout')).toBeInTheDocument();
     expect(screen.queryByTestId('mobile-back')).not.toBeInTheDocument();
   });

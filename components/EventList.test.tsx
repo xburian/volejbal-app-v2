@@ -2,9 +2,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EventList } from './EventList';
-import { VolleyballEvent } from '../types';
+import { SportEvent, DEFAULT_SPORT_CONFIGS } from '../types';
 
-const makeEvent = (id: string, title: string): VolleyballEvent => ({
+const makeEvent = (id: string, title: string, sportType?: string): SportEvent => ({
   id,
   title,
   date: '2026-03-30',
@@ -12,6 +12,7 @@ const makeEvent = (id: string, title: string): VolleyballEvent => ({
   location: 'Hall',
   totalCost: 1000,
   accountNumber: '',
+  sportType: (sportType ?? 'volejbal') as any,
   participants: [
     { userId: 'u1', name: 'A', status: 'joined', hasPaid: false },
   ],
@@ -95,6 +96,113 @@ describe('EventList', () => {
   it('does not show back-to-upcoming button in upcoming mode', () => {
     render(<EventList {...baseProps} events={[]} />);
     expect(screen.queryByText('Zobrazit nadcházející')).not.toBeInTheDocument();
+  });
+
+  describe('Sport Filter', () => {
+    it('renders sport filter pills when sportConfigs and onSportFilterChange are provided', () => {
+      render(
+        <EventList
+          {...baseProps}
+          events={[]}
+          sportConfigs={DEFAULT_SPORT_CONFIGS}
+          sportFilter={null}
+          onSportFilterChange={vi.fn()}
+        />
+      );
+      expect(screen.getByTestId('sport-filter')).toBeInTheDocument();
+      expect(screen.getByText('Vše')).toBeInTheDocument();
+      expect(screen.getByText('Volejbal')).toBeInTheDocument();
+      expect(screen.getByText('Tenis')).toBeInTheDocument();
+    });
+
+    it('does not render sport filter when no sportConfigs', () => {
+      render(<EventList {...baseProps} events={[]} />);
+      expect(screen.queryByTestId('sport-filter')).not.toBeInTheDocument();
+    });
+
+    it('calls onSportFilterChange when sport pill is clicked', async () => {
+      const onSportFilterChange = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <EventList
+          {...baseProps}
+          events={[]}
+          sportConfigs={DEFAULT_SPORT_CONFIGS}
+          sportFilter={null}
+          onSportFilterChange={onSportFilterChange}
+        />
+      );
+      await user.click(screen.getByTestId('sport-filter-tenis'));
+      expect(onSportFilterChange).toHaveBeenCalledWith('tenis');
+    });
+
+    it('calls onSportFilterChange with null when clicking active filter', async () => {
+      const onSportFilterChange = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <EventList
+          {...baseProps}
+          events={[]}
+          sportConfigs={DEFAULT_SPORT_CONFIGS}
+          sportFilter={'tenis'}
+          onSportFilterChange={onSportFilterChange}
+        />
+      );
+      await user.click(screen.getByTestId('sport-filter-tenis'));
+      expect(onSportFilterChange).toHaveBeenCalledWith(null);
+    });
+
+    it('filters events by sport type', () => {
+      const events = [
+        makeEvent('e1', 'Volejbal Game', 'volejbal'),
+        makeEvent('e2', 'Tenis Match', 'tenis'),
+        makeEvent('e3', 'Badminton Game', 'badminton'),
+      ];
+      render(
+        <EventList
+          {...baseProps}
+          events={events}
+          sportConfigs={DEFAULT_SPORT_CONFIGS}
+          sportFilter={'tenis'}
+          onSportFilterChange={vi.fn()}
+        />
+      );
+      expect(screen.queryByText('Volejbal Game')).not.toBeInTheDocument();
+      expect(screen.getByText('Tenis Match')).toBeInTheDocument();
+      expect(screen.queryByText('Badminton Game')).not.toBeInTheDocument();
+    });
+
+    it('shows all events when filter is null', () => {
+      const events = [
+        makeEvent('e1', 'Volejbal Game', 'volejbal'),
+        makeEvent('e2', 'Tenis Match', 'tenis'),
+      ];
+      render(
+        <EventList
+          {...baseProps}
+          events={events}
+          sportConfigs={DEFAULT_SPORT_CONFIGS}
+          sportFilter={null}
+          onSportFilterChange={vi.fn()}
+        />
+      );
+      expect(screen.getByText('Volejbal Game')).toBeInTheDocument();
+      expect(screen.getByText('Tenis Match')).toBeInTheDocument();
+    });
+
+    it('shows empty state for filtered sport with no events', () => {
+      const events = [makeEvent('e1', 'Volejbal Game', 'volejbal')];
+      render(
+        <EventList
+          {...baseProps}
+          events={events}
+          sportConfigs={DEFAULT_SPORT_CONFIGS}
+          sportFilter={'tenis'}
+          onSportFilterChange={vi.fn()}
+        />
+      );
+      expect(screen.getByText('Žádné události pro vybraný sport.')).toBeInTheDocument();
+    });
   });
 });
 

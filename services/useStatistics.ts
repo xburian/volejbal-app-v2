@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { VolleyballEvent, User, UserStats, MonthlyTrend, Badge, DuoStats, GameRound } from '../types';
+import { SportEvent, User, UserStats, MonthlyTrend, Badge, DuoStats, GameRound } from '../types';
 import { format, startOfDay } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
@@ -13,7 +13,7 @@ interface StatisticsResult {
   isReady: boolean;
 }
 
-function computeUserStats(events: VolleyballEvent[]): Map<string, UserStats> {
+function computeUserStats(events: SportEvent[]): Map<string, UserStats> {
   const statsMap = new Map<string, UserStats>();
 
   // Sort events by date for streak calculation
@@ -191,8 +191,8 @@ function computeUserStats(events: VolleyballEvent[]): Map<string, UserStats> {
   return statsMap;
 }
 
-function computeMonthlyTrends(events: VolleyballEvent[]): MonthlyTrend[] {
-  const monthMap = new Map<string, { events: VolleyballEvent[] }>();
+function computeMonthlyTrends(events: SportEvent[]): MonthlyTrend[] {
+  const monthMap = new Map<string, { events: SportEvent[] }>();
 
   for (const event of events) {
     const month = event.date.substring(0, 7); // YYYY-MM
@@ -324,7 +324,7 @@ function computeBadges(statsMap: Map<string, UserStats>): Badge[] {
   return badges;
 }
 
-function computeDuoStats(events: VolleyballEvent[]): DuoStats[] {
+function computeDuoStats(events: SportEvent[]): DuoStats[] {
   // Track co-wins for every pair of players
   const pairMap = new Map<string, { players: [string, string]; names: [string, string]; photos: [string | undefined, string | undefined]; played: number; won: number }>();
 
@@ -383,7 +383,7 @@ function computeDuoStats(events: VolleyballEvent[]): DuoStats[] {
 }
 
 export function useStatistics(
-  events: VolleyballEvent[],
+  events: SportEvent[],
   currentUser: User | null,
   isLoading?: boolean
 ): StatisticsResult {

@@ -1,11 +1,11 @@
-import { VolleyballEvent, DebtItem, User } from '../types';
+import { SportEvent, DebtItem, User } from '../types';
 import { differenceInCalendarDays } from 'date-fns';
 
 /**
  * Calculate unpaid debts for a given user across all events.
  * Pure function — easy to test without any React.
  */
-export function calculateDebts(events: VolleyballEvent[], currentUser: User): DebtItem[] {
+export function calculateDebts(events: SportEvent[], currentUser: User): DebtItem[] {
   const today = new Date();
   const debts: DebtItem[] = [];
 

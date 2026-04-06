@@ -1,10 +1,11 @@
-import { VolleyballEvent, User, AttendanceRecord, Participant, BankAccount } from '../types';
+import { SportEvent, User, AttendanceRecord, Participant, BankAccount, SportConfig, SportType, VALID_SPORT_TYPES, DEFAULT_SPORT_CONFIGS } from '../types';
 
 // Local Storage Keys (fallback for offline / test / dev:vite mode)
 const LS_USERS = 'volleyball_users_db_v1';
 const LS_EVENTS = 'volleyball_events_db_v1';
 const LS_ATTENDANCE = 'volleyball_attendance_db_v1';
 const LS_BANK_ACCOUNTS = 'volleyball_bank_accounts_db_v1';
+const LS_SPORT_CONFIGS = 'sport_configs_db_v1';
 
 // Detect if API is available (running via `vercel dev` or deployed on Vercel)
 const API_BASE = '/api';
@@ -61,7 +62,7 @@ const EVENTS_CACHE_TTL = 30_000; // 30 seconds
 const BANK_ACCOUNTS_CACHE_TTL = 30_000; // 30 seconds
 
 let usersCache: CacheEntry<User[]> | null = null;
-let eventsCache: CacheEntry<VolleyballEvent[]> | null = null;
+let eventsCache: CacheEntry<SportEvent[]> | null = null;
 let bankAccountsCache: CacheEntry<BankAccount[]> | null = null;
 
 function getCached<T>(entry: CacheEntry<T> | null, ttl: number): T | null {
@@ -226,10 +227,10 @@ export const updateAttendance = async (eventId: string, userId: string, status: 
 
 // --- Events ---
 
-export const getEvents = async (): Promise<VolleyballEvent[]> => {
+export const getEvents = async (): Promise<SportEvent[]> => {
   if (!useApi()) {
     // Local join logic (same as before)
-    const rawEvents = getLS<Omit<VolleyballEvent, 'participants'>>(LS_EVENTS);
+    const rawEvents = getLS<Omit<SportEvent, 'participants'>>(LS_EVENTS);
     const attendances = getLS<AttendanceRecord>(LS_ATTENDANCE);
     const users = getLS<User>(LS_USERS);
 
@@ -245,7 +246,9 @@ export const getEvents = async (): Promise<VolleyballEvent[]> => {
           hasPaid: record.hasPaid
         };
       });
-      return { ...event, participants };
+      const rawType = (event as any).sportType ?? 'volejbal';
+      const sportType = (VALID_SPORT_TYPES as readonly string[]).includes(rawType) ? rawType : 'volejbal';
+      return { ...event, participants, sportType: sportType as SportType };
     });
   }
 
@@ -253,7 +256,7 @@ export const getEvents = async (): Promise<VolleyballEvent[]> => {
   if (cached) return cached;
 
   try {
-    const data = await apiFetch<VolleyballEvent[]>('/events');
+    const data = await apiFetch<SportEvent[]>('/events');
     eventsCache = { data, timestamp: Date.now() };
     return data;
   } catch (e) {
@@ -262,14 +265,14 @@ export const getEvents = async (): Promise<VolleyballEvent[]> => {
   }
 };
 
-export const createEvent = async (event: VolleyballEvent): Promise<VolleyballEvent[]> => {
+export const createEvent = async (event: SportEvent): Promise<SportEvent[]> => {
   if (!event.id) {
     event.id = generateId();
   }
   const { participants, ...eventData } = event;
 
   if (!useApi()) {
-    const events = getLS<Omit<VolleyballEvent, 'participants'>>(LS_EVENTS);
+    const events = getLS<Omit<SportEvent, 'participants'>>(LS_EVENTS);
     events.push(eventData);
     setLS(LS_EVENTS, events);
     return getEvents();
@@ -283,11 +286,11 @@ export const createEvent = async (event: VolleyballEvent): Promise<VolleyballEve
   return getEvents();
 };
 
-export const updateEvent = async (updatedEvent: VolleyballEvent): Promise<VolleyballEvent[]> => {
+export const updateEvent = async (updatedEvent: SportEvent): Promise<SportEvent[]> => {
   const { participants, ...eventData } = updatedEvent;
 
   if (!useApi()) {
-    const events = getLS<Omit<VolleyballEvent, 'participants'>>(LS_EVENTS);
+    const events = getLS<Omit<SportEvent, 'participants'>>(LS_EVENTS);
     const idx = events.findIndex(e => e.id === updatedEvent.id);
     if (idx !== -1) {
       events[idx] = { ...events[idx], ...eventData };
@@ -307,9 +310,9 @@ export const updateEvent = async (updatedEvent: VolleyballEvent): Promise<Volley
   return getEvents();
 };
 
-export const deleteEvent = async (id: string): Promise<VolleyballEvent[]> => {
+export const deleteEvent = async (id: string): Promise<SportEvent[]> => {
   if (!useApi()) {
-    const events = getLS<Omit<VolleyballEvent, 'participants'>>(LS_EVENTS).filter(e => e.id !== id);
+    const events = getLS<Omit<SportEvent, 'participants'>>(LS_EVENTS).filter(e => e.id !== id);
     setLS(LS_EVENTS, events);
     const attendance = getLS<AttendanceRecord>(LS_ATTENDANCE).filter(a => a.eventId !== id);
     setLS(LS_ATTENDANCE, attendance);
@@ -374,3 +377,39 @@ export const createBankAccount = async (
   return newAccount;
 };
 
+// --- Sport Configs ---
+
+/** Only keep configs whose type is in the valid allow-list */
+const filterValidConfigs = (configs: SportConfig[]): SportConfig[] =>
+  configs.filter(c => (VALID_SPORT_TYPES as readonly string[]).includes(c.type));
+
+export const getSportConfigs = async (): Promise<SportConfig[]> => {
+  if (!useApi()) {
+    const stored = getLS<SportConfig>(LS_SPORT_CONFIGS);
+    return filterValidConfigs(stored.length > 0 ? stored : DEFAULT_SPORT_CONFIGS);
+  }
+
+  try {
+    const data = await apiFetch<SportConfig[]>('/sport-configs');
+    return filterValidConfigs(data);
+  } catch (e) {
+    console.error("Failed to load sport configs from API", e);
+    return DEFAULT_SPORT_CONFIGS;
+  }
+};
+
+export const updateSportConfigs = async (configs: SportConfig[]): Promise<SportConfig[]> => {
+  // Strip out any invalid sport types before persisting
+  const valid = filterValidConfigs(configs);
+
+  if (!useApi()) {
+    setLS(LS_SPORT_CONFIGS, valid);
+    return valid;
+  }
+
+  const updated = await apiFetch<SportConfig[]>('/sport-configs', {
+    method: 'PUT',
+    body: JSON.stringify(valid),
+  });
+  return filterValidConfigs(updated);
+};

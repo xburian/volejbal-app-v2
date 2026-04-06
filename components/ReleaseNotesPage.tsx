@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Zap, CheckCircle2, Smartphone, Layout, FlaskConical, CreditCard, ArrowLeft, Trophy, BookOpen, UserCircle } from 'lucide-react';
+import { Sparkles, Zap, CheckCircle2, Smartphone, Layout, FlaskConical, CreditCard, ArrowLeft, Trophy, BookOpen, UserCircle, BarChart3, Target, Puzzle, RefreshCw } from 'lucide-react';
 
 interface ReleaseNotesPageProps {
   onClose: () => void;
@@ -12,6 +12,65 @@ interface ChangeEntry {
 }
 
 const versions: { version: string; date: string; title: string; changes: ChangeEntry[] }[] = [
+  {
+    version: '1.3.0',
+    date: '6. 4. 2026',
+    title: 'Chytré týmy, skóre setů a refaktoring',
+    changes: [
+      {
+        icon: <BarChart3 size={16} />,
+        title: 'Vyvážené rozdělení týmů',
+        items: [
+          'Týmy se nyní rozdělují podle výkonnosti hráčů (poměr výher a skóre setů)',
+          'Snake-draft algoritmus — nejsilnější hráč do jednoho týmu, druhý nejsilnější do druhého, atd.',
+          'Hráči s méně než 3 odehranými hrami dostanou průměrné hodnocení skupiny (minimální datový práh)',
+          'Blended rating: 60 % poměr výher + 40 % výkon v setech',
+          'Plně zpětně kompatibilní — funguje i pro události bez historie',
+        ],
+      },
+      {
+        icon: <Target size={16} />,
+        title: 'Sledování skóre setů',
+        items: [
+          'U každé hry lze zadat skóre jednotlivých setů (např. 25:20, 18:25, 15:12)',
+          'Přehledné zobrazení s barevným zvýrazněním vítězných setů',
+          'Souhrn setů (např. 2:1 na sety) pod výsledky',
+          'Skóre se ukládá i do historie her a zobrazuje se u předchozích kol',
+          'Data ze setů zlepšují přesnost vyvažování týmů',
+        ],
+      },
+      {
+        icon: <Puzzle size={16} />,
+        title: 'Refaktoring EventDetail',
+        items: [
+          'Monolitní komponenta (1 133 řádků) rozdělena do 14 souborů',
+          'Největší soubor má nyní max 219 řádků — snadnější čtení a údržba',
+          '4 custom hooks: useTeamManagement, useScoreTracking, useParticipants, usePhotoUpload',
+          '6 sub-komponent: Header, ParticipantList, WaitlistSection, TeamSection, ScoreEditor, PaymentSection',
+          'IBAN konverze přesunuta do utils/iban.ts',
+          'Všechny importy používají @/ path alias místo relativních cest',
+        ],
+      },
+      {
+        icon: <RefreshCw size={16} />,
+        title: 'UX vylepšení',
+        items: [
+          'Tlačítko „Zamíchat" / „Nová hra" se animuje při míchání týmů',
+          'Kompaktnější přihlašovací obrazovka — horizontální layout s menším paddingem',
+          'Odebrán sport Fotbal a Florbal — aplikace podporuje Volejbal, Tenis a Badminton',
+          'Týmy se automaticky aktualizují při změně účastníků (přidání / odebrání hráče)',
+        ],
+      },
+      {
+        icon: <FlaskConical size={16} />,
+        title: 'Testy',
+        items: [
+          '27 testů pro teamBalancer — snake-draft, blended rating, minimální práh, zpětná kompatibilita',
+          '185 testů celkem — vše prochází',
+        ],
+      },
+    ],
+  },
   {
     version: '1.2.0',
     date: '29. 3. 2026',
@@ -107,7 +166,7 @@ const versions: { version: string; date: string; title: string; changes: ChangeE
         icon: <Sparkles size={16} />,
         title: 'Funkce',
         items: [
-          'Správa volejbalových událostí — vytváření, úprava, mazání',
+          'Správa sportovních událostí — vytváření, úprava, mazání',
           'Kalendářové zobrazení s přehledem nadcházejících akcí',
           'Účast hráčů — Jdu / Nejdu s automatickým počítáním',
           'Platby — sledování zaplacení, výpočet částky na osobu',
@@ -152,7 +211,7 @@ export const ReleaseNotesPage: React.FC<ReleaseNotesPageProps> = ({ onClose }) =
             <Sparkles size={24} className="text-amber-500" />
             Seznam změn
           </h1>
-          <p className="text-sm text-slate-500 mt-0.5">Co je nového ve Volejbal Plánovači</p>
+          <p className="text-sm text-slate-500 mt-0.5">Co je nového v Sport Plánovači</p>
         </div>
       </div>
 
@@ -211,7 +270,7 @@ export const ReleaseNotesPage: React.FC<ReleaseNotesPageProps> = ({ onClose }) =
 
       {/* Footer */}
       <div className="mt-8 text-center text-xs text-slate-400 pb-4">
-        Volejbal Plánovač — vytvořeno s ❤️ pro hráče
+        Sport Plánovač — vytvořeno s ❤️ pro hráče
       </div>
     </div>
   );

@@ -6,6 +6,9 @@ const redis = new Redis({
   token: process.env.volejbal_KV_REST_API_TOKEN!,
 });
 
+/** Allowed sport types — anything else falls back to 'volejbal' */
+const VALID_SPORT_TYPES = ['volejbal', 'tenis', 'badminton'] as const;
+
 interface ApiRequest extends IncomingMessage {
   body: any;
   query: Record<string, string | string[]>;
@@ -89,7 +92,9 @@ async function handleGet(res: ApiResponse) {
         });
       }
 
-      return { ...event, participants };
+      const rawType = event.sportType ?? 'volejbal';
+      const sportType = VALID_SPORT_TYPES.includes(rawType) ? rawType : 'volejbal';
+      return { ...event, participants, sportType };
     })
   );
 
@@ -102,6 +107,11 @@ async function handlePost(req: ApiRequest, res: ApiResponse) {
 
   if (!eventData.id) {
     eventData.id = generateId();
+  }
+
+  // Normalize invalid sport types to 'volejbal'
+  if (eventData.sportType && !VALID_SPORT_TYPES.includes(eventData.sportType)) {
+    eventData.sportType = 'volejbal';
   }
 
   await redis.set(`event:${eventData.id}`, JSON.stringify(eventData));

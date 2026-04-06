@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { convertToCZIBAN, EventDetail } from './EventDetail';
-import { VolleyballEvent, User } from '../types';
+import { SportEvent, User, DEFAULT_SPORT_CONFIGS } from '../types';
 import * as storage from '../services/storage';
 
 // Mock storage module
@@ -66,7 +66,7 @@ describe('EventDetail Component', () => {
     photoUrl: undefined,
   };
 
-  const mockEvent: VolleyballEvent = {
+  const mockEvent: SportEvent = {
     id: 'event1',
     title: 'Test Volleyball',
     date: '2024-12-15',
@@ -74,6 +74,7 @@ describe('EventDetail Component', () => {
     location: 'Test Hall',
     totalCost: 1000,
     accountNumber: '123456789/0100',
+    sportType: 'volejbal',
     participants: [
       { userId: 'user1', name: 'Test User', status: 'joined', hasPaid: false },
       { userId: 'user2', name: 'Jan Novák', status: 'joined', hasPaid: true },
@@ -100,7 +101,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
-          bankAccounts={[]}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -116,7 +117,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
-          bankAccounts={[]}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -132,7 +133,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
-          bankAccounts={[]}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -163,7 +164,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
-          bankAccounts={[]}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -183,7 +184,7 @@ describe('EventDetail Component', () => {
           event={eventWithoutAccount}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
-          bankAccounts={[]}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -199,7 +200,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
-          bankAccounts={[]}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -215,7 +216,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
-          bankAccounts={[]}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -234,7 +235,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
-          bankAccounts={[]}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -265,7 +266,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
-          bankAccounts={[]}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -292,7 +293,7 @@ describe('EventDetail Component', () => {
           event={updatedEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
-          bankAccounts={[]}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -310,7 +311,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
-          bankAccounts={[]}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -350,7 +351,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
-          bankAccounts={[]}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -373,7 +374,7 @@ describe('EventDetail Component', () => {
           event={updatedEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
-          bankAccounts={[]}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -393,7 +394,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
-          bankAccounts={[]}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -420,7 +421,7 @@ describe('EventDetail Component', () => {
           event={updatedEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
-          bankAccounts={[]}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -442,7 +443,7 @@ describe('EventDetail Component', () => {
           event={eventWithZeroCost}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
-          bankAccounts={[]}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -463,7 +464,7 @@ describe('EventDetail Component', () => {
           event={eventNoJoined}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
-          bankAccounts={[]}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -473,7 +474,7 @@ describe('EventDetail Component', () => {
     });
 
     it('displays participant photos when available', () => {
-      const eventWithPhotos: VolleyballEvent = {
+      const eventWithPhotos: SportEvent = {
         ...mockEvent,
         participants: [
           { userId: 'user1', name: 'User With Photo', photoUrl: 'https://example.com/photo.jpg', status: 'joined', hasPaid: false },
@@ -486,7 +487,7 @@ describe('EventDetail Component', () => {
           event={eventWithPhotos}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
-          bankAccounts={[]}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -515,7 +516,7 @@ describe('EventDetail Component', () => {
           event={eventOddCost}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
-          bankAccounts={[]}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -537,7 +538,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
-          bankAccounts={[]}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -563,7 +564,7 @@ describe('EventDetail Component', () => {
           event={eventWithUserPhoto}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
-          bankAccounts={[]}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -586,7 +587,7 @@ describe('EventDetail Component', () => {
           event={eventWithOtherUsers}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
-          bankAccounts={[]}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -604,7 +605,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
-          bankAccounts={[]}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -630,7 +631,7 @@ describe('EventDetail Component', () => {
           event={mockEvent}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
-          bankAccounts={[]}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -662,7 +663,7 @@ describe('EventDetail Component', () => {
           event={eventWithMixedUsers}
           currentUser={mockCurrentUser}
           onUpdate={mockOnUpdate}
-          bankAccounts={[]}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
           onDelete={mockOnDelete}
         />
       );
@@ -681,6 +682,555 @@ describe('EventDetail Component', () => {
         el.className.includes('rounded-full')
       );
       expect(janInitial).toBeInTheDocument();
+    });
+  });
+
+  describe('Max Player Enforcement', () => {
+    it('shows count/max in participant header', () => {
+      render(
+        <EventDetail
+          event={mockEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+      // 2 joined out of 12 max for volejbal
+      expect(screen.getByText(/2\/12/)).toBeInTheDocument();
+    });
+
+    it('shows waitlist button when at capacity', () => {
+      const tenisConfig = [{ type: 'tenis' as const, label: 'Tenis', maxPlayers: 2, defaultCost: 500, defaultLocation: 'Kurt', teamSize: 2 }];
+      const fullEvent: SportEvent = {
+        ...mockEvent,
+        sportType: 'tenis',
+        participants: [
+          { userId: 'user2', name: 'Jan Novák', status: 'joined', hasPaid: true },
+          { userId: 'user3', name: 'Petr Svoboda', status: 'joined', hasPaid: false },
+        ],
+        teams: undefined,
+      };
+
+      render(
+        <EventDetail
+          event={fullEvent}
+          currentUser={mockCurrentUser}
+          bankAccounts={[]} sportConfigs={tenisConfig} allEvents={[]}
+          onUpdate={mockOnUpdate}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      const joinBtn = screen.getByText('Na čekací listinu');
+      expect(joinBtn.closest('button')).not.toBeDisabled();
+    });
+
+    it('shows capacity full badge when at max', () => {
+      const tenisConfig = [{ type: 'tenis' as const, label: 'Tenis', maxPlayers: 2, defaultCost: 500, defaultLocation: 'Kurt', teamSize: 2 }];
+      const fullEvent: SportEvent = {
+        ...mockEvent,
+        sportType: 'tenis',
+        participants: [
+          { userId: 'user2', name: 'Jan Novák', status: 'joined', hasPaid: true },
+          { userId: 'user3', name: 'Petr Svoboda', status: 'joined', hasPaid: false },
+        ],
+        teams: undefined,
+      };
+
+      render(
+        <EventDetail
+          event={fullEvent}
+          currentUser={mockCurrentUser}
+          bankAccounts={[]} sportConfigs={tenisConfig} allEvents={[]}
+          onUpdate={mockOnUpdate}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      expect(screen.getByText('Plná kapacita')).toBeInTheDocument();
+    });
+
+    it('shows waitlist section when participants are waitlisted', () => {
+      const tenisConfig = [{ type: 'tenis' as const, label: 'Tenis', maxPlayers: 2, defaultCost: 500, defaultLocation: 'Kurt', teamSize: 2 }];
+      const eventWithWaitlist: SportEvent = {
+        ...mockEvent,
+        sportType: 'tenis',
+        participants: [
+          { userId: 'user2', name: 'Jan Novák', status: 'joined', hasPaid: true },
+          { userId: 'user3', name: 'Petr Svoboda', status: 'joined', hasPaid: false },
+          { userId: 'user4', name: 'Karel Dvořák', status: 'waitlist', hasPaid: false },
+        ],
+        teams: undefined,
+      };
+
+      render(
+        <EventDetail
+          event={eventWithWaitlist}
+          currentUser={mockCurrentUser}
+          bankAccounts={[]} sportConfigs={tenisConfig} allEvents={[]}
+          onUpdate={mockOnUpdate}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      expect(screen.getByTestId('waitlist-section')).toBeInTheDocument();
+      expect(screen.getByText(/Čekací listina/)).toBeInTheDocument();
+      // Karel appears in both the participant list and the waitlist section
+      expect(screen.getAllByText('Karel Dvořák').length).toBeGreaterThan(0);
+    });
+
+    it('shows "Čeká na místo" status for waitlisted users', () => {
+      const tenisConfig = [{ type: 'tenis' as const, label: 'Tenis', maxPlayers: 2, defaultCost: 500, defaultLocation: 'Kurt', teamSize: 2 }];
+      const eventWithWaitlist: SportEvent = {
+        ...mockEvent,
+        sportType: 'tenis',
+        participants: [
+          { userId: 'user2', name: 'Jan Novák', status: 'joined', hasPaid: true },
+          { userId: 'user4', name: 'Karel Dvořák', status: 'waitlist', hasPaid: false },
+        ],
+        teams: undefined,
+      };
+
+      render(
+        <EventDetail
+          event={eventWithWaitlist}
+          currentUser={mockCurrentUser}
+          bankAccounts={[]} sportConfigs={tenisConfig} allEvents={[]}
+          onUpdate={mockOnUpdate}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      expect(screen.getByText('Čeká na místo')).toBeInTheDocument();
+    });
+  });
+
+  describe('Team Names', () => {
+    const eventWithTeams: SportEvent = {
+      ...mockEvent,
+      teams: [
+        [{ userId: 'user1', name: 'Test User' }, { userId: 'user4', name: 'Karel Dvořák' }],
+        [{ userId: 'user2', name: 'Jan Novák' }, { userId: 'user5', name: 'Petr Novotný' }],
+      ],
+      teamNames: ['Červení', 'Modří'],
+      participants: [
+        { userId: 'user1', name: 'Test User', status: 'joined', hasPaid: false },
+        { userId: 'user2', name: 'Jan Novák', status: 'joined', hasPaid: true },
+        { userId: 'user4', name: 'Karel Dvořák', status: 'joined', hasPaid: false },
+        { userId: 'user5', name: 'Petr Novotný', status: 'joined', hasPaid: false },
+      ],
+    };
+
+    it('displays team names instead of "Tým 1" / "Tým 2"', () => {
+      render(
+        <EventDetail
+          event={eventWithTeams}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      // Team names appear in the team card headers and winner buttons
+      expect(screen.getAllByText(/Červení/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Modří/).length).toBeGreaterThan(0);
+    });
+
+    it('shows team name in winner buttons', () => {
+      render(
+        <EventDetail
+          event={eventWithTeams}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      expect(screen.getByTestId('winner-btn-0')).toHaveTextContent('Červení vyhrál');
+      expect(screen.getByTestId('winner-btn-1')).toHaveTextContent('Modří vyhrál');
+    });
+
+    it('shows team name edit button on hover', () => {
+      render(
+        <EventDetail
+          event={eventWithTeams}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      const editBtn0 = screen.getByTestId('team-name-edit-0');
+      expect(editBtn0).toBeInTheDocument();
+      const editBtn1 = screen.getByTestId('team-name-edit-1');
+      expect(editBtn1).toBeInTheDocument();
+    });
+
+    it('opens inline team name editor when edit button is clicked', async () => {
+      const user = userEvent.setup();
+      render(
+        <EventDetail
+          event={eventWithTeams}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      await user.click(screen.getByTestId('team-name-edit-0'));
+
+      const input = screen.getByTestId('team-name-input-0');
+      expect(input).toBeInTheDocument();
+      expect(input).toHaveValue('Červení');
+    });
+
+    it('saves edited team name when save button is clicked', async () => {
+      const user = userEvent.setup();
+      render(
+        <EventDetail
+          event={eventWithTeams}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      await user.click(screen.getByTestId('team-name-edit-0'));
+      const input = screen.getByTestId('team-name-input-0');
+      await user.clear(input);
+      await user.type(input, 'Tygři');
+      await user.click(screen.getByTestId('team-name-save-0'));
+
+      expect(mockOnUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teamNames: ['Tygři', 'Modří'],
+        })
+      );
+    });
+
+    it('cancels team name edit without saving', async () => {
+      const user = userEvent.setup();
+      render(
+        <EventDetail
+          event={eventWithTeams}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      await user.click(screen.getByTestId('team-name-edit-1'));
+      const input = screen.getByTestId('team-name-input-1');
+      await user.clear(input);
+      await user.type(input, 'Sharks');
+      await user.click(screen.getByTestId('team-name-cancel-1'));
+
+      expect(mockOnUpdate).not.toHaveBeenCalled();
+      // Should be back to showing the name, not the input
+      expect(screen.queryByTestId('team-name-input-1')).not.toBeInTheDocument();
+    });
+
+    it('displays winning team name in winner announcement', () => {
+      const wonEvent: SportEvent = {
+        ...eventWithTeams,
+        winningTeam: 0,
+      };
+
+      render(
+        <EventDetail
+          event={wonEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      expect(screen.getByText(/Červení vyhrál!/)).toBeInTheDocument();
+    });
+
+    it('falls back to "Tým N" when teamNames is undefined', () => {
+      const noNamesEvent: SportEvent = {
+        ...eventWithTeams,
+        teamNames: undefined,
+      };
+
+      render(
+        <EventDetail
+          event={noNamesEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      expect(screen.getByTestId('winner-btn-0')).toHaveTextContent('Tým 1 vyhrál');
+      expect(screen.getByTestId('winner-btn-1')).toHaveTextContent('Tým 2 vyhrál');
+    });
+  });
+
+  describe('Game History with Team Names', () => {
+    it('shows team names in game history entries', () => {
+      const eventWithHistory: SportEvent = {
+        ...mockEvent,
+        teams: [
+          [{ userId: 'user1', name: 'Test User' }],
+          [{ userId: 'user2', name: 'Jan Novák' }],
+        ],
+        teamNames: ['Zelení', 'Žlutí'],
+        gameHistory: [
+          {
+            teams: [
+              [{ userId: 'user1', name: 'Test User' }],
+              [{ userId: 'user2', name: 'Jan Novák' }],
+            ],
+            teamNames: ['Červení', 'Modří'],
+            winningTeam: 0,
+          },
+        ],
+      };
+
+      render(
+        <EventDetail
+          event={eventWithHistory}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      const historyEntry = screen.getByTestId('game-history-1');
+      expect(historyEntry).toBeInTheDocument();
+      expect(historyEntry).toHaveTextContent('Červení');
+      expect(historyEntry).toHaveTextContent('Modří');
+    });
+
+    it('falls back to player names when team names missing in history', () => {
+      const eventWithHistory: SportEvent = {
+        ...mockEvent,
+        teams: [
+          [{ userId: 'user1', name: 'Test User' }],
+          [{ userId: 'user2', name: 'Jan Novák' }],
+        ],
+        teamNames: ['Zelení', 'Žlutí'],
+        gameHistory: [
+          {
+            teams: [
+              [{ userId: 'user1', name: 'Test User' }],
+              [{ userId: 'user2', name: 'Jan Novák' }],
+            ],
+            // no teamNames — old format
+            winningTeam: 1,
+          },
+        ],
+      };
+
+      render(
+        <EventDetail
+          event={eventWithHistory}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      const historyEntry = screen.getByTestId('game-history-1');
+      expect(historyEntry).toHaveTextContent('Test');
+      expect(historyEntry).toHaveTextContent('Jan');
+    });
+
+    it('shows tooltip with full player names on history entries', () => {
+      const eventWithHistory: SportEvent = {
+        ...mockEvent,
+        teams: [
+          [{ userId: 'user1', name: 'Test User' }],
+          [{ userId: 'user2', name: 'Jan Novák' }],
+        ],
+        teamNames: ['Zelení', 'Žlutí'],
+        gameHistory: [
+          {
+            teams: [
+              [{ userId: 'user1', name: 'Test User' }, { userId: 'user4', name: 'Karel Dvořák' }],
+              [{ userId: 'user2', name: 'Jan Novák' }, { userId: 'user5', name: 'Petr Novotný' }],
+            ],
+            teamNames: ['Červení', 'Modří'],
+            winningTeam: 0,
+          },
+        ],
+      };
+
+      render(
+        <EventDetail
+          event={eventWithHistory}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      // Check tooltip attributes for full player names
+      const historyEntry = screen.getByTestId('game-history-1');
+      const spans = historyEntry.querySelectorAll('[title]');
+      const titles = Array.from(spans).map(s => s.getAttribute('title'));
+      expect(titles).toContain('Test User, Karel Dvořák');
+      expect(titles).toContain('Jan Novák, Petr Novotný');
+    });
+
+    it('preserves team names when shuffling to new round', async () => {
+      const user = userEvent.setup();
+      const wonEvent: SportEvent = {
+        ...mockEvent,
+        participants: [
+          { userId: 'user1', name: 'Test User', status: 'joined', hasPaid: false },
+          { userId: 'user2', name: 'Jan Novák', status: 'joined', hasPaid: true },
+        ],
+        teams: [
+          [{ userId: 'user1', name: 'Test User' }],
+          [{ userId: 'user2', name: 'Jan Novák' }],
+        ],
+        teamNames: ['Červení', 'Modří'],
+        winningTeam: 0,
+        gameHistory: [],
+      };
+
+      render(
+        <EventDetail
+          event={wonEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      // Click "Nová hra" button
+      const newGameBtn = screen.getByText('Nová hra');
+      await user.click(newGameBtn);
+
+      expect(mockOnUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          gameHistory: expect.arrayContaining([
+            expect.objectContaining({
+              teamNames: ['Červení', 'Modří'],
+              winningTeam: 0,
+            }),
+          ]),
+          // New round should have new team names
+          teamNames: expect.any(Array),
+          winningTeam: undefined,
+        })
+      );
+    });
+  });
+
+  describe('Winning Team Flow', () => {
+    const teamsEvent: SportEvent = {
+      ...mockEvent,
+      participants: [
+        { userId: 'user1', name: 'Test User', status: 'joined', hasPaid: false },
+        { userId: 'user2', name: 'Jan Novák', status: 'joined', hasPaid: true },
+      ],
+      teams: [
+        [{ userId: 'user1', name: 'Test User' }],
+        [{ userId: 'user2', name: 'Jan Novák' }],
+      ],
+      teamNames: ['Červení', 'Modří'],
+    };
+
+    it('shows winner buttons when no winner set', () => {
+      render(
+        <EventDetail
+          event={teamsEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      expect(screen.getByTestId('winner-btn-0')).toBeInTheDocument();
+      expect(screen.getByTestId('winner-btn-1')).toBeInTheDocument();
+    });
+
+    it('calls onUpdate with winningTeam when winner button clicked', async () => {
+      const user = userEvent.setup();
+      render(
+        <EventDetail
+          event={teamsEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      await user.click(screen.getByTestId('winner-btn-1'));
+
+      expect(mockOnUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({ winningTeam: 1 })
+      );
+    });
+
+    it('hides winner buttons after winner is set', () => {
+      const wonEvent: SportEvent = { ...teamsEvent, winningTeam: 0 };
+
+      render(
+        <EventDetail
+          event={wonEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      expect(screen.queryByTestId('winner-btn-0')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('winner-btn-1')).not.toBeInTheDocument();
+    });
+
+    it('shows "Nová hra" button text after winner is set', () => {
+      const wonEvent: SportEvent = { ...teamsEvent, winningTeam: 1 };
+
+      render(
+        <EventDetail
+          event={wonEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      expect(screen.getByText('Nová hra')).toBeInTheDocument();
+    });
+
+    it('highlights winning team with green styling', () => {
+      const wonEvent: SportEvent = { ...teamsEvent, winningTeam: 0 };
+
+      render(
+        <EventDetail
+          event={wonEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      // Winner team should show trophy icon
+      const winnerText = screen.getByText(/Výherce/);
+      expect(winnerText).toBeInTheDocument();
     });
   });
 });

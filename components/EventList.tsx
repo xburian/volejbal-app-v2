@@ -1,12 +1,12 @@
 import React from 'react';
-import { VolleyballEvent } from '../types';
+import { SportEvent, SportConfig, SportType, SPORT_EMOJI } from '../types';
 import { EventCard } from './EventCard';
 import { Plus, ListFilter, Calendar as CalendarIcon, ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
 interface EventListProps {
-  events: VolleyballEvent[];
+  events: SportEvent[];
   selectedEventId: string | null;
   selectedDate: Date | null;
   onSelectEvent: (id: string) => void;
@@ -17,6 +17,12 @@ interface EventListProps {
   showChevron?: boolean;
   /** Show the "Přidat" button in the header */
   showAddButton?: boolean;
+  /** Sport configs for filter pills */
+  sportConfigs?: SportConfig[];
+  /** Currently selected sport filter (null = show all) */
+  sportFilter?: SportType | null;
+  /** Callback when sport filter changes */
+  onSportFilterChange?: (sport: SportType | null) => void;
 }
 
 export const EventList: React.FC<EventListProps> = ({
@@ -29,8 +35,16 @@ export const EventList: React.FC<EventListProps> = ({
   onCreateEvent,
   showChevron = false,
   showAddButton = true,
+  sportConfigs = [],
+  sportFilter = null,
+  onSportFilterChange,
 }) => {
   const isUpcomingMode = selectedDate === null;
+
+  // Filter events by sport type if filter is active
+  const filteredEvents = sportFilter
+    ? events.filter(e => (e.sportType ?? 'volejbal') === sportFilter)
+    : events;
 
   return (
     <div>
@@ -71,13 +85,46 @@ export const EventList: React.FC<EventListProps> = ({
         )}
       </div>
 
+      {/* Sport Filter Pills */}
+      {sportConfigs.length > 0 && onSportFilterChange && (
+        <div className="flex flex-wrap gap-1.5 mb-3 px-2" data-testid="sport-filter">
+          <button
+            onClick={() => onSportFilterChange(null)}
+            className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all border ${
+              sportFilter === null
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'
+            }`}
+          >
+            Vše
+          </button>
+          {sportConfigs.map(config => (
+            <button
+              key={config.type}
+              onClick={() => onSportFilterChange(sportFilter === config.type ? null : config.type)}
+              data-testid={`sport-filter-${config.type}`}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all border flex items-center gap-1 ${
+                sportFilter === config.type
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'
+              }`}
+            >
+              <span>{SPORT_EMOJI[config.type] ?? '🏅'}</span>
+              {config.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="space-y-3 pb-8">
-        {events.length === 0 ? (
+        {filteredEvents.length === 0 ? (
           <div className="text-center py-12 text-slate-400 border-2 border-dashed border-slate-100 rounded-xl">
             <p className="text-sm">
-              {isUpcomingMode
-                ? 'Žádné nadcházející události.'
-                : 'Žádné události pro tento den.'}
+              {sportFilter
+                ? 'Žádné události pro vybraný sport.'
+                : isUpcomingMode
+                  ? 'Žádné nadcházející události.'
+                  : 'Žádné události pro tento den.'}
             </p>
             <button
               onClick={onCreateEvent}
@@ -87,7 +134,7 @@ export const EventList: React.FC<EventListProps> = ({
             </button>
           </div>
         ) : (
-          events.map(event => (
+          filteredEvents.map(event => (
             <EventCard
               key={event.id}
               event={event}
