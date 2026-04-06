@@ -1,5 +1,5 @@
 import React from 'react';
-import { SportEvent, BankAccount, maskAccountNumber } from '../../types';
+import { SportEvent, BankAccount, maskAccountNumber } from '@/types.ts';
 import { Wallet, AlertTriangle, Check, Copy, ChevronDown } from 'lucide-react';
 import QRCode from 'react-qr-code';
 

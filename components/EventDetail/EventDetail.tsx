@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { SportEvent, User, BankAccount, SportConfig } from '../../types';
-import { convertToCZIBAN } from '../../utils/iban';
+import { SportEvent, User, BankAccount, SportConfig } from '@/types.ts';
+import { convertToCZIBAN } from '@/utils/iban.ts';
 import { Loader2 } from 'lucide-react';
 
 import { useTeamManagement } from './hooks/useTeamManagement';
@@ -159,16 +159,8 @@ export const EventDetail: React.FC<EventDetailProps> = ({
             countJoined={countJoined}
             costPerPerson={costPerPerson}
             isAtCapacity={isAtCapacity}
-            isCurrentUserJoined={participants.isCurrentUserJoined}
-            currentUserParticipant={participants.currentUserParticipant}
-            savingUsers={participants.savingUsers}
-            capacityError={participants.capacityError}
-            photoError={photoUpload.photoError}
-            isUploadingPhoto={photoUpload.isUploadingPhoto}
-            onStatusChange={participants.handleStatusChange}
-            onPaymentToggle={participants.handlePaymentToggle}
-            onPhotoChange={photoUpload.handlePhotoChange}
-            onRemovePhoto={photoUpload.handleRemovePhoto}
+            participants={participants}
+            photoUpload={photoUpload}
           />
 
           <WaitlistSection
@@ -178,23 +170,8 @@ export const EventDetail: React.FC<EventDetailProps> = ({
 
           <TeamSection
             event={event}
-            canShuffleTeams={teamManagement.canShuffleTeams}
-            onShuffleTeams={teamManagement.shuffleTeams}
-            onSetWinner={teamManagement.setWinner}
-            editingTeamNameIdx={teamManagement.editingTeamNameIdx}
-            tempTeamName={teamManagement.tempTeamName}
-            onTempTeamNameChange={teamManagement.setTempTeamName}
-            onStartEditTeamName={teamManagement.handleStartEditTeamName}
-            onSaveTeamName={teamManagement.handleSaveTeamName}
-            onCancelEditTeamName={teamManagement.handleCancelEditTeamName}
-            setScores={scoreTracking.setScores}
-            isEditingScore={scoreTracking.isEditingScore}
-            onAddSet={scoreTracking.handleAddSet}
-            onRemoveSet={scoreTracking.handleRemoveSet}
-            onSetScoreChange={scoreTracking.handleSetScoreChange}
-            onSaveScore={scoreTracking.handleSaveScore}
-            onCancelScore={scoreTracking.handleCancelScore}
-            onStartEditScore={scoreTracking.handleStartEditScore}
+            teamManagement={teamManagement}
+            scoreTracking={scoreTracking}
           />
         </div>
 

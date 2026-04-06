@@ -1,6 +1,8 @@
 import React from 'react';
-import { Participant, User, SportConfig } from '../../types';
+import { Participant, User, SportConfig } from '@/types.ts';
 import { Hand, AlertTriangle, Loader2, X } from 'lucide-react';
+import type { ParticipantsState } from './hooks/useParticipants';
+import type { PhotoUploadState } from './hooks/usePhotoUpload';
 
 interface ParticipantListProps {
   sortedParticipants: Participant[];
@@ -9,16 +11,8 @@ interface ParticipantListProps {
   countJoined: number;
   costPerPerson: number;
   isAtCapacity: boolean;
-  isCurrentUserJoined: boolean;
-  currentUserParticipant: Participant | undefined;
-  savingUsers: Set<string>;
-  capacityError: string | null;
-  photoError: string | null;
-  isUploadingPhoto: boolean;
-  onStatusChange: (userId: string, status: Participant['status']) => void;
-  onPaymentToggle: (userId: string, currentStatus: boolean) => void;
-  onPhotoChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onRemovePhoto: () => void;
+  participants: ParticipantsState;
+  photoUpload: PhotoUploadState;
 }
 
 export const ParticipantList: React.FC<ParticipantListProps> = ({
@@ -28,16 +22,8 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
   countJoined,
   costPerPerson,
   isAtCapacity,
-  isCurrentUserJoined,
-  currentUserParticipant,
-  savingUsers,
-  capacityError,
-  photoError,
-  isUploadingPhoto,
-  onStatusChange,
-  onPaymentToggle,
-  onPhotoChange,
-  onRemovePhoto,
+  participants,
+  photoUpload,
 }) => (
   <div>
     <h3 className="text-lg font-semibold text-slate-700 mb-4 flex items-center justify-between">
@@ -52,31 +38,31 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
       </span>
     </h3>
 
-    {photoError && (
+    {photoUpload.photoError && (
       <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm flex items-center gap-2">
         <AlertTriangle size={16} />
-        {photoError}
+        {photoUpload.photoError}
       </div>
     )}
 
-    {capacityError && (
+    {participants.capacityError && (
       <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm flex items-center gap-2">
         <AlertTriangle size={16} />
-        {capacityError}
+        {participants.capacityError}
       </div>
     )}
 
-    {!isCurrentUserJoined && currentUserParticipant?.status !== 'waitlist' && (
+    {!participants.isCurrentUserJoined && participants.currentUserParticipant?.status !== 'waitlist' && (
       <button
-        onClick={() => onStatusChange(currentUser.id, 'joined')}
-        disabled={savingUsers.has(currentUser.id)}
+        onClick={() => participants.handleStatusChange(currentUser.id, 'joined')}
+        disabled={participants.savingUsers.has(currentUser.id)}
         className={`w-full mb-4 py-3 text-white rounded-xl font-bold shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed ${
           isAtCapacity
             ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-200'
             : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200'
         }`}
       >
-        {savingUsers.has(currentUser.id) ? (
+        {participants.savingUsers.has(currentUser.id) ? (
           <Loader2 size={20} className="animate-spin" />
         ) : (
           <Hand size={20} />
@@ -90,7 +76,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
         .filter(p => p.status !== 'declined' || p.userId === currentUser.id)
         .map(p => {
           const isMe = p.userId === currentUser.id;
-          const isSaving = savingUsers.has(p.userId);
+          const isSaving = participants.savingUsers.has(p.userId);
 
           return (
             <div key={p.userId} className={`flex items-center justify-between p-2 border rounded-lg shadow-sm hover:shadow-md transition-shadow group ${isMe ? 'bg-blue-50 border-blue-200 ring-1 ring-blue-100' : 'bg-white border-slate-100'}`}>
@@ -107,8 +93,8 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={onPhotoChange}
-                        disabled={isUploadingPhoto}
+                        onChange={photoUpload.handlePhotoChange}
+                        disabled={photoUpload.isUploadingPhoto}
                         className="hidden"
                       />
                       {p.photoUrl ? (
@@ -118,15 +104,15 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
                           {p.name.charAt(0).toUpperCase()}
                         </div>
                       )}
-                      {isUploadingPhoto && (
+                      {photoUpload.isUploadingPhoto && (
                         <div className="absolute inset-0 bg-white/80 rounded-full flex items-center justify-center">
                           <Loader2 size={16} className="animate-spin text-blue-600" />
                         </div>
                       )}
                     </label>
-                    {p.photoUrl && !isUploadingPhoto && (
+                    {p.photoUrl && !photoUpload.isUploadingPhoto && (
                       <button
-                        onClick={onRemovePhoto}
+                        onClick={photoUpload.handleRemovePhoto}
                         className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover/photo:opacity-100 transition-opacity"
                         title="Odebrat fotku"
                       >
@@ -154,13 +140,13 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
                     <div className="flex gap-2 text-xs mt-0.5">
                       <button
                         disabled={isSaving}
-                        onClick={() => onStatusChange(p.userId, 'joined')}
+                        onClick={() => participants.handleStatusChange(p.userId, 'joined')}
                         className={`hover:underline ${p.status === 'joined' ? 'font-bold text-green-600' : 'text-slate-400'}`}
                       >Jdu</button>
                       <span className="text-slate-300">|</span>
                       <button
                         disabled={isSaving}
-                        onClick={() => onStatusChange(p.userId, 'declined')}
+                        onClick={() => participants.handleStatusChange(p.userId, 'declined')}
                         className={`hover:underline ${p.status === 'declined' ? 'font-bold text-red-600' : 'text-slate-400'}`}
                       >Nejdu</button>
                     </div>
@@ -182,7 +168,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
                         <input
                           type="checkbox"
                           checked={p.hasPaid}
-                          onChange={() => onPaymentToggle(p.userId, p.hasPaid)}
+                          onChange={() => participants.handlePaymentToggle(p.userId, p.hasPaid)}
                           className="w-4 h-4 rounded border-slate-300 text-green-600 focus:ring-green-500 cursor-pointer"
                         />
                       )}

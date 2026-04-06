@@ -1,5 +1,5 @@
 import React from 'react';
-import { Participant, User } from '../../types';
+import { Participant, User } from '@/types.ts';
 import { Users } from 'lucide-react';
 
 interface WaitlistSectionProps {

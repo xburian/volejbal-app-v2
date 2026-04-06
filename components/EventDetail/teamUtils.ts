@@ -1,4 +1,4 @@
-import { Participant, SportConfig, TeamMember, TEAM_COLOR_NAMES } from '../../types';
+import { Participant, SportConfig, TeamMember, TEAM_COLOR_NAMES } from '@/types.ts';
 
 /** Pick two random distinct team color names */
 export const pickRandomTeamNames = (): [string, string] => {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { User } from '../../../types';
-import * as storage from '../../../services/storage';
+import { User } from '@/types.ts';
+import * as storage from '@/services/storage.ts';
 
 interface UsePhotoUploadProps {
   currentUser: User;
@@ -63,4 +63,6 @@ export function usePhotoUpload({ currentUser, refreshEventData }: UsePhotoUpload
     handleRemovePhoto,
   };
 }
+
+export type PhotoUploadState = ReturnType<typeof usePhotoUpload>;
 

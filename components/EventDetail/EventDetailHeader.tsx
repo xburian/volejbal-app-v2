@@ -1,5 +1,5 @@
 import React from 'react';
-import { SportEvent, SportConfig } from '../../types';
+import { SportEvent, SportConfig } from '@/types.ts';
 import { Users, Trash2, Wallet, Edit2, Check, X } from 'lucide-react';
 import { format } from 'date-fns';
 

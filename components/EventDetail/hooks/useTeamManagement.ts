@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { SportEvent, Participant, SportConfig, TeamMember } from '../../../types';
-import { balanceTeams } from '../../../utils/teamBalancer';
+import { SportEvent, Participant, SportConfig, TeamMember } from '@/types.ts';
+import { balanceTeams } from '@/utils/teamBalancer.ts';
 import { pickRandomTeamNames, updateTeamsForParticipantChange } from '../teamUtils';
 
 interface UseTeamManagementProps {
@@ -115,4 +115,6 @@ export function useTeamManagement({
     minPlayersForTeams,
   };
 }
+
+export type TeamManagement = ReturnType<typeof useTeamManagement>;
 

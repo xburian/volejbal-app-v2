@@ -1,5 +1,5 @@
 import React from 'react';
-import { GameRound } from '../../types';
+import { GameRound } from '@/types.ts';
 
 interface GameHistoryProps {
   gameHistory: GameRound[];

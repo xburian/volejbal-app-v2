@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { SportEvent, Participant, User, SportConfig } from '../../../types';
-import * as storage from '../../../services/storage';
+import { SportEvent, Participant, User, SportConfig } from '@/types.ts';
+import * as storage from '@/services/storage.ts';
 import { updateTeamsForParticipantChange } from '../teamUtils';
 
 interface UseParticipantsProps {
@@ -130,4 +130,6 @@ export function useParticipants({ event, currentUser, sportConfig, onUpdate }: U
     handlePaymentToggle,
   };
 }
+
+export type ParticipantsState = ReturnType<typeof useParticipants>;
 

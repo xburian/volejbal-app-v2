@@ -1,52 +1,34 @@
-import React from 'react';
-import { SportEvent } from '../../types';
+import React, { useState } from 'react';
+import { SportEvent } from '@/types.ts';
 import { Shuffle, RefreshCw, Trophy, Pencil, Check, X } from 'lucide-react';
 import { ScoreEditor } from './ScoreEditor';
 import { GameHistory } from './GameHistory';
+import type { TeamManagement } from './hooks/useTeamManagement';
+import type { ScoreTracking } from './hooks/useScoreTracking';
 
 interface TeamSectionProps {
   event: SportEvent;
-  canShuffleTeams: boolean;
-  // Team management
-  onShuffleTeams: () => void;
-  onSetWinner: (idx: 0 | 1) => void;
-  editingTeamNameIdx: 0 | 1 | null;
-  tempTeamName: string;
-  onTempTeamNameChange: (v: string) => void;
-  onStartEditTeamName: (idx: 0 | 1) => void;
-  onSaveTeamName: () => void;
-  onCancelEditTeamName: () => void;
-  // Score tracking
-  setScores: [number, number][];
-  isEditingScore: boolean;
-  onAddSet: () => void;
-  onRemoveSet: (idx: number) => void;
-  onSetScoreChange: (setIdx: number, teamIdx: 0 | 1, value: number) => void;
-  onSaveScore: () => void;
-  onCancelScore: () => void;
-  onStartEditScore: () => void;
+  teamManagement: TeamManagement;
+  scoreTracking: ScoreTracking;
 }
 
 export const TeamSection: React.FC<TeamSectionProps> = ({
   event,
-  canShuffleTeams,
-  onShuffleTeams,
-  onSetWinner,
-  editingTeamNameIdx,
-  tempTeamName,
-  onTempTeamNameChange,
-  onStartEditTeamName,
-  onSaveTeamName,
-  onCancelEditTeamName,
-  setScores,
-  isEditingScore,
-  onAddSet,
-  onRemoveSet,
-  onSetScoreChange,
-  onSaveScore,
-  onCancelScore,
-  onStartEditScore,
+  teamManagement,
+  scoreTracking,
 }) => {
+  const [isShuffling, setIsShuffling] = useState(false);
+
+  const handleShuffle = async () => {
+    setIsShuffling(true);
+    try {
+      await teamManagement.shuffleTeams();
+    } finally {
+      // Keep spinning briefly so the animation is visible
+      setTimeout(() => setIsShuffling(false), 400);
+    }
+  };
+
   if (!event.teams) return null;
 
   return (
@@ -62,11 +44,11 @@ export const TeamSection: React.FC<TeamSectionProps> = ({
           )}
         </h3>
         <button
-          onClick={onShuffleTeams}
-          disabled={!canShuffleTeams}
+          onClick={handleShuffle}
+          disabled={!teamManagement.canShuffleTeams || isShuffling}
           className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <RefreshCw size={14} />
+          <RefreshCw size={14} className={isShuffling ? 'animate-spin' : ''} />
           {event.winningTeam !== undefined ? 'Nová hra' : 'Zamíchat'}
         </button>
       </div>
@@ -76,7 +58,7 @@ export const TeamSection: React.FC<TeamSectionProps> = ({
         {event.teams.map((team, teamIdx) => {
           const isWinner = event.winningTeam === teamIdx;
           const teamName = event.teamNames?.[teamIdx] ?? `Tým ${teamIdx + 1}`;
-          const isEditingThisTeam = editingTeamNameIdx === teamIdx;
+          const isEditingThisTeam = teamManagement.editingTeamNameIdx === teamIdx;
           return (
             <div key={teamIdx} className={`rounded-lg border-2 p-3 transition-all ${
               isWinner
@@ -91,17 +73,17 @@ export const TeamSection: React.FC<TeamSectionProps> = ({
                   <span className="flex items-center gap-1">
                     <input
                       type="text"
-                      value={tempTeamName}
-                      onChange={e => onTempTeamNameChange(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') onSaveTeamName(); if (e.key === 'Escape') onCancelEditTeamName(); }}
+                      value={teamManagement.tempTeamName}
+                      onChange={e => teamManagement.setTempTeamName(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') teamManagement.handleSaveTeamName(); if (e.key === 'Escape') teamManagement.handleCancelEditTeamName(); }}
                       className="w-24 px-1.5 py-0.5 text-sm border border-blue-300 rounded focus:ring-1 focus:ring-blue-200 outline-none bg-white"
                       autoFocus
                       data-testid={`team-name-input-${teamIdx}`}
                     />
-                    <button onClick={onSaveTeamName} className="text-green-600 hover:bg-green-50 p-0.5 rounded" data-testid={`team-name-save-${teamIdx}`}>
+                    <button onClick={teamManagement.handleSaveTeamName} className="text-green-600 hover:bg-green-50 p-0.5 rounded" data-testid={`team-name-save-${teamIdx}`}>
                       <Check size={12} />
                     </button>
-                    <button onClick={onCancelEditTeamName} className="text-red-500 hover:bg-red-50 p-0.5 rounded" data-testid={`team-name-cancel-${teamIdx}`}>
+                    <button onClick={teamManagement.handleCancelEditTeamName} className="text-red-500 hover:bg-red-50 p-0.5 rounded" data-testid={`team-name-cancel-${teamIdx}`}>
                       <X size={12} />
                     </button>
                   </span>
@@ -109,7 +91,7 @@ export const TeamSection: React.FC<TeamSectionProps> = ({
                   <span className="flex items-center gap-1 group/teamname">
                     {teamName} ({team.length})
                     <button
-                      onClick={() => onStartEditTeamName(teamIdx as 0 | 1)}
+                      onClick={() => teamManagement.handleStartEditTeamName(teamIdx as 0 | 1)}
                       className="opacity-0 group-hover/teamname:opacity-100 text-slate-400 hover:text-blue-600 p-0.5 rounded transition-opacity"
                       title="Přejmenovat tým"
                       data-testid={`team-name-edit-${teamIdx}`}
@@ -147,7 +129,7 @@ export const TeamSection: React.FC<TeamSectionProps> = ({
             return (
               <button
                 key={idx}
-                onClick={() => onSetWinner(idx as 0 | 1)}
+                onClick={() => teamManagement.setWinner(idx as 0 | 1)}
                 className="py-2 px-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200"
                 data-testid={`winner-btn-${idx}`}
               >
@@ -160,17 +142,7 @@ export const TeamSection: React.FC<TeamSectionProps> = ({
       )}
 
       {/* Score tracking */}
-      <ScoreEditor
-        event={event}
-        setScores={setScores}
-        isEditingScore={isEditingScore}
-        onAddSet={onAddSet}
-        onRemoveSet={onRemoveSet}
-        onSetScoreChange={onSetScoreChange}
-        onSaveScore={onSaveScore}
-        onCancelScore={onCancelScore}
-        onStartEditScore={onStartEditScore}
-      />
+      <ScoreEditor event={event} scoreTracking={scoreTracking} />
 
       {/* Winner announcement */}
       {event.winningTeam !== undefined && (

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { SportEvent } from '../../../types';
+import { SportEvent } from '@/types.ts';
 
 interface UseScoreTrackingProps {
   event: SportEvent;
@@ -60,4 +60,6 @@ export function useScoreTracking({ event, onUpdate }: UseScoreTrackingProps) {
     resetScores,
   };
 }
+
+export type ScoreTracking = ReturnType<typeof useScoreTracking>;
 

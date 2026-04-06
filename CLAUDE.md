@@ -60,6 +60,36 @@ All domain types in `types.ts`: `User`, `BankAccount`, `Participant`, `Volleybal
 
 ## Release Notes
 
+### v1.3.0 — Smart Teams, Set Scores & EventDetail Refactor (2026-04-06)
+
+#### 🎯 Balanced Team Splitting
+- **Performance-based balancing**: Teams split using snake-draft algorithm based on player win rate + set performance.
+- **Blended rating**: `effectiveRating = 0.6 × winRate + 0.4 × setWinRatio` for players with enough data.
+- **Minimum data threshold**: Players with < 3 games get group average rating instead of unreliable personal stats.
+- **`utils/teamBalancer.ts`**: Exports `computePlayerRatings()`, `balanceTeams()`, `teamRating()`, `extractRounds()`.
+
+#### 📊 Set Score Tracking
+- **Score input per game**: Enter set scores (e.g. 25:20, 18:25) via inline editor in team section.
+- **Read-only display**: Color-coded set results + set tally (e.g. "2:1 na sety").
+- **Persisted in history**: Scores saved with game rounds and displayed in game history.
+- **Feeds balancer**: Set-level performance data improves team balancing accuracy.
+
+#### 🧩 EventDetail Component Split (1 133 → 14 files)
+- **4 custom hooks**: `useTeamManagement`, `useScoreTracking`, `useParticipants`, `usePhotoUpload`.
+- **6 sub-components**: `EventDetailHeader`, `ParticipantList`, `WaitlistSection`, `TeamSection`, `ScoreEditor`, `PaymentSection`.
+- **Shared utilities**: `teamUtils.ts` (team participant sync), `utils/iban.ts` (IBAN conversion).
+- **Hook objects pattern**: Sub-components receive hook return objects (e.g. `teamManagement={teamManagement}`) instead of 10+ individual props.
+- **`@/` path alias**: All cross-module imports use `@/types.ts`, `@/utils/...`, `@/services/...` pattern.
+
+#### ✨ UX Improvements
+- **Spinning shuffle button**: RefreshCw icon animates on "Zamíchat" / "Nová hra" click.
+- **Compact login screen**: Horizontal layout with smaller padding.
+- **Removed Fotbal/Florbal**: App supports Volejbal, Tenis, Badminton only.
+- **Auto team refresh**: Teams update incrementally when participants join/leave.
+
+#### ✅ Tests (27 new, 185 total)
+- `utils/teamBalancer.test.ts` — 27 tests: snake-draft, blended rating, min threshold, backward compat, extractRounds.
+
 ### v1.2.0 — Async Payments, Stability & Changelog Page (2026-03-29)
 
 #### ⚡ Optimistic Async Updates

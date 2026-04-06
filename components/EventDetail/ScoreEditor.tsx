@@ -1,38 +1,25 @@
 import React from 'react';
-import { SportEvent } from '../../types';
+import { SportEvent } from '@/types.ts';
 import { Edit2, Check, X, Plus, Minus } from 'lucide-react';
+import type { ScoreTracking } from './hooks/useScoreTracking';
 
 interface ScoreEditorProps {
   event: SportEvent;
-  setScores: [number, number][];
-  isEditingScore: boolean;
-  onAddSet: () => void;
-  onRemoveSet: (idx: number) => void;
-  onSetScoreChange: (setIdx: number, teamIdx: 0 | 1, value: number) => void;
-  onSaveScore: () => void;
-  onCancelScore: () => void;
-  onStartEditScore: () => void;
+  scoreTracking: ScoreTracking;
 }
 
 export const ScoreEditor: React.FC<ScoreEditorProps> = ({
   event,
-  setScores,
-  isEditingScore,
-  onAddSet,
-  onRemoveSet,
-  onSetScoreChange,
-  onSaveScore,
-  onCancelScore,
-  onStartEditScore,
+  scoreTracking,
 }) => (
   <div className="mt-3 bg-slate-50 rounded-lg border border-slate-200 p-3" data-testid="score-section">
     <div className="flex items-center justify-between mb-2">
       <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
         Skóre setů
       </h4>
-      {!isEditingScore ? (
+      {!scoreTracking.isEditingScore ? (
         <button
-          onClick={onStartEditScore}
+          onClick={scoreTracking.handleStartEditScore}
           className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1 px-2 py-1 rounded hover:bg-indigo-50 transition-colors"
           data-testid="score-edit-btn"
         >
@@ -42,7 +29,7 @@ export const ScoreEditor: React.FC<ScoreEditorProps> = ({
       ) : (
         <div className="flex items-center gap-1">
           <button
-            onClick={onSaveScore}
+            onClick={scoreTracking.handleSaveScore}
             className="text-xs text-green-600 hover:bg-green-50 px-2 py-1 rounded font-medium flex items-center gap-1 transition-colors"
             data-testid="score-save-btn"
           >
@@ -50,7 +37,7 @@ export const ScoreEditor: React.FC<ScoreEditorProps> = ({
             Uložit
           </button>
           <button
-            onClick={onCancelScore}
+            onClick={scoreTracking.handleCancelScore}
             className="text-xs text-red-500 hover:bg-red-50 px-2 py-1 rounded font-medium flex items-center gap-1 transition-colors"
             data-testid="score-cancel-btn"
           >
@@ -60,7 +47,7 @@ export const ScoreEditor: React.FC<ScoreEditorProps> = ({
       )}
     </div>
 
-    {isEditingScore ? (
+    {scoreTracking.isEditingScore ? (
       <div className="space-y-2">
         <div className="grid grid-cols-[auto_1fr_auto_1fr_auto] gap-2 items-center text-xs text-slate-500 font-medium">
           <span className="w-12"></span>
@@ -69,14 +56,14 @@ export const ScoreEditor: React.FC<ScoreEditorProps> = ({
           <span className="text-center truncate">{event.teamNames?.[1] ?? 'Tým 2'}</span>
           <span className="w-6"></span>
         </div>
-        {setScores.map(([s0, s1], idx) => (
+        {scoreTracking.setScores.map(([s0, s1], idx) => (
           <div key={idx} className="grid grid-cols-[auto_1fr_auto_1fr_auto] gap-2 items-center" data-testid={`score-set-${idx}`}>
             <span className="text-xs font-bold text-slate-400 w-12">Set {idx + 1}</span>
             <input
               type="number"
               min="0"
               value={s0}
-              onChange={e => onSetScoreChange(idx, 0, Math.max(0, Number(e.target.value)))}
+              onChange={e => scoreTracking.handleSetScoreChange(idx, 0, Math.max(0, Number(e.target.value)))}
               className="w-full px-2 py-1.5 text-sm text-center border border-slate-300 rounded focus:ring-1 focus:ring-blue-300 outline-none"
               data-testid={`score-set-${idx}-team-0`}
             />
@@ -85,12 +72,12 @@ export const ScoreEditor: React.FC<ScoreEditorProps> = ({
               type="number"
               min="0"
               value={s1}
-              onChange={e => onSetScoreChange(idx, 1, Math.max(0, Number(e.target.value)))}
+              onChange={e => scoreTracking.handleSetScoreChange(idx, 1, Math.max(0, Number(e.target.value)))}
               className="w-full px-2 py-1.5 text-sm text-center border border-slate-300 rounded focus:ring-1 focus:ring-blue-300 outline-none"
               data-testid={`score-set-${idx}-team-1`}
             />
             <button
-              onClick={() => onRemoveSet(idx)}
+              onClick={() => scoreTracking.handleRemoveSet(idx)}
               className="text-red-400 hover:text-red-600 p-0.5 rounded hover:bg-red-50 transition-colors"
               title="Odebrat set"
               data-testid={`score-remove-set-${idx}`}
@@ -100,7 +87,7 @@ export const ScoreEditor: React.FC<ScoreEditorProps> = ({
           </div>
         ))}
         <button
-          onClick={onAddSet}
+          onClick={scoreTracking.handleAddSet}
           className="w-full py-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center justify-center gap-1 border border-dashed border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
           data-testid="score-add-set-btn"
         >
