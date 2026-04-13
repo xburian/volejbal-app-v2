@@ -15,12 +15,13 @@ export const GameHistory: React.FC<GameHistoryProps> = ({ gameHistory }) => {
       </h4>
       <div className="space-y-2">
         {[...gameHistory].reverse().map((round, idx) => {
+          if (!round?.teams?.[0] || !round?.teams?.[1]) return null;
           const roundNum = gameHistory.length - idx;
-          const name0 = round.teamNames?.[0] ?? round.teams[0].map(p => p.name.split(' ')[0]).join(', ');
-          const name1 = round.teamNames?.[1] ?? round.teams[1].map(p => p.name.split(' ')[0]).join(', ');
-          const tooltip0 = round.teams[0].map(p => p.name).join(', ');
-          const tooltip1 = round.teams[1].map(p => p.name).join(', ');
-          const scoreStr = round.score && round.score.length > 0
+          const name0 = round.teamNames?.[0] ?? round.teams[0].map(p => p.name?.split(' ')[0] ?? '?').join(', ');
+          const name1 = round.teamNames?.[1] ?? round.teams[1].map(p => p.name?.split(' ')[0] ?? '?').join(', ');
+          const tooltip0 = round.teams[0].map(p => p.name ?? '?').join(', ');
+          const tooltip1 = round.teams[1].map(p => p.name ?? '?').join(', ');
+          const scoreStr = round.score && Array.isArray(round.score) && round.score.length > 0
             ? round.score.map(([a, b]) => `${a}:${b}`).join(', ')
             : null;
           return (

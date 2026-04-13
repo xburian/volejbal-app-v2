@@ -32,7 +32,7 @@ export const ALL_STRATEGIES: BalancingStrategy[] = ['jittered-snake', 'greedy-sw
  * Extract all completed rounds from an event (game history + current round if finished).
  */
 export function extractRounds(event: SportEvent): GameRound[] {
-  const rounds: GameRound[] = [...(event.gameHistory || [])];
+  const rounds: GameRound[] = [...(Array.isArray(event.gameHistory) ? event.gameHistory : [])];
   if (event.teams && event.winningTeam !== undefined) {
     rounds.push({
       teams: event.teams,
