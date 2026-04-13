@@ -1,7 +1,15 @@
 import React from 'react';
 import { SportEvent, BankAccount, maskAccountNumber } from '@/types.ts';
 import { Wallet, AlertTriangle, Check, Copy, ChevronDown } from 'lucide-react';
-import QRCode from 'react-qr-code';
+import * as QRCodeModule from 'react-qr-code';
+
+// Safely resolve QRCode component — handles CJS/ESM interop differences
+// between Vite dev (esbuild) and production (Rollup) builds.
+const QRCode: React.ComponentType<any> =
+  (QRCodeModule as any).default?.render ? (QRCodeModule as any).default      // ESM: module.default is the component
+  : (QRCodeModule as any).QRCode?.render ? (QRCodeModule as any).QRCode      // Named export
+  : (QRCodeModule as any).default?.default?.render ? (QRCodeModule as any).default.default  // Double-wrapped
+  : (QRCodeModule as any).default ?? (QRCodeModule as any);                  // Fallback
 
 interface PaymentSectionProps {
   event: SportEvent;

@@ -13,6 +13,7 @@ import { ParticipantList } from './ParticipantList';
 import { WaitlistSection } from './WaitlistSection';
 import { TeamSection } from './TeamSection';
 import { PaymentSection } from './PaymentSection';
+import { ErrorBoundary } from '../ErrorBoundary';
 
 interface EventDetailProps {
   event: SportEvent;
@@ -136,60 +137,70 @@ export const EventDetail: React.FC<EventDetailProps> = ({
         </div>
       )}
 
-      <EventDetailHeader
-        event={event}
-        sportConfig={sportConfig}
-        countJoined={countJoined}
-        costPerPerson={costPerPerson}
-        isEditingCost={isEditingCost}
-        tempTotalCost={tempTotalCost}
-        onTempTotalCostChange={setTempTotalCost}
-        onStartEditCost={() => setIsEditingCost(true)}
-        onSaveCost={handleSaveCost}
-        onCancelCostEdit={handleCancelCostEdit}
-        onDelete={onDelete}
-      />
+      <ErrorBoundary fallbackMessage="Chyba v hlavičce">
+        <EventDetailHeader
+          event={event}
+          sportConfig={sportConfig}
+          countJoined={countJoined}
+          costPerPerson={costPerPerson}
+          isEditingCost={isEditingCost}
+          tempTotalCost={tempTotalCost}
+          onTempTotalCostChange={setTempTotalCost}
+          onStartEditCost={() => setIsEditingCost(true)}
+          onSaveCost={handleSaveCost}
+          onCancelCostEdit={handleCancelCostEdit}
+          onDelete={onDelete}
+        />
+      </ErrorBoundary>
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 grid lg:grid-cols-2 gap-6 lg:gap-8">
         {/* Left Column: Participants & Teams */}
         <div className="space-y-6">
-          <ParticipantList
-            sortedParticipants={sortedParticipants}
-            currentUser={currentUser}
-            sportConfig={sportConfig}
-            countJoined={countJoined}
-            costPerPerson={costPerPerson}
-            isAtCapacity={isAtCapacity}
-            participants={participants}
-            photoUpload={photoUpload}
-          />
+          <ErrorBoundary fallbackMessage="Chyba v seznamu účastníků">
+            <ParticipantList
+              sortedParticipants={sortedParticipants}
+              currentUser={currentUser}
+              sportConfig={sportConfig}
+              countJoined={countJoined}
+              costPerPerson={costPerPerson}
+              isAtCapacity={isAtCapacity}
+              participants={participants}
+              photoUpload={photoUpload}
+            />
+          </ErrorBoundary>
 
-          <WaitlistSection
-            waitlistedParticipants={waitlistedParticipants}
-            currentUser={currentUser}
-          />
+          <ErrorBoundary fallbackMessage="Chyba v čekací listině">
+            <WaitlistSection
+              waitlistedParticipants={waitlistedParticipants}
+              currentUser={currentUser}
+            />
+          </ErrorBoundary>
 
-          <TeamSection
-            event={event}
-            teamManagement={teamManagement}
-            scoreTracking={scoreTracking}
-          />
+          <ErrorBoundary fallbackMessage="Chyba v sekci týmů">
+            <TeamSection
+              event={event}
+              teamManagement={teamManagement}
+              scoreTracking={scoreTracking}
+            />
+          </ErrorBoundary>
         </div>
 
         {/* Right Column: Payment Info */}
-        <PaymentSection
-          event={event}
-          bankAccounts={bankAccounts}
-          effectiveAccountNumber={effectiveAccountNumber}
-          selectedAccountOwner={selectedAccountOwner}
-          iban={iban}
-          qrString={qrString}
-          costPerPerson={costPerPerson}
-          countJoined={countJoined}
-          isCopied={isCopied}
-          onCopyToClipboard={handleCopyToClipboard}
-          onBankAccountChange={handleBankAccountChange}
-        />
+        <ErrorBoundary fallbackMessage="Chyba v platebních údajích">
+          <PaymentSection
+            event={event}
+            bankAccounts={bankAccounts}
+            effectiveAccountNumber={effectiveAccountNumber}
+            selectedAccountOwner={selectedAccountOwner}
+            iban={iban}
+            qrString={qrString}
+            costPerPerson={costPerPerson}
+            countJoined={countJoined}
+            isCopied={isCopied}
+            onCopyToClipboard={handleCopyToClipboard}
+            onBankAccountChange={handleBankAccountChange}
+          />
+        </ErrorBoundary>
       </div>
     </div>
   );
