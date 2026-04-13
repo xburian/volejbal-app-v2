@@ -53,9 +53,10 @@ export const EventDetail: React.FC<EventDetailProps> = ({
   }, [event.sportType, sportConfigs]);
 
   // ── Derived participant data ──
+  const safeParticipants = Array.isArray(event.participants) ? event.participants : [];
   const sortedParticipants = useMemo(
-    () => [...event.participants].sort((a, b) => a.name.localeCompare(b.name, 'cs')),
-    [event.participants],
+    () => [...safeParticipants].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '', 'cs')),
+    [safeParticipants],
   );
   const joinedParticipants = sortedParticipants.filter(p => p.status === 'joined');
   const waitlistedParticipants = sortedParticipants.filter(p => p.status === 'waitlist');

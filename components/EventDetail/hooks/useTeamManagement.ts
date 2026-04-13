@@ -90,14 +90,15 @@ export function useTeamManagement({
 
   // Auto-generate/update teams when participants change
   useEffect(() => {
-    if (!event.teams && joinedParticipants.length >= minPlayersForTeams) {
+    const hasValidTeams = Array.isArray(event.teams) && event.teams.length >= 2;
+    if (!hasValidTeams && joinedParticipants.length >= minPlayersForTeams) {
       shuffleTeams();
-    } else if (event.teams) {
-      const updatedTeams = updateTeamsForParticipantChange(event.teams, joinedParticipants, sportConfig);
+    } else if (hasValidTeams) {
+      const updatedTeams = updateTeamsForParticipantChange(event.teams!, joinedParticipants, sportConfig);
       if (updatedTeams === null) {
         onUpdate({ ...event, teams: undefined, teamNames: undefined, winningTeam: undefined });
       } else {
-        const currentIds = event.teams.flatMap(t => t.map(m => m.userId)).sort().join(',');
+        const currentIds = event.teams!.flatMap(t => t.map(m => m.userId)).sort().join(',');
         const newIds = updatedTeams.flatMap(t => t.map(m => m.userId)).sort().join(',');
         if (currentIds !== newIds) {
           onUpdate({ ...event, teams: updatedTeams });

@@ -95,7 +95,7 @@ export const ScoreEditor: React.FC<ScoreEditorProps> = ({
           Přidat set
         </button>
       </div>
-    ) : event.score && event.score.length > 0 ? (
+    ) : event.score && Array.isArray(event.score) && event.score.length > 0 ? (
       <div className="space-y-1.5">
         <div className="grid grid-cols-[auto_1fr_auto_1fr] gap-2 items-center text-xs text-slate-500 font-medium">
           <span className="w-12"></span>

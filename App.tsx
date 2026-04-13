@@ -14,6 +14,7 @@ import { StatsPage } from './components/StatsPage';
 import { ReleaseNotesPage } from './components/ReleaseNotesPage';
 import { MobileBottomNav, MobileView } from './components/MobileBottomNav';
 import { MobileHeader } from './components/MobileHeader';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Calendar as CalendarIcon, Trophy, LogOut, Loader2, Settings, BarChart3, Info } from 'lucide-react';
 import { isSameDay, startOfDay } from 'date-fns';
 
@@ -249,15 +250,17 @@ const App: React.FC = () => {
         {mobileView === 'detail' && (
           <div className="flex-1 overflow-y-auto animate-slide-in-right">
             {selectedEvent ? (
-              <EventDetail
-                event={selectedEvent}
-                currentUser={currentUser}
-                bankAccounts={bankAccounts}
-                sportConfigs={sportConfigs}
-                allEvents={events}
-                onUpdate={handleUpdateEvent}
-                onDelete={handleRequestDelete}
-              />
+              <ErrorBoundary fallbackMessage="Chyba při zobrazení detailu události">
+                <EventDetail
+                  event={selectedEvent}
+                  currentUser={currentUser}
+                  bankAccounts={bankAccounts}
+                  sportConfigs={sportConfigs}
+                  allEvents={events}
+                  onUpdate={handleUpdateEvent}
+                  onDelete={handleRequestDelete}
+                />
+              </ErrorBoundary>
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4 p-8 min-h-[50vh]">
                 <CalendarIcon size={32} className="text-slate-300" />
@@ -358,7 +361,9 @@ const App: React.FC = () => {
         ) : showStats ? (
           <StatsPage events={events} currentUser={currentUser} isLoading={isLoading} onClose={() => setShowStats(false)} sportConfigs={sportConfigs} />
         ) : selectedEvent ? (
-          <EventDetail event={selectedEvent} currentUser={currentUser} bankAccounts={bankAccounts} sportConfigs={sportConfigs} allEvents={events} onUpdate={handleUpdateEvent} onDelete={handleRequestDelete} />
+          <ErrorBoundary fallbackMessage="Chyba při zobrazení detailu události">
+            <EventDetail event={selectedEvent} currentUser={currentUser} bankAccounts={bankAccounts} sportConfigs={sportConfigs} allEvents={events} onUpdate={handleUpdateEvent} onDelete={handleRequestDelete} />
+          </ErrorBoundary>
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4 min-h-[50vh]">
             <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center">

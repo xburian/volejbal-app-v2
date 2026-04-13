@@ -29,7 +29,7 @@ export const TeamSection: React.FC<TeamSectionProps> = ({
     }
   };
 
-  if (!event.teams) return null;
+  if (!event.teams || !Array.isArray(event.teams) || event.teams.length < 2) return null;
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
