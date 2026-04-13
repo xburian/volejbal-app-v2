@@ -60,13 +60,34 @@ All domain types in `types.ts`: `User`, `BankAccount`, `Participant`, `Volleybal
 
 ## Release Notes
 
+### v1.4.0 — Multi-Strategy Team Rebalancing (2026-04-13)
+
+#### 🔄 Always-Different Team Shuffling
+- **Multi-strategy balancing**: "Zamíchat" now rotates through 3 different balanced-team strategies, ensuring every click produces a different team configuration.
+- **Previous-team avoidance**: `balanceTeams()` accepts `previousTeams` option; tries up to 12 attempts across strategies to avoid duplicating the current split.
+- **`teamsAreSame()` helper**: Compares team configurations regardless of team order or member order within a team.
+
+#### 🎯 3 Balancing Strategies
+- **Jittered Snake Draft** (`jitteredSnakeDraft`): Snake-draft with controlled random noise on ratings. Similarly-rated players get shuffled into different positions each time.
+- **Greedy Swap** (`greedySwapBalance`): Random initial partition → iterative pairwise swaps to minimize total rating difference.
+- **Random Partition** (`randomPartitionBalance`): Random shuffle → hill-climbing optimization picking the best swap per iteration.
+
+#### ✅ Tests (20 new, 207 total)
+- `teamsAreSame` — 5 tests: identical, swapped order, different, single-player, reordered members.
+- `balanceTeams with previousTeams` — 4 tests: different result, 2-player edge, team size, no-previous.
+- `jitteredSnakeDraft` — 3 tests: valid split, fixed size, varied results.
+- `greedySwapBalance` — 2 tests: balanced output, varied results.
+- `randomPartitionBalance` — 2 tests: correct sizes, hill-climbing balance.
+- `balanceTeams with forced strategy` — 3 tests: one per strategy.
+- `ALL_STRATEGIES` — 1 test.
+
 ### v1.3.0 — Smart Teams, Set Scores & EventDetail Refactor (2026-04-06)
 
 #### 🎯 Balanced Team Splitting
 - **Performance-based balancing**: Teams split using snake-draft algorithm based on player win rate + set performance.
 - **Blended rating**: `effectiveRating = 0.6 × winRate + 0.4 × setWinRatio` for players with enough data.
 - **Minimum data threshold**: Players with < 3 games get group average rating instead of unreliable personal stats.
-- **`utils/teamBalancer.ts`**: Exports `computePlayerRatings()`, `balanceTeams()`, `teamRating()`, `extractRounds()`.
+- **`utils/teamBalancer.ts`**: Exports `computePlayerRatings()`, `balanceTeams()`, `teamRating()`, `extractRounds()`, `teamsAreSame()`, `jitteredSnakeDraft()`, `greedySwapBalance()`, `randomPartitionBalance()`, `BalancingStrategy`, `ALL_STRATEGIES`.
 
 #### 📊 Set Score Tracking
 - **Score input per game**: Enter set scores (e.g. 25:20, 18:25) via inline editor in team section.
