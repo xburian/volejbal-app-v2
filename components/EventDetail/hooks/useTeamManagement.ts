@@ -29,7 +29,11 @@ export function useTeamManagement({
   const shuffleTeams = async () => {
     const teamSize = sportConfig.teamSize;
 
-    const balanced = balanceTeams(joinedParticipants, allEvents, { teamSize });
+    // Pass current teams so the balancer avoids producing the same split
+    const balanced = balanceTeams(joinedParticipants, allEvents, {
+      teamSize,
+      previousTeams: event.teams ?? null,
+    });
 
     let newTeams: [TeamMember[], TeamMember[]];
     if (balanced) {

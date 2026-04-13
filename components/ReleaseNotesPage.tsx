@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Zap, CheckCircle2, Smartphone, Layout, FlaskConical, CreditCard, ArrowLeft, Trophy, BookOpen, UserCircle, BarChart3, Target, Puzzle, RefreshCw } from 'lucide-react';
+import { Sparkles, Zap, CheckCircle2, Smartphone, Layout, FlaskConical, CreditCard, ArrowLeft, Trophy, BookOpen, UserCircle, BarChart3, Target, Puzzle, RefreshCw, Repeat2 } from 'lucide-react';
 
 interface ReleaseNotesPageProps {
   onClose: () => void;
@@ -12,6 +12,40 @@ interface ChangeEntry {
 }
 
 const versions: { version: string; date: string; title: string; changes: ChangeEntry[] }[] = [
+  {
+    version: '1.4.0',
+    date: '13. 4. 2026',
+    title: 'Multi-strategie míchání týmů',
+    changes: [
+      {
+        icon: <Repeat2 size={16} />,
+        title: 'Různé týmy při každém zamíchání',
+        items: [
+          'Tlačítko „Zamíchat" nyní pokaždé vytvoří jiné složení týmů',
+          '3 vyvažovací strategie se střídají: Jittered Snake Draft, Greedy Swap, Random Partition',
+          'Algoritmus se vyhýbá předchozímu složení — nové týmy jsou vždy odlišné',
+          'Všechny strategie zachovávají vyváženost — rozdíl v celkovém ratingu týmů zůstává minimální',
+        ],
+      },
+      {
+        icon: <BarChart3 size={16} />,
+        title: '3 vyvažovací strategie',
+        items: [
+          'Jittered Snake Draft — snake-draft s náhodným šumem na ratingy, jinak seřazení hráči každé kolo',
+          'Greedy Swap — náhodné rozdělení + iterativní výměny hráčů pro minimální rozdíl ratingu',
+          'Random Partition — náhodné rozdělení + hill-climbing optimalizace nejlepší výměnou',
+        ],
+      },
+      {
+        icon: <FlaskConical size={16} />,
+        title: 'Testy',
+        items: [
+          '20 nových testů pro multi-strategie: teamsAreSame, previousTeams, jitteredSnakeDraft, greedySwapBalance, randomPartitionBalance',
+          '47 testů v teamBalancer, 207 testů celkem',
+        ],
+      },
+    ],
+  },
   {
     version: '1.3.0',
     date: '6. 4. 2026',

@@ -4,7 +4,12 @@ import {
   balanceTeams,
   teamRating,
   extractRounds,
+  teamsAreSame,
+  jitteredSnakeDraft,
+  greedySwapBalance,
+  randomPartitionBalance,
   DEFAULT_MIN_GAMES_THRESHOLD,
+  ALL_STRATEGIES,
   PlayerRating,
 } from './teamBalancer';
 import { SportEvent, Participant, TeamMember } from '../types';
@@ -501,6 +506,267 @@ describe('teamRating', () => {
 describe('DEFAULT_MIN_GAMES_THRESHOLD', () => {
   it('is set to 3', () => {
     expect(DEFAULT_MIN_GAMES_THRESHOLD).toBe(3);
+  });
+});
+
+// ── teamsAreSame ──
+
+describe('teamsAreSame', () => {
+  it('detects identical team configurations', () => {
+    const teams: [TeamMember[], TeamMember[]] = [[tm('a'), tm('b')], [tm('c'), tm('d')]];
+    expect(teamsAreSame(teams, [[tm('a'), tm('b')], [tm('c'), tm('d')]])).toBe(true);
+  });
+
+  it('detects swapped team order as same', () => {
+    const a: [TeamMember[], TeamMember[]] = [[tm('a'), tm('b')], [tm('c'), tm('d')]];
+    const b: [TeamMember[], TeamMember[]] = [[tm('c'), tm('d')], [tm('a'), tm('b')]];
+    expect(teamsAreSame(a, b)).toBe(true);
+  });
+
+  it('detects different configurations as not same', () => {
+    const a: [TeamMember[], TeamMember[]] = [[tm('a'), tm('b')], [tm('c'), tm('d')]];
+    const b: [TeamMember[], TeamMember[]] = [[tm('a'), tm('c')], [tm('b'), tm('d')]];
+    expect(teamsAreSame(a, b)).toBe(false);
+  });
+
+  it('handles single-player teams', () => {
+    expect(teamsAreSame([[tm('a')], [tm('b')]], [[tm('b')], [tm('a')]])).toBe(true);
+    expect(teamsAreSame([[tm('a')], [tm('b')]], [[tm('a')], [tm('b')]])).toBe(true);
+  });
+
+  it('handles different member order within a team', () => {
+    const a: [TeamMember[], TeamMember[]] = [[tm('a'), tm('b')], [tm('c')]];
+    const b: [TeamMember[], TeamMember[]] = [[tm('b'), tm('a')], [tm('c')]];
+    expect(teamsAreSame(a, b)).toBe(true);
+  });
+});
+
+// ── ALL_STRATEGIES ──
+
+describe('ALL_STRATEGIES', () => {
+  it('contains three strategies', () => {
+    expect(ALL_STRATEGIES).toHaveLength(3);
+    expect(ALL_STRATEGIES).toContain('jittered-snake');
+    expect(ALL_STRATEGIES).toContain('greedy-swap');
+    expect(ALL_STRATEGIES).toContain('random-partition');
+  });
+});
+
+// ── Multi-strategy balancing (previousTeams avoidance) ──
+
+describe('balanceTeams with previousTeams', () => {
+  it('produces different teams when previousTeams is provided (4+ players)', () => {
+    // With 4+ players and some variety, repeated calls should produce different results
+    const players = Array.from({ length: 6 }, (_, i) => makeParticipant(`p${i}`));
+    const events = [
+      makeEventWithHistory('e1', [
+        { teams: [[tm('p0'), tm('p1'), tm('p2')], [tm('p3'), tm('p4'), tm('p5')]], winningTeam: 0 },
+        { teams: [[tm('p0'), tm('p3')], [tm('p1'), tm('p4')]], winningTeam: 1 },
+        { teams: [[tm('p0'), tm('p5')], [tm('p2'), tm('p3')]], winningTeam: 0 },
+      ]),
+    ];
+
+    const first = balanceTeams(players, events, { teamSize: null });
+    expect(first).not.toBeNull();
+
+    // Now request a different split
+    const second = balanceTeams(players, events, { teamSize: null, previousTeams: first });
+    expect(second).not.toBeNull();
+
+    // The second result should be different from the first
+    expect(teamsAreSame(first!, second!)).toBe(false);
+  });
+
+  it('still returns valid teams even if only 2 players (may be same)', () => {
+    const players = [makeParticipant('a'), makeParticipant('b')];
+    const first = balanceTeams(players, [], { teamSize: null });
+    expect(first).not.toBeNull();
+
+    // With only 2 players, there's only one way to split
+    const second = balanceTeams(players, [], { teamSize: null, previousTeams: first });
+    expect(second).not.toBeNull();
+    // Can't guarantee different with only 2 players, but should not be null
+  });
+
+  it('respects team size with previousTeams', () => {
+    const players = Array.from({ length: 6 }, (_, i) => makeParticipant(`p${i}`));
+    const first = balanceTeams(players, [], { teamSize: 2 });
+    expect(first).not.toBeNull();
+    expect(first![0]).toHaveLength(2);
+    expect(first![1]).toHaveLength(2);
+
+    const second = balanceTeams(players, [], { teamSize: 2, previousTeams: first });
+    expect(second).not.toBeNull();
+    expect(second![0]).toHaveLength(2);
+    expect(second![1]).toHaveLength(2);
+  });
+
+  it('without previousTeams, returns a valid balanced result', () => {
+    const players = Array.from({ length: 8 }, (_, i) => makeParticipant(`p${i}`));
+    const result = balanceTeams(players, [], { teamSize: null });
+    expect(result).not.toBeNull();
+    expect(result![0].length + result![1].length).toBe(8);
+  });
+});
+
+// ── Individual strategy functions ──
+
+describe('jitteredSnakeDraft', () => {
+  it('produces valid two-team split', () => {
+    const ratings: PlayerRating[] = Array.from({ length: 6 }, (_, i) => ({
+      userId: `p${i}`,
+      name: `Player ${i}`,
+      gamesPlayed: 5,
+      gamesWon: i,
+      winRate: i / 5,
+      setWinRatio: 0.5,
+      effectiveRating: 0.3 + i * 0.1,
+      hasEnoughData: true,
+    }));
+
+    const [t0, t1] = jitteredSnakeDraft(ratings, null);
+    expect(t0.length + t1.length).toBe(6);
+    expect(Math.abs(t0.length - t1.length)).toBeLessThanOrEqual(1);
+  });
+
+  it('respects fixed teamSize', () => {
+    const ratings: PlayerRating[] = Array.from({ length: 6 }, (_, i) => ({
+      userId: `p${i}`,
+      name: `Player ${i}`,
+      gamesPlayed: 5,
+      gamesWon: i,
+      winRate: i / 5,
+      setWinRatio: 0.5,
+      effectiveRating: 0.3 + i * 0.1,
+      hasEnoughData: true,
+    }));
+
+    const [t0, t1] = jitteredSnakeDraft(ratings, 2);
+    expect(t0).toHaveLength(2);
+    expect(t1).toHaveLength(2);
+  });
+
+  it('produces varied results across calls due to jitter', () => {
+    const ratings: PlayerRating[] = Array.from({ length: 8 }, (_, i) => ({
+      userId: `p${i}`,
+      name: `Player ${i}`,
+      gamesPlayed: 5,
+      gamesWon: 3,
+      winRate: 0.6,
+      setWinRatio: 0.5,
+      effectiveRating: 0.56, // All same rating → jitter determines order
+      hasEnoughData: true,
+    }));
+
+    const results = new Set<string>();
+    for (let i = 0; i < 20; i++) {
+      const [t0] = jitteredSnakeDraft(ratings, null);
+      results.add(t0.map(m => m.userId).sort().join(','));
+    }
+    // With all-equal ratings and jitter, should produce multiple different results
+    expect(results.size).toBeGreaterThan(1);
+  });
+});
+
+describe('greedySwapBalance', () => {
+  it('produces balanced teams', () => {
+    const ratings: PlayerRating[] = [
+      { userId: 'a', name: 'A', gamesPlayed: 5, gamesWon: 5, winRate: 1.0, setWinRatio: 0.7, effectiveRating: 0.88, hasEnoughData: true },
+      { userId: 'b', name: 'B', gamesPlayed: 5, gamesWon: 4, winRate: 0.8, setWinRatio: 0.6, effectiveRating: 0.72, hasEnoughData: true },
+      { userId: 'c', name: 'C', gamesPlayed: 5, gamesWon: 2, winRate: 0.4, setWinRatio: 0.45, effectiveRating: 0.42, hasEnoughData: true },
+      { userId: 'd', name: 'D', gamesPlayed: 5, gamesWon: 1, winRate: 0.2, setWinRatio: 0.35, effectiveRating: 0.26, hasEnoughData: true },
+    ];
+
+    const [t0, t1] = greedySwapBalance(ratings, null);
+    expect(t0).toHaveLength(2);
+    expect(t1).toHaveLength(2);
+
+    // Rating difference should be small after greedy optimization
+    const sum0 = t0.reduce((s, m) => s + (ratings.find(r => r.userId === m.userId)?.effectiveRating ?? 0), 0);
+    const sum1 = t1.reduce((s, m) => s + (ratings.find(r => r.userId === m.userId)?.effectiveRating ?? 0), 0);
+    expect(Math.abs(sum0 - sum1)).toBeLessThan(0.5);
+  });
+
+  it('produces varied results across calls', () => {
+    const ratings: PlayerRating[] = Array.from({ length: 6 }, (_, i) => ({
+      userId: `p${i}`,
+      name: `Player ${i}`,
+      gamesPlayed: 5,
+      gamesWon: 3,
+      winRate: 0.6,
+      setWinRatio: 0.5,
+      effectiveRating: 0.56,
+      hasEnoughData: true,
+    }));
+
+    const results = new Set<string>();
+    for (let i = 0; i < 20; i++) {
+      const [t0] = greedySwapBalance(ratings, null);
+      results.add(t0.map(m => m.userId).sort().join(','));
+    }
+    expect(results.size).toBeGreaterThan(1);
+  });
+});
+
+describe('randomPartitionBalance', () => {
+  it('produces valid teams with correct sizes', () => {
+    const ratings: PlayerRating[] = Array.from({ length: 8 }, (_, i) => ({
+      userId: `p${i}`,
+      name: `Player ${i}`,
+      gamesPlayed: 5,
+      gamesWon: i,
+      winRate: i / 5,
+      setWinRatio: 0.5,
+      effectiveRating: 0.3 + i * 0.08,
+      hasEnoughData: true,
+    }));
+
+    const [t0, t1] = randomPartitionBalance(ratings, null);
+    expect(t0.length + t1.length).toBe(8);
+    expect(Math.abs(t0.length - t1.length)).toBeLessThanOrEqual(1);
+  });
+
+  it('optimizes for balance via hill-climbing', () => {
+    const ratings: PlayerRating[] = [
+      { userId: 'strong', name: 'S', gamesPlayed: 5, gamesWon: 5, winRate: 1.0, setWinRatio: 0.8, effectiveRating: 0.92, hasEnoughData: true },
+      { userId: 'medium1', name: 'M1', gamesPlayed: 5, gamesWon: 3, winRate: 0.6, setWinRatio: 0.5, effectiveRating: 0.56, hasEnoughData: true },
+      { userId: 'medium2', name: 'M2', gamesPlayed: 5, gamesWon: 3, winRate: 0.6, setWinRatio: 0.5, effectiveRating: 0.56, hasEnoughData: true },
+      { userId: 'weak', name: 'W', gamesPlayed: 5, gamesWon: 0, winRate: 0.0, setWinRatio: 0.3, effectiveRating: 0.12, hasEnoughData: true },
+    ];
+
+    // Run multiple times and check balance
+    for (let i = 0; i < 10; i++) {
+      const [t0, t1] = randomPartitionBalance(ratings, null);
+      const sum0 = t0.reduce((s, m) => s + (ratings.find(r => r.userId === m.userId)?.effectiveRating ?? 0), 0);
+      const sum1 = t1.reduce((s, m) => s + (ratings.find(r => r.userId === m.userId)?.effectiveRating ?? 0), 0);
+      // After hill-climbing, teams should be reasonably balanced
+      expect(Math.abs(sum0 - sum1)).toBeLessThan(0.6);
+    }
+  });
+});
+
+// ── Forced strategy ──
+
+describe('balanceTeams with forced strategy', () => {
+  it('uses jittered-snake strategy when specified', () => {
+    const players = Array.from({ length: 6 }, (_, i) => makeParticipant(`p${i}`));
+    const result = balanceTeams(players, [], { teamSize: null, strategy: 'jittered-snake' });
+    expect(result).not.toBeNull();
+    expect(result![0].length + result![1].length).toBe(6);
+  });
+
+  it('uses greedy-swap strategy when specified', () => {
+    const players = Array.from({ length: 6 }, (_, i) => makeParticipant(`p${i}`));
+    const result = balanceTeams(players, [], { teamSize: null, strategy: 'greedy-swap' });
+    expect(result).not.toBeNull();
+    expect(result![0].length + result![1].length).toBe(6);
+  });
+
+  it('uses random-partition strategy when specified', () => {
+    const players = Array.from({ length: 6 }, (_, i) => makeParticipant(`p${i}`));
+    const result = balanceTeams(players, [], { teamSize: null, strategy: 'random-partition' });
+    expect(result).not.toBeNull();
+    expect(result![0].length + result![1].length).toBe(6);
   });
 });
 
