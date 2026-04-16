@@ -4,8 +4,6 @@ import { format, startOfDay } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
 interface StatisticsResult {
-  leaderboard: UserStats[];
-  paymentRanking: UserStats[];
   personalStats: UserStats | null;
   monthlyTrends: MonthlyTrend[];
   badges: Badge[];
@@ -45,6 +43,9 @@ function computeUserStats(events: SportEvent[]): Map<string, UserStats> {
           winRate: 0,
           winStreak: 0,
           longestWinStreak: 0,
+          setsWon: 0,
+          setsLost: 0,
+          setWinRate: 0,
         });
       }
     }
@@ -104,7 +105,7 @@ function computeUserStats(events: SportEvent[]): Map<string, UserStats> {
     // Win tracking: count all completed rounds (history + current)
     const allRounds: GameRound[] = [...(event.gameHistory || [])];
     if (event.teams && event.winningTeam !== undefined) {
-      allRounds.push({ teams: event.teams, winningTeam: event.winningTeam });
+      allRounds.push({ teams: event.teams, winningTeam: event.winningTeam, score: event.score });
     }
     for (const round of allRounds) {
       if (round.winningTeam === undefined) continue;
@@ -112,12 +113,29 @@ function computeUserStats(events: SportEvent[]): Map<string, UserStats> {
       const losingTeam = round.teams[1 - round.winningTeam];
       const allTeamMembers = [...winningTeam, ...losingTeam];
 
+      // Count sets per team from score
+      let teamSetsWon: [number, number] = [0, 0];
+      if (round.score && Array.isArray(round.score)) {
+        for (const [s0, s1] of round.score) {
+          if (s0 + s1 === 0) continue;
+          if (s0 > s1) teamSetsWon[0]++;
+          else if (s1 > s0) teamSetsWon[1]++;
+        }
+      }
+
       for (const member of allTeamMembers) {
         const stats = statsMap.get(member.userId);
         if (!stats) continue;
         stats.gamesPlayed++;
         const isWinner = winningTeam.some(m => m.userId === member.userId);
-        if (isWinner) stats.gamesWon++;
+        if (isWinner) {
+          stats.gamesWon++;
+          stats.setsWon += teamSetsWon[round.winningTeam];
+          stats.setsLost += teamSetsWon[1 - round.winningTeam];
+        } else {
+          stats.setsWon += teamSetsWon[1 - round.winningTeam];
+          stats.setsLost += teamSetsWon[round.winningTeam];
+        }
       }
     }
   }
@@ -179,8 +197,9 @@ function computeUserStats(events: SportEvent[]): Map<string, UserStats> {
       stats.favoriteLocation = favLoc;
     }
 
-    // Win rate and win streak
+    // Win rate, set rate, and win streak
     stats.winRate = stats.gamesPlayed > 0 ? stats.gamesWon / stats.gamesPlayed : 0;
+    stats.setWinRate = (stats.setsWon + stats.setsLost) > 0 ? stats.setsWon / (stats.setsWon + stats.setsLost) : 0;
     const ws = winStreaks.get(userId);
     if (ws) {
       stats.winStreak = ws.current;
@@ -325,23 +344,34 @@ function computeBadges(statsMap: Map<string, UserStats>): Badge[] {
 }
 
 function computeDuoStats(events: SportEvent[]): DuoStats[] {
-  // Track co-wins for every pair of players
-  const pairMap = new Map<string, { players: [string, string]; names: [string, string]; photos: [string | undefined, string | undefined]; played: number; won: number }>();
+  // Track co-wins and set performance for every pair of players
+  const pairMap = new Map<string, { players: [string, string]; names: [string, string]; photos: [string | undefined, string | undefined]; played: number; won: number; setsWon: number; setsLost: number }>();
 
   for (const event of events) {
     // Collect all completed rounds (history + current)
     const allRounds: GameRound[] = [...(event.gameHistory || [])];
     if (event.teams && event.winningTeam !== undefined) {
-      allRounds.push({ teams: event.teams, winningTeam: event.winningTeam });
+      allRounds.push({ teams: event.teams, winningTeam: event.winningTeam, score: event.score });
     }
 
     for (const round of allRounds) {
       if (round.winningTeam === undefined) continue;
 
+      // Count sets won/lost per team from score
+      let teamSetsWon: [number, number] = [0, 0];
+      if (round.score && Array.isArray(round.score)) {
+        for (const [s0, s1] of round.score) {
+          if (s0 + s1 === 0) continue; // skip [0,0]
+          if (s0 > s1) teamSetsWon[0]++;
+          else if (s1 > s0) teamSetsWon[1]++;
+        }
+      }
+
       // Both teams played together
       for (let teamIdx = 0; teamIdx < 2; teamIdx++) {
         const team = round.teams[teamIdx];
         const isWinning = teamIdx === round.winningTeam;
+        const otherIdx = 1 - teamIdx;
 
         for (let i = 0; i < team.length; i++) {
           for (let j = i + 1; j < team.length; j++) {
@@ -356,11 +386,15 @@ function computeDuoStats(events: SportEvent[]): DuoStats[] {
                 photos: [p1.photoUrl, p2.photoUrl],
                 played: 0,
                 won: 0,
+                setsWon: 0,
+                setsLost: 0,
               });
             }
             const pair = pairMap.get(key)!;
             pair.played++;
             if (isWinning) pair.won++;
+            pair.setsWon += teamSetsWon[teamIdx];
+            pair.setsLost += teamSetsWon[otherIdx];
           }
         }
       }
@@ -369,8 +403,17 @@ function computeDuoStats(events: SportEvent[]): DuoStats[] {
 
   return Array.from(pairMap.values())
     .filter(p => p.played >= 2)
-    .sort((a, b) => b.won - a.won || (b.won / b.played) - (a.won / a.played))
-    .slice(0, 3)
+    .sort((a, b) => {
+      // Blended score: 0.6 * winRate + 0.4 * setWinRate, then by total wins
+      const aSetRate = (a.setsWon + a.setsLost) > 0 ? a.setsWon / (a.setsWon + a.setsLost) : 0.5;
+      const bSetRate = (b.setsWon + b.setsLost) > 0 ? b.setsWon / (b.setsWon + b.setsLost) : 0.5;
+      const aWinRate = a.played > 0 ? a.won / a.played : 0;
+      const bWinRate = b.played > 0 ? b.won / b.played : 0;
+      const aScore = 0.6 * aWinRate + 0.4 * aSetRate;
+      const bScore = 0.6 * bWinRate + 0.4 * bSetRate;
+      return bScore - aScore || b.won - a.won;
+    })
+    .slice(0, 5)
     .map(p => ({
       players: [
         { userId: p.players[0], name: p.names[0], photoUrl: p.photos[0] },
@@ -379,6 +422,9 @@ function computeDuoStats(events: SportEvent[]): DuoStats[] {
       gamesPlayed: p.played,
       gamesWon: p.won,
       winRate: p.played > 0 ? p.won / p.played : 0,
+      setsWon: p.setsWon,
+      setsLost: p.setsLost,
+      setWinRate: (p.setsWon + p.setsLost) > 0 ? p.setsWon / (p.setsWon + p.setsLost) : 0,
     }));
 }
 
@@ -390,8 +436,6 @@ export function useStatistics(
   return useMemo(() => {
     if (isLoading || events.length === 0) {
       return {
-        leaderboard: [],
-        paymentRanking: [],
         personalStats: null,
         monthlyTrends: [],
         badges: [],
@@ -406,8 +450,6 @@ export function useStatistics(
 
     if (pastEvents.length === 0) {
       return {
-        leaderboard: [],
-        paymentRanking: [],
         personalStats: null,
         monthlyTrends: [],
         badges: [],
@@ -417,16 +459,6 @@ export function useStatistics(
     }
 
     const statsMap = computeUserStats(pastEvents);
-    const allStats = Array.from(statsMap.values());
-
-    // Leaderboard: sorted by attendance rate, then by total joined
-    const leaderboard = [...allStats]
-      .sort((a, b) => b.attendanceRate - a.attendanceRate || b.eventsJoined - a.eventsJoined);
-
-    // Payment ranking: sorted by payment rate, then by events joined
-    const paymentRanking = [...allStats]
-      .filter(s => s.eventsJoined > 0)
-      .sort((a, b) => b.paymentRate - a.paymentRate || b.eventsJoined - a.eventsJoined);
 
     // Personal stats
     const personalStats = currentUser ? statsMap.get(currentUser.id) || null : null;
@@ -441,8 +473,6 @@ export function useStatistics(
     const duoStats = computeDuoStats(pastEvents);
 
     return {
-      leaderboard,
-      paymentRanking,
       personalStats,
       monthlyTrends,
       badges,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Zap, CheckCircle2, Smartphone, Layout, FlaskConical, CreditCard, ArrowLeft, Trophy, BookOpen, UserCircle, BarChart3, Target, Puzzle, RefreshCw, Repeat2 } from 'lucide-react';
+import { Sparkles, Zap, CheckCircle2, Smartphone, Layout, FlaskConical, CreditCard, ArrowLeft, Trophy, BookOpen, UserCircle, BarChart3, Target, Puzzle, RefreshCw, Repeat2, Link, PawPrint, Swords } from 'lucide-react';
 
 interface ReleaseNotesPageProps {
   onClose: () => void;
@@ -12,6 +12,75 @@ interface ChangeEntry {
 }
 
 const versions: { version: string; date: string; title: string; changes: ChangeEntry[] }[] = [
+  {
+    version: '1.5.0',
+    date: '16. 4. 2026',
+    title: 'Persistence, statistiky setů a refaktoring',
+    changes: [
+      {
+        icon: <RefreshCw size={16} />,
+        title: 'Přihlášení přežije reload',
+        items: [
+          'Po obnovení stránky v prohlížeči zůstanete přihlášeni',
+          'Vybraná událost a mobilní pohled se ukládají do URL a localStorage',
+          'URL obsahuje parametry ?event=ID&view=detail — lze sdílet odkaz na konkrétní událost',
+        ],
+      },
+      {
+        icon: <Link size={16} />,
+        title: 'Událost v URL',
+        items: [
+          'Vybraná událost se ukládá do URL parametru ?event=...',
+          'Při reloadu se zobrazí stejná událost místo první nadcházející',
+          'Mobilní pohled (detail/statistiky/changelog) se také ukládá do URL',
+        ],
+      },
+      {
+        icon: <Swords size={16} />,
+        title: 'Statistiky setů',
+        items: [
+          'Moje statistiky nyní zobrazují sety: výhry:prohry (X%)',
+          'Nejlepší dvojice — řazení podle kombinace výher + výkonu v setech (60:40 blend)',
+          'Dvojice zobrazují záznam setů: „sety 7:4 (64%)"',
+          'Top 5 dvojic místo 3',
+          'Konzistentní počítání her se systémem vyvažování týmů',
+        ],
+      },
+      {
+        icon: <PawPrint size={16} />,
+        title: 'Názvy týmů — zvířata',
+        items: [
+          'Týmy se nyní jmenují podle zvířat: Vlci, Orli, Medvědi, Tygři, Lvi, Panteři, Jestřábi, Sokoli, Rysové, Žraloci',
+          'Existující události zachovávají původní názvy',
+        ],
+      },
+      {
+        icon: <CheckCircle2 size={16} />,
+        title: 'Odstraněné statistiky',
+        items: [
+          'Odstraněn „MVP Žebříček" (docházka) a „Spolehlivost plateb" ze stránky statistik',
+          'Přehlednější statistiky zaměřené na výkon a hru',
+        ],
+      },
+      {
+        icon: <Layout size={16} />,
+        title: 'Refaktoring App.tsx',
+        items: [
+          'App.tsx rozdělen do 3 custom hooks: usePersistedAuth, useUrlState, useDataLoading',
+          'Autentizace, URL persistence a načítání dat odděleny do samostatných souborů',
+          'App.tsx zmenšen z 461 na ~280 řádků čistého renderovacího kódu',
+        ],
+      },
+      {
+        icon: <FlaskConical size={16} />,
+        title: 'Testy',
+        items: [
+          '10 nových testů pro statistiky setů: personalStats, duoStats, konzistence s teamBalancerem',
+          '217 testů celkem — vše prochází',
+        ],
+      },
+    ],
+  },
   {
     version: '1.4.0',
     date: '13. 4. 2026',

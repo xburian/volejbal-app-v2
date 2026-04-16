@@ -22,6 +22,10 @@ vi.mock('./services/storage', () => ({
 
 describe('App Integration', () => {
   beforeEach(() => {
+    // Clear persisted login
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('selectedEventId');
+    localStorage.removeItem('mobileView');
     // Reset all mocks
     vi.resetAllMocks();
     // Default mock implementations - return empty arrays for integration tests
@@ -177,6 +181,9 @@ describe('App Integration', () => {
 
 describe('Calendar Date Selection', () => {
   beforeEach(() => {
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('selectedEventId');
+    localStorage.removeItem('mobileView');
     vi.resetAllMocks();
   });
 

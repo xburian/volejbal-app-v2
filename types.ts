@@ -58,9 +58,9 @@ export interface TeamMember {
   photoUrl?: string;
 }
 
-/** Default team color names — randomly assigned on shuffle */
+/** Default team animal names — randomly assigned on shuffle */
 export const TEAM_COLOR_NAMES = [
-  'Červení', 'Modří', 'Zelení', 'Žlutí', 'Oranžoví', 'Fialový',
+  'Vlci', 'Orli', 'Medvědi', 'Tygři', 'Lvi', 'Panteři', 'Jestřábi', 'Sokoli', 'Rysové', 'Žraloci',
 ] as const;
 
 export interface GameRound {
@@ -130,6 +130,9 @@ export interface UserStats {
   winRate: number;             // gamesWon / gamesPlayed (0-1)
   winStreak: number;           // current consecutive wins
   longestWinStreak: number;
+  setsWon: number;
+  setsLost: number;
+  setWinRate: number;          // setsWon / (setsWon + setsLost) (0-1)
 }
 
 export interface MonthlyTrend {
@@ -145,6 +148,9 @@ export interface DuoStats {
   gamesPlayed: number;
   gamesWon: number;
   winRate: number;
+  setsWon: number;
+  setsLost: number;
+  setWinRate: number;
 }
 
 export type BadgeType = 'ironman' | 'ghost' | 'maybeMaster' | 'quickPayer' | 'socialButterfly' | 'luckyPlayer';

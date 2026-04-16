@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SportEvent, User, DebtItem, BankAccount, SportConfig, SportType } from './types';
-import * as storage from './services/storage';
-import { calculateDebts } from './utils/debt';
+import { SportEvent, SportType } from './types';
 import { CalendarView } from './components/CalendarView';
 import { EventDetail } from './components/EventDetail';
 import { EventList } from './components/EventList';
@@ -15,63 +13,28 @@ import { ReleaseNotesPage } from './components/ReleaseNotesPage';
 import { MobileBottomNav, MobileView } from './components/MobileBottomNav';
 import { MobileHeader } from './components/MobileHeader';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { usePersistedAuth } from './hooks/usePersistedAuth';
+import { useUrlState } from './hooks/useUrlState';
+import { useDataLoading } from './hooks/useDataLoading';
 import { Calendar as CalendarIcon, Trophy, LogOut, Loader2, Settings, BarChart3, Info } from 'lucide-react';
 import { isSameDay, startOfDay } from 'date-fns';
 
 const App: React.FC = () => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [events, setEvents] = useState<SportEvent[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const { currentUser, login, logout, updateUser } = usePersistedAuth();
+  const { selectedEventId, setSelectedEventId, clearSelection, mobileView, setMobileView } = useUrlState();
+  const {
+    events, isLoading, unpaidDebts, bankAccounts, setBankAccounts,
+    sportConfigs, setSportConfigs, loadEvents, createEvent, updateEvent, deleteEvent,
+  } = useDataLoading({ currentUser });
 
   const [viewDate, setViewDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<string | null>(null);
-  const [unpaidDebts, setUnpaidDebts] = useState<DebtItem[]>([]);
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
-  const [mobileView, setMobileView] = useState<MobileView>('calendar');
-  const [sportConfigs, setSportConfigs] = useState<SportConfig[]>([]);
   const [sportFilter, setSportFilter] = useState<SportType | null>(null);
-
-  // ── Data loading ──
-
-  const loadEvents = async () => {
-    setIsLoading(true);
-    try {
-      setEvents(await storage.getEvents());
-    } catch (error) {
-      console.error("Failed to load events", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadBankAccounts = async () => {
-    try {
-      setBankAccounts(await storage.getBankAccounts());
-    } catch (error) {
-      console.error("Failed to load bank accounts", error);
-    }
-  };
-
-  const loadSportConfigs = async () => {
-    try {
-      setSportConfigs(await storage.getSportConfigs());
-    } catch (error) {
-      console.error("Failed to load sport configs", error);
-    }
-  };
-
-  useEffect(() => {
-    if (!currentUser) return;
-    loadEvents();
-    loadBankAccounts();
-    loadSportConfigs();
-  }, [currentUser]);
 
   // Auto-select first upcoming event
   useEffect(() => {
@@ -83,42 +46,28 @@ const App: React.FC = () => {
     if (upcoming.length > 0) setSelectedEventId(upcoming[0].id);
   }, [currentUser, events, selectedEventId]);
 
-  // Recalculate debts using extracted pure function
-  useEffect(() => {
-    if (!currentUser || events.length === 0) {
-      setUnpaidDebts([]);
-      return;
-    }
-    setUnpaidDebts(calculateDebts(events, currentUser));
-  }, [currentUser, events]);
-
   // ── Handlers ──
 
-  const handleLogin = (user: User) => {
-    setCurrentUser(user);
+  const handleLogin = (user: NonNullable<typeof currentUser>) => {
+    login(user);
     setSelectedDate(null);
     setViewDate(new Date());
     setMobileView('calendar');
   };
 
   const handleLogout = () => {
-    setCurrentUser(null);
-    setSelectedEventId(null);
-    setUnpaidDebts([]);
+    logout();
+    clearSelection();
     setMobileView('calendar');
   };
 
-  const handleUserUpdate = (updatedUser: User) => {
-    setCurrentUser(updatedUser);
-    // Reload events so participant names/photos reflect the change
+  const handleUserUpdate = (updatedUser: NonNullable<typeof currentUser>) => {
+    updateUser(updatedUser);
     loadEvents();
   };
 
   const handleCreateEvent = async (newEvent: SportEvent) => {
-    setIsLoading(true);
-    const updatedList = await storage.createEvent(newEvent);
-    setEvents(updatedList);
-    setIsLoading(false);
+    await createEvent(newEvent);
     setIsModalOpen(false);
     setSelectedEventId(newEvent.id);
     if (selectedDate) {
@@ -128,20 +77,13 @@ const App: React.FC = () => {
     setMobileView('detail');
   };
 
-  const handleUpdateEvent = async (updatedEvent: SportEvent) => {
-    setEvents(await storage.updateEvent(updatedEvent));
-  };
-
   const handleRequestDelete = (id: string) => setEventToDelete(id);
 
   const confirmDelete = async () => {
     if (!eventToDelete) return;
-    setIsLoading(true);
-    const updatedList = await storage.deleteEvent(eventToDelete);
-    setEvents(updatedList);
-    setIsLoading(false);
+    await deleteEvent(eventToDelete);
     if (selectedEventId === eventToDelete) {
-      setSelectedEventId(null);
+      clearSelection();
       setMobileView('calendar');
     }
     setEventToDelete(null);
@@ -159,7 +101,7 @@ const App: React.FC = () => {
   const handleShowUpcoming = () => {
     setSelectedDate(null);
     setViewDate(new Date());
-    setSelectedEventId(null);
+    clearSelection();
   };
 
   const handleMobileEventSelect = (eventId: string) => {
@@ -257,7 +199,7 @@ const App: React.FC = () => {
                   bankAccounts={bankAccounts}
                   sportConfigs={sportConfigs}
                   allEvents={events}
-                  onUpdate={handleUpdateEvent}
+                  onUpdate={updateEvent}
                   onDelete={handleRequestDelete}
                 />
               </ErrorBoundary>
@@ -362,7 +304,7 @@ const App: React.FC = () => {
           <StatsPage events={events} currentUser={currentUser} isLoading={isLoading} onClose={() => setShowStats(false)} sportConfigs={sportConfigs} />
         ) : selectedEvent ? (
           <ErrorBoundary fallbackMessage="Chyba při zobrazení detailu události">
-            <EventDetail event={selectedEvent} currentUser={currentUser} bankAccounts={bankAccounts} sportConfigs={sportConfigs} allEvents={events} onUpdate={handleUpdateEvent} onDelete={handleRequestDelete} />
+            <EventDetail event={selectedEvent} currentUser={currentUser} bankAccounts={bankAccounts} sportConfigs={sportConfigs} allEvents={events} onUpdate={updateEvent} onDelete={handleRequestDelete} />
           </ErrorBoundary>
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4 min-h-[50vh]">

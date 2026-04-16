@@ -63,6 +63,7 @@ function PersonalStatsCard({ stats }: { stats: UserStats }) {
     { icon: <TrendingUp size={18} />, label: 'Dluh', value: `${stats.totalOwed} Kč`, color: stats.totalOwed > 0 ? 'text-red-600' : 'text-slate-400' },
     { icon: <MapPin size={18} />, label: 'Oblíbené', value: stats.favoriteLocation || '–', color: 'text-amber-600' },
     ...(stats.gamesPlayed > 0 ? [{ icon: <Trophy size={18} />, label: 'Výhry', value: `${stats.gamesWon}/${stats.gamesPlayed} (${Math.round(stats.winRate * 100)}%)`, color: 'text-indigo-600' }] : []),
+    ...((stats.setsWon + stats.setsLost) > 0 ? [{ icon: <Swords size={18} />, label: 'Sety', value: `${stats.setsWon}:${stats.setsLost} (${Math.round(stats.setWinRate * 100)}%)`, color: 'text-purple-600' }] : []),
   ];
 
   return (
@@ -118,60 +119,6 @@ function BadgesRow({ badges }: { badges: Badge[] }) {
   );
 }
 
-function Leaderboard({ stats, title, icon, valueKey }: {
-  stats: UserStats[];
-  title: string;
-  icon: React.ReactNode;
-  valueKey: 'attendanceRate' | 'paymentRate';
-}) {
-  if (stats.length === 0) return null;
-  const maxVal = Math.max(...stats.map(s => s[valueKey]), 0.01);
-
-  const getBarColor = (value: number) => {
-    if (valueKey === 'paymentRate') {
-      if (value >= 0.8) return 'bg-green-500';
-      if (value >= 0.5) return 'bg-yellow-500';
-      return 'bg-red-400';
-    }
-    return 'bg-blue-500';
-  };
-
-  return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-      <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-        {icon}
-        {title}
-      </h3>
-      <div className="space-y-2.5">
-        {stats.slice(0, 10).map((s, i) => {
-          const pct = Math.round(s[valueKey] * 100);
-          const barWidth = s[valueKey] / maxVal * 100;
-          return (
-            <div key={s.userId} className={`flex items-center gap-3 p-2 rounded-lg ${i === 0 ? 'bg-yellow-50 ring-1 ring-yellow-200' : ''}`}>
-              <span className={`w-6 text-right text-sm font-bold ${i === 0 ? 'text-yellow-600' : 'text-slate-400'}`}>
-                {i === 0 ? '🏆' : `${i + 1}.`}
-              </span>
-              <Avatar name={s.name} photoUrl={s.photoUrl} size={28} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-medium text-slate-700 truncate">{s.name}</span>
-                  <span className="text-sm font-bold text-slate-600 ml-2">{pct}%</span>
-                </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${getBarColor(s[valueKey])}`}
-                    style={{ width: `${barWidth}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 function BestDuos({ duos }: { duos: DuoStats[] }) {
   if (duos.length === 0) return null;
   return (
@@ -196,6 +143,9 @@ function BestDuos({ duos }: { duos: DuoStats[] }) {
               </div>
               <div className="text-xs text-slate-500">
                 {duo.gamesWon} výher z {duo.gamesPlayed} zápasů ({Math.round(duo.winRate * 100)}%)
+                {(duo.setsWon + duo.setsLost) > 0 && (
+                  <span className="ml-1">· sety {duo.setsWon}:{duo.setsLost} ({Math.round(duo.setWinRate * 100)}%)</span>
+                )}
               </div>
             </div>
           </div>
@@ -249,7 +199,7 @@ export const StatsPage: React.FC<StatsPageProps> = ({ events, currentUser, isLoa
     [events, sportFilter]
   );
 
-  const { leaderboard, paymentRanking, personalStats, badges, duoStats } = useStatistics(filteredEvents, currentUser, false);
+  const { personalStats, badges, duoStats } = useStatistics(filteredEvents, currentUser, false);
 
   const hasEnoughData = filteredEvents.length >= 3;
 
@@ -333,21 +283,6 @@ export const StatsPage: React.FC<StatsPageProps> = ({ events, currentUser, isLoa
           {/* Badges */}
           <BadgesRow badges={badges} />
 
-          {/* Leaderboards side by side on desktop */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Leaderboard
-              stats={leaderboard}
-              title="MVP Žebříček"
-              icon={<Trophy size={18} className="text-yellow-500" />}
-              valueKey="attendanceRate"
-            />
-            <Leaderboard
-              stats={paymentRanking}
-              title="Spolehlivost plateb"
-              icon={<Wallet size={18} className="text-green-500" />}
-              valueKey="paymentRate"
-            />
-          </div>
 
           {/* Best Duos */}
           <BestDuos duos={duoStats} />
