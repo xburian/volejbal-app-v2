@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { SportEvent, SportConfig, SportType, SPORT_EMOJI, BankAccount, maskAccountNumber } from '../types';
-import { X, Users, ChevronDown } from 'lucide-react';
+import { X, Users, ChevronDown, Repeat } from 'lucide-react';
 import { format } from 'date-fns';
+import { generateRecurringDates, RecurrenceConfig } from '../utils/recurrence';
 
 
 interface CreateEventModalProps {
   selectedDate: Date;
   onClose: () => void;
-  onCreate: (event: SportEvent) => void;
+  onCreate: (event: SportEvent | SportEvent[]) => void;
   sportConfigs: SportConfig[];
   bankAccounts?: BankAccount[];
 }
@@ -31,6 +32,13 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ selectedDate
     description: '',
   });
 
+  // Recurrence state
+  const [recurrence, setRecurrence] = useState<RecurrenceConfig>({
+    enabled: false,
+    frequency: 'weekly',
+    count: 4,
+  });
+
   const handleSportChange = (type: SportType) => {
     setSelectedSport(type);
     const config = sportConfigs.find(c => c.type === type);
@@ -47,17 +55,35 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ selectedDate
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const selectedAccount = bankAccounts.find(a => a.id === selectedBankAccountId);
-    const newEvent: SportEvent = {
-      date: formData.date,
-      participants: [],
-      ...formData,
-      accountNumber: selectedAccount?.accountNumber ?? '',
-      selectedBankAccountId: selectedAccount?.id,
-      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
-      totalCost: Number(formData.totalCost),
-      sportType: selectedSport,
-    };
-    onCreate(newEvent);
+
+    if (recurrence.enabled) {
+      const dates = generateRecurringDates(formData.date, recurrence);
+      const events: SportEvent[] = dates.map(date => {
+        const { date: _ignored, ...restFormData } = formData;
+        return {
+          participants: [],
+          ...restFormData,
+          date,
+          accountNumber: selectedAccount?.accountNumber ?? '',
+          selectedBankAccountId: selectedAccount?.id,
+          id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random().toString(36),
+          totalCost: Number(formData.totalCost),
+          sportType: selectedSport,
+        };
+      });
+      onCreate(events);
+    } else {
+      const newEvent: SportEvent = {
+        participants: [],
+        ...formData,
+        accountNumber: selectedAccount?.accountNumber ?? '',
+        selectedBankAccountId: selectedAccount?.id,
+        id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+        totalCost: Number(formData.totalCost),
+        sportType: selectedSport,
+      };
+      onCreate(newEvent);
+    }
   };
 
   return (
@@ -124,6 +150,55 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ selectedDate
                onChange={e => setFormData({...formData, date: e.target.value})}
                className="w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
              />
+          </div>
+
+          {/* ── Recurrence Section ── */}
+          <div className="border border-slate-200 rounded-lg p-3 space-y-3" data-testid="recurrence-section">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={recurrence.enabled}
+                onChange={e => setRecurrence({ ...recurrence, enabled: e.target.checked })}
+                className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                data-testid="recurrence-toggle"
+              />
+              <Repeat size={16} className="text-slate-500" />
+              <span className="text-sm font-medium text-slate-700">Opakovat událost</span>
+            </label>
+
+            {recurrence.enabled && (
+              <div className="grid grid-cols-2 gap-3 pt-1" data-testid="recurrence-options">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Frekvence</label>
+                  <select
+                    value={recurrence.frequency}
+                    onChange={e => setRecurrence({ ...recurrence, frequency: e.target.value as 'weekly' | 'biweekly' })}
+                    className="w-full px-2 py-1.5 bg-white text-slate-900 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none h-[34px]"
+                    data-testid="recurrence-frequency"
+                  >
+                    <option value="weekly">Každý týden</option>
+                    <option value="biweekly">Každé 2 týdny</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Počet opakování</label>
+                  <input
+                    type="number"
+                    min={2}
+                    max={26}
+                    value={recurrence.count}
+                    onChange={e => setRecurrence({ ...recurrence, count: Math.min(26, Math.max(2, Number(e.target.value))) })}
+                    className="w-full px-2 py-1.5 bg-white text-slate-900 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none h-[34px]"
+                    data-testid="recurrence-count"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <p className="text-xs text-slate-500">
+                    Vytvoří {recurrence.count} událost{recurrence.count > 4 ? 'í' : recurrence.count > 1 ? 'i' : ''} ({recurrence.frequency === 'weekly' ? 'každý týden' : 'každé 2 týdny'})
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -202,7 +277,9 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ selectedDate
               type="submit"
               className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
             >
-              Vytvořit událost
+              {recurrence.enabled
+                ? `Vytvořit ${recurrence.count} událostí`
+                : 'Vytvořit událost'}
             </button>
           </div>
         </form>
@@ -210,3 +287,4 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ selectedDate
     </div>
   );
 };
+

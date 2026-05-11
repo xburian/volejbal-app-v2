@@ -65,6 +65,17 @@ export function useDataLoading({ currentUser }: UseDataLoadingProps) {
     return updatedList;
   }, []);
 
+  const createEventsBatch = useCallback(async (newEvents: SportEvent[]) => {
+    setIsLoading(true);
+    try {
+      const updatedList = await storage.createEventsBatch(newEvents);
+      setEvents(updatedList);
+      return updatedList;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const updateEvent = useCallback(async (updatedEvent: SportEvent) => {
     setEvents(await storage.updateEvent(updatedEvent));
   }, []);
@@ -87,8 +98,8 @@ export function useDataLoading({ currentUser }: UseDataLoadingProps) {
     setSportConfigs,
     loadEvents,
     createEvent,
+    createEventsBatch,
     updateEvent,
     deleteEvent,
   };
 }
-

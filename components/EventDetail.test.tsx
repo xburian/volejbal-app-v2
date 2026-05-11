@@ -704,6 +704,7 @@ describe('EventDetail Component', () => {
       const tenisConfig = [{ type: 'tenis' as const, label: 'Tenis', maxPlayers: 2, defaultCost: 500, defaultLocation: 'Kurt', teamSize: 2 }];
       const fullEvent: SportEvent = {
         ...mockEvent,
+        date: '2099-12-15', // future date so join button is visible
         sportType: 'tenis',
         participants: [
           { userId: 'user2', name: 'Jan Novák', status: 'joined', hasPaid: true },

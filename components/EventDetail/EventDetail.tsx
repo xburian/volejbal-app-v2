@@ -64,6 +64,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({
   const countJoined = joinedParticipants.length;
   const costPerPerson = countJoined > 0 ? Math.ceil(event.totalCost / countJoined) : 0;
   const isAtCapacity = countJoined >= sportConfig.maxPlayers;
+  const isPastEvent = new Date(event.date + 'T23:59:59') < new Date();
 
   // ── Bank account / QR derived data ──
   const selectedBankAccount = useMemo(() => {
@@ -164,6 +165,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({
               countJoined={countJoined}
               costPerPerson={costPerPerson}
               isAtCapacity={isAtCapacity}
+              isPastEvent={isPastEvent}
               participants={participants}
               photoUpload={photoUpload}
             />

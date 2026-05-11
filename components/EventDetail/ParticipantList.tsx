@@ -11,6 +11,7 @@ interface ParticipantListProps {
   countJoined: number;
   costPerPerson: number;
   isAtCapacity: boolean;
+  isPastEvent: boolean;
   participants: ParticipantsState;
   photoUpload: PhotoUploadState;
 }
@@ -22,6 +23,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
   countJoined,
   costPerPerson,
   isAtCapacity,
+  isPastEvent,
   participants,
   photoUpload,
 }) => (
@@ -52,7 +54,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
       </div>
     )}
 
-    {!participants.isCurrentUserJoined && participants.currentUserParticipant?.status !== 'waitlist' && (
+    {!participants.isCurrentUserJoined && participants.currentUserParticipant?.status !== 'waitlist' && !isPastEvent && (
       <button
         onClick={() => participants.handleStatusChange(currentUser.id, 'joined')}
         disabled={participants.savingUsers.has(currentUser.id)}
@@ -139,15 +141,15 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
                   {isMe ? (
                     <div className="flex gap-2 text-xs mt-0.5">
                       <button
-                        disabled={isSaving}
+                        disabled={isSaving || isPastEvent}
                         onClick={() => participants.handleStatusChange(p.userId, 'joined')}
-                        className={`hover:underline ${p.status === 'joined' ? 'font-bold text-green-600' : 'text-slate-400'}`}
+                        className={`hover:underline disabled:opacity-50 disabled:cursor-not-allowed ${p.status === 'joined' ? 'font-bold text-green-600' : 'text-slate-400'}`}
                       >Jdu</button>
                       <span className="text-slate-300">|</span>
                       <button
-                        disabled={isSaving}
+                        disabled={isSaving || isPastEvent}
                         onClick={() => participants.handleStatusChange(p.userId, 'declined')}
-                        className={`hover:underline ${p.status === 'declined' ? 'font-bold text-red-600' : 'text-slate-400'}`}
+                        className={`hover:underline disabled:opacity-50 disabled:cursor-not-allowed ${p.status === 'declined' ? 'font-bold text-red-600' : 'text-slate-400'}`}
                       >Nejdu</button>
                     </div>
                   ) : (

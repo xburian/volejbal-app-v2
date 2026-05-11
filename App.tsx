@@ -24,7 +24,7 @@ const App: React.FC = () => {
   const { selectedEventId, setSelectedEventId, clearSelection, mobileView, setMobileView } = useUrlState();
   const {
     events, isLoading, unpaidDebts, bankAccounts, setBankAccounts,
-    sportConfigs, setSportConfigs, loadEvents, createEvent, updateEvent, deleteEvent,
+    sportConfigs, setSportConfigs, loadEvents, createEvent, createEventsBatch, updateEvent, deleteEvent,
   } = useDataLoading({ currentUser });
 
   const [viewDate, setViewDate] = useState<Date>(new Date());
@@ -66,15 +66,31 @@ const App: React.FC = () => {
     loadEvents();
   };
 
-  const handleCreateEvent = async (newEvent: SportEvent) => {
-    await createEvent(newEvent);
-    setIsModalOpen(false);
-    setSelectedEventId(newEvent.id);
-    if (selectedDate) {
-      setSelectedDate(new Date(newEvent.date));
-      setViewDate(new Date(newEvent.date));
+  const handleCreateEvent = async (newEventOrBatch: SportEvent | SportEvent[]) => {
+    try {
+      if (Array.isArray(newEventOrBatch)) {
+        await createEventsBatch(newEventOrBatch);
+        setIsModalOpen(false);
+        const first = newEventOrBatch[0];
+        setSelectedEventId(first.id);
+        if (selectedDate) {
+          setSelectedDate(new Date(first.date));
+          setViewDate(new Date(first.date));
+        }
+      } else {
+        await createEvent(newEventOrBatch);
+        setIsModalOpen(false);
+        setSelectedEventId(newEventOrBatch.id);
+        if (selectedDate) {
+          setSelectedDate(new Date(newEventOrBatch.date));
+          setViewDate(new Date(newEventOrBatch.date));
+        }
+      }
+      setMobileView('detail');
+    } catch (error: any) {
+      console.error('Failed to create event(s):', error);
+      alert(error.message || 'Nepodařilo se vytvořit události.');
     }
-    setMobileView('detail');
   };
 
   const handleRequestDelete = (id: string) => setEventToDelete(id);

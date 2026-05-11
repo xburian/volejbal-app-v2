@@ -133,6 +133,12 @@ export interface UserStats {
   setsWon: number;
   setsLost: number;
   setWinRate: number;          // setsWon / (setsWon + setsLost) (0-1)
+  // v1.6 additions
+  eloRating?: number;
+  reliabilityScore?: number;
+  dayOfWeekDistribution?: number[];  // [Mon,Tue,Wed,Thu,Fri,Sat,Sun]
+  recentFormRate?: number;
+  averageSetMargin?: number;
 }
 
 export interface MonthlyTrend {
@@ -153,7 +159,46 @@ export interface DuoStats {
   setWinRate: number;
 }
 
-export type BadgeType = 'ironman' | 'ghost' | 'maybeMaster' | 'quickPayer' | 'socialButterfly' | 'luckyPlayer';
+// ── v1.6 Statistics Types ──
+
+export interface LeaderboardEntry {
+  userId: string;
+  name: string;
+  photoUrl?: string;
+  rank: number;
+  eloRating: number;
+  winRate: number;
+  gamesPlayed: number;
+  attendanceRate: number;
+  reliabilityScore: number;
+}
+
+export interface PlayerFormTrend {
+  last5WinRate: number | null;
+  last10WinRate: number | null;
+  allTimeWinRate: number;
+  trend: 'up' | 'down' | 'stable';
+  recentResults: boolean[];      // last N results (true=win), most recent first
+}
+
+export interface NemesisData {
+  nemesis: { userId: string; name: string; photoUrl?: string; winRate: number; gamesAgainst: number } | null;
+  favorite: { userId: string; name: string; photoUrl?: string; winRate: number; gamesAgainst: number } | null;
+}
+
+export interface EventHealthMetrics {
+  avgFillRate: number;
+  mostCompetitiveGames: { eventId: string; eventTitle: string; date: string; avgMargin: number }[];
+  avgSetMargin: number;
+}
+
+export interface ClutchData {
+  clutchWinRate: number | null;
+  blowoutWinRate: number | null;
+  clutchSetsPlayed: number;
+}
+
+export type BadgeType = 'ironman' | 'ghost' | 'maybeMaster' | 'quickPayer' | 'socialButterfly' | 'luckyPlayer' | 'comebackKing' | 'clutchPlayer' | 'consistent' | 'weekdayWarrior';
 
 export interface Badge {
   type: BadgeType;

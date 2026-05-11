@@ -286,6 +286,30 @@ export const createEvent = async (event: SportEvent): Promise<SportEvent[]> => {
   return getEvents();
 };
 
+export const createEventsBatch = async (events: SportEvent[]): Promise<SportEvent[]> => {
+  const preparedEvents = events.map(event => {
+    if (!event.id) {
+      event.id = generateId();
+    }
+    const { participants, ...eventData } = event;
+    return eventData;
+  });
+
+  if (!useApi()) {
+    const existing = getLS<Omit<SportEvent, 'participants'>>(LS_EVENTS);
+    existing.push(...preparedEvents);
+    setLS(LS_EVENTS, existing);
+    return getEvents();
+  }
+
+  await apiFetch('/events-batch', {
+    method: 'POST',
+    body: JSON.stringify({ events: preparedEvents }),
+  });
+  invalidateEventsCache();
+  return getEvents();
+};
+
 export const updateEvent = async (updatedEvent: SportEvent): Promise<SportEvent[]> => {
   const { participants, ...eventData } = updatedEvent;
 

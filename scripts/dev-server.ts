@@ -33,12 +33,14 @@ async function start() {
   // Dynamically import the API handlers (after env vars are loaded)
   const usersHandler = await import('../api/users.js');
   const eventsHandler = await import('../api/events.js');
+  const eventsBatchHandler = await import('../api/events-batch.js');
   const attendanceHandler = await import('../api/attendance.js');
   const photosHandler = await import('../api/photos.js');
   const bankAccountsHandler = await import('../api/bank-accounts.js');
   const sportConfigsHandler = await import('../api/sport-configs.js');
 
   app.all('/api/users', wrapHandler(usersHandler));
+  app.all('/api/events-batch', wrapHandler(eventsBatchHandler));
   app.all('/api/events', wrapHandler(eventsHandler));
   app.all('/api/attendance', wrapHandler(attendanceHandler));
   app.all('/api/photos', wrapHandler(photosHandler));
@@ -48,7 +50,7 @@ async function start() {
   const PORT = 3001;
   app.listen(PORT, () => {
     console.log(`🚀 Local API server running on http://localhost:${PORT}`);
-    console.log(`   Routes: /api/users, /api/events, /api/attendance, /api/photos, /api/bank-accounts, /api/sport-configs`);
+    console.log(`   Routes: /api/users, /api/events, /api/events-batch, /api/attendance, /api/photos, /api/bank-accounts, /api/sport-configs`);
     console.log(`   Redis: ${process.env.volejbal_KV_REST_API_URL ? '✅ connected' : '❌ missing volejbal_KV_REST_API_URL'}`);
   });
 }
@@ -57,4 +59,3 @@ start().catch((err) => {
   console.error('❌ Failed to start dev server:', err);
   process.exit(1);
 });
-

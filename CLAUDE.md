@@ -26,7 +26,7 @@ npm test -- --run --coverage  # With coverage
 - **Views**: Login → Calendar/List toggle → Event detail (all state-driven, no router)
 
 ### Backend (Vercel Serverless Functions)
-- **Handlers in `api/`**: `users.ts`, `events.ts`, `attendance.ts`, `photos.ts`, `bank-accounts.ts`
+- **Handlers in `api/`**: `users.ts`, `events.ts`, `events-batch.ts`, `attendance.ts`, `photos.ts`, `bank-accounts.ts`
 - Each handler follows Vercel's `(req, res)` pattern with method-based routing inside
 - Local dev uses Express wrapper (`scripts/dev-server.ts`) that adapts Express req/res to Vercel interface
 - Vite proxies `/api/*` → `localhost:3001` in development
@@ -51,6 +51,7 @@ All domain types in `types.ts`: `User`, `BankAccount`, `Participant`, `Volleybal
 - **Photo storage**: Photos stored as base64 in separate Redis keys (`photo:{id}`), referenced by lightweight URL in user object
 - **Czech payment QR codes**: SPD format with IBAN conversion from Czech account numbers (e.g., `123456789/0100`)
 - **Sorting**: Czech locale (`cs`) collation for alphabetical user sorting
+- **Recurring events**: `utils/recurrence.ts` generates arrays of ISO dates (weekly/biweekly, capped at 26). Batch-created via `POST /api/events-batch` with atomic Redis pipeline.
 
 ## Testing
 
@@ -59,6 +60,67 @@ All domain types in `types.ts`: `User`, `BankAccount`, `Participant`, `Volleybal
 - Storage tests use localStorage fallback (no Redis needed)
 
 ## Release Notes
+
+### v1.6.0 — Statistics Redesign (2026-05-11)
+
+#### 📊 New Statistics Engine (`services/statsEngine.ts`)
+- **Pure computation functions**: All stats logic extracted from hook into standalone, unit-testable functions.
+- **ELO rating system**: Running skill rating (K=32, initial 1000) computed on the fly from game history. Team-averaged for fair multi-player matching.
+- **Form trend**: Last 5/10 game win rates vs all-time, with trend detection (up/down/stable, ±10% threshold).
+- **Day-of-week heatmap**: Per-user attendance distribution across Mon–Sun.
+- **Nemesis & Favorite opponent**: Tracks win/loss record against each opponent (min 3 games).
+- **Clutch factor**: Win rate in close sets (≤3pt margin) vs blowout sets (min 5 sets).
+- **Reliability score**: 0–100 blending 60% attendance + 40% payment rate.
+- **Event health**: Average fill rate, average set margin, top 3 most competitive matches.
+- **Extended badges**: 10 badge types including Comeback King, Clutch Hráč, Všední Válečník, plus original 6.
+
+#### 🎯 Per-Metric Data Thresholds
+- Each stat independently shows "Nedostatek dat" when its minimum isn't met.
+- ELO: min 5 games | Form: min 5/10 games | Nemesis: min 3 games against | Clutch: min 5 close sets | Duos: min 3 games together (raised from 2) | Leaderboard: min 3 events | Day heatmap: min 5 events.
+
+#### 🏆 Redesigned Stats Page
+- **Vertical scroll layout**: Single-column, mobile-friendly. No tabs.
+- **Žebříček (Leaderboard)**: Sortable table with rank, avatar, ELO, win%, games, reliability. Current user highlighted.
+- **Moje forma**: Hand-rolled SVG sparkline (30px, blue/green/red) + last 5 rate + trend arrow + V/P result dots.
+- **Denní rozložení**: 7-bar horizontal heatmap (Po–Ne) with proportional fill.
+- **Soupeři**: Nemesis (😈) and Favorite (😊) opponent cards with win rate.
+- **Clutch faktor**: Close-game vs blowout win rate comparison.
+- **Personal stats**: Extended with ELO + reliability tiles.
+- **Ocenění**: Horizontal scroll of 10 badge types.
+- **Nejlepší dvojice**: Duo stats with raised threshold.
+- **Zdraví událostí**: Fill rate gauge + competitive match highlights.
+
+#### ✅ Tests (30 new, 265 total)
+- `services/statsEngine.test.ts` — 30 tests: ELO (4), form trend (6), day heatmap (3), nemesis (3), clutch (3), reliability (3), leaderboard (2), event health (2), badges (2), user stats (1), duo threshold (1).
+- Updated `services/useStatistics.test.ts` — duo tests bumped to 3-game threshold.
+
+### v1.5.0 — Recurring Events (2026-05-11)
+
+#### 🔁 Recurring Event Creation
+- **"Opakovat událost" toggle**: New section in CreateEventModal lets users create repeating events in a single action.
+- **Frequency selector**: Choose between "Každý týden" (weekly) or "Každé 2 týdny" (biweekly).
+- **Count input**: Set number of occurrences (2–26, capped at half a year of weekly events).
+- **Batch creation**: All recurring events created atomically via a single API call — no partial failures.
+- **Dynamic submit button**: Button text reflects event count (e.g. "Vytvořit 8 událostí").
+
+#### 🛠️ Batch API Endpoint (`api/events-batch.ts`)
+- **`POST /api/events-batch`**: Accepts `{ events: EventData[] }`, validates array (non-empty, max 26), normalizes IDs and sport types.
+- **Atomic Redis pipeline**: All events stored in a single pipeline execution — all-or-nothing semantics.
+- **Error handling**: Returns 400 for invalid input (empty array, exceeds max), 405 for wrong method, 500 with `{ error, detail }` on pipeline failure.
+- **Response**: `{ success: true, ids: string[], count: number }` on success.
+
+#### 📦 Storage Layer
+- **`storage.createEventsBatch()`**: New function that POSTs to `/api/events-batch` with localStorage fallback for tests.
+- **`useDataLoading.createEventsBatch()`**: Hook wrapper with loading state management.
+
+#### 🧮 Pure Utility (`utils/recurrence.ts`)
+- **`generateRecurringDates(startDate, config)`**: Returns array of ISO date strings based on `RecurrenceConfig`.
+- **`RecurrenceConfig`** interface: `{ enabled: boolean; frequency: 'weekly' | 'biweekly'; count: number }`.
+- **Internal capping**: Count always clamped to `Math.min(count, 26)`.
+
+#### ✅ Tests (18 new, 235 total)
+- `utils/recurrence.test.ts` — 8 tests: disabled, weekly, biweekly, cap at 26, count edge cases, day-of-week preservation, year boundary.
+- `components/CreateEventModal.test.tsx` — 10 tests: toggle renders, options visibility, single vs. batch submit, unique IDs, biweekly dates, count clamping, shared properties.
 
 ### v1.4.0 — Multi-Strategy Team Rebalancing (2026-04-13)
 

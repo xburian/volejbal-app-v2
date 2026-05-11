@@ -160,6 +160,7 @@ describe('useStatistics — duoStats with set tracking', () => {
       ], {
         gameHistory: [
           { teams: [[tm('a'), tm('b')], [tm('c'), tm('d')]], winningTeam: 0, score: [[25, 20], [25, 18]] },
+          { teams: [[tm('a'), tm('b')], [tm('c'), tm('d')]], winningTeam: 0, score: [[25, 15]] },
         ],
         teams: [[tm('a'), tm('b')], [tm('c'), tm('d')]],
         winningTeam: 0,
@@ -170,23 +171,20 @@ describe('useStatistics — duoStats with set tracking', () => {
     const { result } = renderHook(() => useStatistics(events, makeUser('a'), false));
     const duos = result.current.duoStats;
 
-    // a&b played together twice, won both
+    // a&b played together 3 times, won all 3 (min threshold = 3)
     const abDuo = duos.find(d =>
       d.players.some(p => p.userId === 'a') && d.players.some(p => p.userId === 'b'),
     );
     expect(abDuo).toBeDefined();
-    expect(abDuo!.gamesPlayed).toBe(2);
-    expect(abDuo!.gamesWon).toBe(2);
-    // Round 1: team0 won 2 sets, team1 won 0 → setsWon+=2, setsLost+=0
-    // Round 2: team0 won 2 sets (25:22, 25:23), team1 won 1 (20:25) → setsWon+=2, setsLost+=1
-    expect(abDuo!.setsWon).toBe(4);
+    expect(abDuo!.gamesPlayed).toBe(3);
+    expect(abDuo!.gamesWon).toBe(3);
+    // Round 1: 2 sets won, 0 lost | Round 2: 1 set won, 0 lost | Round 3: 2 sets won, 1 lost
+    expect(abDuo!.setsWon).toBe(5);
     expect(abDuo!.setsLost).toBe(1);
-    expect(abDuo!.setWinRate).toBeCloseTo(4 / 5);
+    expect(abDuo!.setWinRate).toBeCloseTo(5 / 6);
   });
 
   it('sorts duos by blended score (winRate + setWinRate)', () => {
-    // Duo A&B: 2 wins, good set record
-    // Duo C&D: 2 wins, worse set record
     const events: SportEvent[] = [
       makeEvent('e1', PAST, [
         { userId: 'a', name: 'A', status: 'joined', hasPaid: true },
@@ -196,6 +194,7 @@ describe('useStatistics — duoStats with set tracking', () => {
       ], {
         gameHistory: [
           { teams: [[tm('a'), tm('b')], [tm('c'), tm('d')]], winningTeam: 0, score: [[25, 10], [25, 10]] },
+          { teams: [[tm('a'), tm('b')], [tm('c'), tm('d')]], winningTeam: 0, score: [[25, 10]] },
         ],
         teams: [[tm('c'), tm('d')], [tm('a'), tm('b')]], // swap teams
         winningTeam: 0, // c&d win
@@ -206,7 +205,7 @@ describe('useStatistics — duoStats with set tracking', () => {
     const { result } = renderHook(() => useStatistics(events, makeUser('a'), false));
     const duos = result.current.duoStats;
 
-    // Both pairs played 2 games, each won 1. But A&B have better set record.
+    // Both pairs played 3 games. A&B won 2, C&D won 1. A&B should rank higher.
     const abDuo = duos.find(d =>
       d.players.some(p => p.userId === 'a') && d.players.some(p => p.userId === 'b'),
     );
@@ -215,7 +214,6 @@ describe('useStatistics — duoStats with set tracking', () => {
     );
     expect(abDuo).toBeDefined();
     expect(cdDuo).toBeDefined();
-    // A&B should rank higher due to better set performance
     const abIdx = duos.indexOf(abDuo!);
     const cdIdx = duos.indexOf(cdDuo!);
     expect(abIdx).toBeLessThan(cdIdx);
@@ -230,6 +228,7 @@ describe('useStatistics — duoStats with set tracking', () => {
         { userId: 'd', name: 'D', status: 'joined', hasPaid: true },
       ], {
         gameHistory: [
+          { teams: [[tm('a'), tm('b')], [tm('c'), tm('d')]], winningTeam: 0 },
           { teams: [[tm('a'), tm('b')], [tm('c'), tm('d')]], winningTeam: 0 },
         ],
         teams: [[tm('a'), tm('b')], [tm('c'), tm('d')]],
