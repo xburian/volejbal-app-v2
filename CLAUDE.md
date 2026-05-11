@@ -80,15 +80,20 @@ All domain types in `types.ts`: `User`, `BankAccount`, `Participant`, `Volleybal
 
 #### 🏆 Redesigned Stats Page
 - **Vertical scroll layout**: Single-column, mobile-friendly. No tabs.
-- **Žebříček (Leaderboard)**: Sortable table with rank, avatar, ELO, win%, games, reliability. Current user highlighted.
+- **Žebříček (Leaderboard)**: Sortable table with rank, avatar, ELO, win%, games, reliability. Current user highlighted. ELO column has tooltip explaining the rating system.
 - **Moje forma**: Hand-rolled SVG sparkline (30px, blue/green/red) + last 5 rate + trend arrow + V/P result dots.
 - **Denní rozložení**: 7-bar horizontal heatmap (Po–Ne) with proportional fill.
 - **Soupeři**: Nemesis (😈) and Favorite (😊) opponent cards with win rate.
 - **Clutch faktor**: Close-game vs blowout win rate comparison.
-- **Personal stats**: Extended with ELO + reliability tiles.
+- **Přehled (Personal stats)**: Simplified — only Odehráno, Docházka (vs all events), Výhry, Sety, ELO. Removed Platby, Zaplaceno, Dluh, Oblíbené, Spolehlivost. All tiles have hover tooltips.
 - **Ocenění**: Horizontal scroll of 10 badge types.
 - **Nejlepší dvojice**: Duo stats with raised threshold.
 - **Zdraví událostí**: Fill rate gauge + competitive match highlights.
+- **Removed**: "Podle sportu" breakdown section.
+
+#### 🔒 Past Event Protection
+- **Join button hidden**: "Jdu hrát" / "Na čekací listinu" button not shown for past events.
+- **Status toggles disabled**: Inline "Jdu" / "Nejdu" buttons grayed out and unclickable for events whose date has passed.
 
 #### ✅ Tests (30 new, 265 total)
 - `services/statsEngine.test.ts` — 30 tests: ELO (4), form trend (6), day heatmap (3), nemesis (3), clutch (3), reliability (3), leaderboard (2), event health (2), badges (2), user stats (1), duo threshold (1).

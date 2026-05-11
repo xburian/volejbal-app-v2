@@ -13,6 +13,65 @@ interface ChangeEntry {
 
 const versions: { version: string; date: string; title: string; changes: ChangeEntry[] }[] = [
   {
+    version: '1.6.0',
+    date: '11. 5. 2026',
+    title: 'Redesign statistik & opakované události',
+    changes: [
+      {
+        icon: <BarChart3 size={16} />,
+        title: 'Nový statistický engine',
+        items: [
+          'ELO rating systém — hodnocení síly hráče (start 1000, K=32)',
+          'Forma — trend posledních 5/10 zápasů vs celková úspěšnost',
+          'Denní rozložení — heatmapa docházky Po–Ne',
+          'Nemesis & Oblíbenec — nejhorší a nejlepší soupeř (min. 3 zápasy)',
+          'Clutch faktor — úspěšnost v těsných setech (≤3 body)',
+          'Zdraví událostí — průměrná naplněnost, nejvyrovnanější zápasy',
+        ],
+      },
+      {
+        icon: <Trophy size={16} />,
+        title: 'Redesign stránky statistik',
+        items: [
+          'Žebříček — tabulka hráčů řazená podle ELO s tooltipy',
+          'SVG sparkline grafy pro vizualizaci formy',
+          'Přehled — zjednodušené dlaždice: Odehráno, Docházka (vs všechny události), Výhry, Sety, ELO',
+          'Odstraněno: Platby, Zaplaceno, Dluh, Oblíbené místo, Spolehlivost, Podle sportu',
+          '10 odznaků včetně Comeback King, Clutch Hráč, Všední Válečník',
+          'Dvojice — práh zvýšen na min. 3 společné zápasy',
+        ],
+      },
+      {
+        icon: <Repeat2 size={16} />,
+        title: 'Opakované události',
+        items: [
+          'Nový přepínač „Opakovat událost" v modálu vytváření',
+          'Frekvence: každý týden / každé 2 týdny',
+          'Počet opakování: 2–26 (max půl roku)',
+          'Batch API — všechny události vytvořeny atomicky jedním voláním',
+          'Tlačítko dynamicky zobrazuje počet (např. „Vytvořit 8 událostí")',
+        ],
+      },
+      {
+        icon: <Target size={16} />,
+        title: 'Ochrana minulých událostí',
+        items: [
+          'Tlačítko „Jdu hrát" se nezobrazuje u proběhlých událostí',
+          'Přepínače „Jdu" / „Nejdu" jsou u starých událostí neaktivní',
+        ],
+      },
+      {
+        icon: <FlaskConical size={16} />,
+        title: 'Testy',
+        items: [
+          '30 nových testů pro statsEngine (ELO, forma, heatmapa, nemesis, clutch, leaderboard)',
+          '18 testů pro opakované události (recurrence + CreateEventModal)',
+          '265 testů celkem — vše prochází',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.5.0',
     date: '16. 4. 2026',
     title: 'Persistence, statistiky setů a refaktoring',
