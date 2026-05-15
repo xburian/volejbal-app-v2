@@ -49,7 +49,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     // Normalize and validate each event
     const normalizedEvents: any[] = [];
     for (const event of events) {
-      const { participants, ...eventData } = event;
+      const { participants: _participants, ...eventData } = event;
 
       if (!eventData.id) {
         eventData.id = generateId();

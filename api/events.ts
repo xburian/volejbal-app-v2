@@ -55,7 +55,7 @@ async function handleGet(res: ApiResponse) {
 
   // Fetch all users for name resolution
   const userIds = await redis.smembers('users:all');
-  let usersMap: Record<string, any> = {};
+  const usersMap: Record<string, any> = {};
   if (userIds && userIds.length > 0) {
     const userPipeline = redis.pipeline();
     for (const id of userIds) {
@@ -103,7 +103,7 @@ async function handleGet(res: ApiResponse) {
 
 // POST /api/events — create event
 async function handlePost(req: ApiRequest, res: ApiResponse) {
-  const { participants, ...eventData } = req.body;
+  const { participants: _participants, ...eventData } = req.body;
 
   if (!eventData.id) {
     eventData.id = generateId();
@@ -122,7 +122,7 @@ async function handlePost(req: ApiRequest, res: ApiResponse) {
 
 // PUT /api/events — update event
 async function handlePut(req: ApiRequest, res: ApiResponse) {
-  const { participants, ...eventData } = req.body;
+  const { participants: _participants, ...eventData } = req.body;
 
   if (!eventData.id) {
     return res.status(400).json({ error: 'Event ID is required' });

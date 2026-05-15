@@ -21,6 +21,7 @@ interface EventDetailProps {
   bankAccounts: BankAccount[];
   sportConfigs: SportConfig[];
   allEvents: SportEvent[];
+  allUsers?: User[];
   onUpdate: (updatedEvent: SportEvent) => void;
   onDelete: (id: string) => void;
 }
@@ -31,16 +32,17 @@ export const EventDetail: React.FC<EventDetailProps> = ({
   bankAccounts = [],
   sportConfigs = [],
   allEvents = [],
+  allUsers = [],
   onUpdate,
   onDelete,
 }) => {
   // ── Cost editing state (small enough to stay inline) ──
   const [isEditingCost, setIsEditingCost] = useState(false);
-  const [tempTotalCost, setTempTotalCost] = useState(event.totalCost);
+  const [tempTotalCost, setTempTotalCost] = useState(String(event.totalCost));
   const [isCopied, setIsCopied] = useState(false);
 
   useEffect(() => {
-    setTempTotalCost(event.totalCost);
+    setTempTotalCost(String(event.totalCost));
     setIsEditingCost(false);
   }, [event.id, event.totalCost]);
 
@@ -54,10 +56,12 @@ export const EventDetail: React.FC<EventDetailProps> = ({
   }, [event.sportType, sportConfigs]);
 
   // ── Derived participant data ──
-  const safeParticipants = Array.isArray(event.participants) ? event.participants : [];
   const sortedParticipants = useMemo(
-    () => [...safeParticipants].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '', 'cs')),
-    [safeParticipants],
+    () => {
+      const safe = Array.isArray(event.participants) ? event.participants : [];
+      return [...safe].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '', 'cs'));
+    },
+    [event.participants],
   );
   const joinedParticipants = sortedParticipants.filter(p => p.status === 'joined');
   const waitlistedParticipants = sortedParticipants.filter(p => p.status === 'waitlist');
@@ -102,12 +106,12 @@ export const EventDetail: React.FC<EventDetailProps> = ({
 
   // ── Cost handlers ──
   const handleSaveCost = () => {
-    onUpdate({ ...event, totalCost: tempTotalCost });
+    onUpdate({ ...event, totalCost: Number(tempTotalCost) || 0 });
     setIsEditingCost(false);
   };
 
   const handleCancelCostEdit = () => {
-    setTempTotalCost(event.totalCost);
+    setTempTotalCost(String(event.totalCost));
     setIsEditingCost(false);
   };
 
@@ -129,6 +133,16 @@ export const EventDetail: React.FC<EventDetailProps> = ({
       }
     }
   };
+
+  // ── Multisport card holders among joined participants ──
+  const multisportUsers = useMemo(() => {
+    return joinedParticipants
+      .filter(p => {
+        const user = allUsers.find(u => u.id === p.userId);
+        return user?.hasMultisportCard === true;
+      })
+      .map(p => ({ name: p.name }));
+  }, [joinedParticipants, allUsers]);
 
   return (
     <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden flex flex-col h-full relative">
@@ -201,6 +215,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({
             isCopied={isCopied}
             onCopyToClipboard={handleCopyToClipboard}
             onBankAccountChange={handleBankAccountChange}
+            multisportUsers={multisportUsers}
           />
         </ErrorBoundary>
       </div>

@@ -377,7 +377,7 @@ export function balanceTeams(
         break;
     }
 
-    if (!bestCandidate) bestCandidate = candidate;
+    if (!bestCandidate) bestCandidate = candidate; // eslint-disable-line no-useless-assignment
 
     // If no previous teams to avoid, return first result
     if (!previousTeams) return candidate;

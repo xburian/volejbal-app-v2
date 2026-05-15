@@ -13,6 +13,7 @@ export function useDataLoading({ currentUser }: UseDataLoadingProps) {
   const [unpaidDebts, setUnpaidDebts] = useState<DebtItem[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [sportConfigs, setSportConfigs] = useState<SportConfig[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
 
   const loadEvents = useCallback(async () => {
     setIsLoading(true);
@@ -22,6 +23,14 @@ export function useDataLoading({ currentUser }: UseDataLoadingProps) {
       console.error("Failed to load events", error);
     } finally {
       setIsLoading(false);
+    }
+  }, []);
+
+  const loadUsers = useCallback(async () => {
+    try {
+      setUsers(await storage.getUsers());
+    } catch (error) {
+      console.error("Failed to load users", error);
     }
   }, []);
 
@@ -44,9 +53,10 @@ export function useDataLoading({ currentUser }: UseDataLoadingProps) {
   useEffect(() => {
     if (!currentUser) return;
     loadEvents();
+    loadUsers();
     loadBankAccounts();
     loadSportConfigs();
-  }, [currentUser]);
+  }, [currentUser, loadEvents, loadUsers, loadBankAccounts, loadSportConfigs]);
 
   // Recalculate debts
   useEffect(() => {
@@ -96,7 +106,9 @@ export function useDataLoading({ currentUser }: UseDataLoadingProps) {
     setBankAccounts,
     sportConfigs,
     setSportConfigs,
+    users,
     loadEvents,
+    loadUsers,
     createEvent,
     createEventsBatch,
     updateEvent,

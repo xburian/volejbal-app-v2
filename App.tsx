@@ -16,15 +16,16 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { usePersistedAuth } from './hooks/usePersistedAuth';
 import { useUrlState } from './hooks/useUrlState';
 import { useDataLoading } from './hooks/useDataLoading';
-import { Calendar as CalendarIcon, Trophy, LogOut, Loader2, Settings, BarChart3, Info } from 'lucide-react';
+import { Calendar as CalendarIcon, Trophy, LogOut, Loader2, Settings, BarChart3, Info, Download } from 'lucide-react';
 import { isSameDay, startOfDay } from 'date-fns';
+import { downloadICS } from './utils/icalExport';
 
 const App: React.FC = () => {
   const { currentUser, login, logout, updateUser } = usePersistedAuth();
   const { selectedEventId, setSelectedEventId, clearSelection, mobileView, setMobileView } = useUrlState();
   const {
     events, isLoading, unpaidDebts, bankAccounts, setBankAccounts,
-    sportConfigs, setSportConfigs, loadEvents, createEvent, createEventsBatch, updateEvent, deleteEvent,
+    sportConfigs, setSportConfigs, users, loadEvents, createEvent, createEventsBatch, updateEvent, deleteEvent,
   } = useDataLoading({ currentUser });
 
   const [viewDate, setViewDate] = useState<Date>(new Date());
@@ -44,7 +45,7 @@ const App: React.FC = () => {
       .filter(e => new Date(e.date) >= today)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     if (upcoming.length > 0) setSelectedEventId(upcoming[0].id);
-  }, [currentUser, events, selectedEventId]);
+  }, [currentUser, events, selectedEventId, setSelectedEventId]);
 
   // ── Handlers ──
 
@@ -186,6 +187,16 @@ const App: React.FC = () => {
               />
             </section>
             <section>
+              <div className="flex justify-end mb-2 px-2">
+                <button
+                  onClick={() => downloadICS(events)}
+                  className="text-xs text-slate-500 hover:text-green-600 flex items-center gap-1 font-medium transition-colors bg-slate-50 px-2.5 py-1.5 rounded-lg hover:bg-green-50 border border-slate-200"
+                  title="Export do kalendáře"
+                >
+                  <Download size={14} />
+                  Export .ics
+                </button>
+              </div>
               <EventList
                 events={displayedEvents}
                 selectedEventId={selectedEventId}
@@ -215,6 +226,7 @@ const App: React.FC = () => {
                   bankAccounts={bankAccounts}
                   sportConfigs={sportConfigs}
                   allEvents={events}
+                  allUsers={users}
                   onUpdate={updateEvent}
                   onDelete={handleRequestDelete}
                 />
@@ -273,6 +285,9 @@ const App: React.FC = () => {
             <button onClick={() => setShowStats(true)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Statistiky">
               <BarChart3 size={20} />
             </button>
+            <button onClick={() => downloadICS(events)} className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all" title="Export do kalendáře">
+              <Download size={20} />
+            </button>
             <button onClick={() => setIsSettingsOpen(true)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Bankovní účty">
               <Settings size={20} />
             </button>
@@ -320,7 +335,7 @@ const App: React.FC = () => {
           <StatsPage events={events} currentUser={currentUser} isLoading={isLoading} onClose={() => setShowStats(false)} sportConfigs={sportConfigs} />
         ) : selectedEvent ? (
           <ErrorBoundary fallbackMessage="Chyba při zobrazení detailu události">
-            <EventDetail event={selectedEvent} currentUser={currentUser} bankAccounts={bankAccounts} sportConfigs={sportConfigs} allEvents={events} onUpdate={updateEvent} onDelete={handleRequestDelete} />
+            <EventDetail event={selectedEvent} currentUser={currentUser} bankAccounts={bankAccounts} sportConfigs={sportConfigs} allEvents={events} allUsers={users} onUpdate={updateEvent} onDelete={handleRequestDelete} />
           </ErrorBoundary>
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4 min-h-[50vh]">

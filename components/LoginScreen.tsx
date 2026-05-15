@@ -24,7 +24,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     try {
       const data = await storage.getUsers();
       setUsers(data);
-    } catch (e) {
+    } catch (_e) {
       setError("Nepodařilo se načíst uživatele.");
     } finally {
       setIsLoading(false);
@@ -80,7 +80,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         await storage.deleteUser(userToDelete.id);
         setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
         setUserToDelete(null);
-      } catch (e) {
+      } catch (_e) {
         setError("Chyba při mazání uživatele.");
       } finally {
         setIsLoading(false);

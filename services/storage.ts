@@ -269,7 +269,7 @@ export const createEvent = async (event: SportEvent): Promise<SportEvent[]> => {
   if (!event.id) {
     event.id = generateId();
   }
-  const { participants, ...eventData } = event;
+  const { participants: _participants, ...eventData } = event;
 
   if (!useApi()) {
     const events = getLS<Omit<SportEvent, 'participants'>>(LS_EVENTS);
@@ -291,7 +291,7 @@ export const createEventsBatch = async (events: SportEvent[]): Promise<SportEven
     if (!event.id) {
       event.id = generateId();
     }
-    const { participants, ...eventData } = event;
+    const { participants: _participants, ...eventData } = event;
     return eventData;
   });
 
@@ -311,7 +311,7 @@ export const createEventsBatch = async (events: SportEvent[]): Promise<SportEven
 };
 
 export const updateEvent = async (updatedEvent: SportEvent): Promise<SportEvent[]> => {
-  const { participants, ...eventData } = updatedEvent;
+  const { participants: _participants, ...eventData } = updatedEvent;
 
   if (!useApi()) {
     const events = getLS<Omit<SportEvent, 'participants'>>(LS_EVENTS);

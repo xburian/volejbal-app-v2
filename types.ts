@@ -35,6 +35,7 @@ export interface User {
   id: string;
   name: string;
   photoUrl?: string; // URL or base64 encoded image
+  hasMultisportCard?: boolean; // Multisport discount card holder
 }
 
 export interface BankAccount {

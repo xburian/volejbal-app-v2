@@ -9,8 +9,8 @@ interface EventDetailHeaderProps {
   countJoined: number;
   costPerPerson: number;
   isEditingCost: boolean;
-  tempTotalCost: number;
-  onTempTotalCostChange: (value: number) => void;
+  tempTotalCost: string;
+  onTempTotalCostChange: (value: string) => void;
   onStartEditCost: () => void;
   onSaveCost: () => void;
   onCancelCostEdit: () => void;
@@ -19,9 +19,9 @@ interface EventDetailHeaderProps {
 
 export const EventDetailHeader: React.FC<EventDetailHeaderProps> = ({
   event,
-  sportConfig,
-  countJoined,
-  costPerPerson,
+  sportConfig: _sportConfig,
+  countJoined: _countJoined,
+  costPerPerson: _costPerPerson,
   isEditingCost,
   tempTotalCost,
   onTempTotalCostChange,
@@ -59,7 +59,9 @@ export const EventDetailHeader: React.FC<EventDetailHeaderProps> = ({
               <input
                 type="number"
                 value={tempTotalCost}
-                onChange={(e) => onTempTotalCostChange(Number(e.target.value))}
+                onChange={(e) => onTempTotalCostChange(e.target.value)}
+                onFocus={(e) => { if (e.target.value === '0') onTempTotalCostChange(''); }}
+                onBlur={(e) => { if (e.target.value === '') onTempTotalCostChange('0'); }}
                 className="w-16 px-1 py-0.5 text-sm border border-blue-300 rounded focus:ring-1 focus:ring-blue-200 outline-none"
                 min="0"
               />

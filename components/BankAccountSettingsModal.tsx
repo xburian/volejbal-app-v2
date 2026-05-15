@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { BankAccount, User, SportConfig, maskAccountNumber } from '../types';
 import * as storage from '../services/storage';
-import { X, Landmark, UserCircle, Loader2, AlertTriangle, Sparkles, Camera, Pencil, Check, Trash2, Settings as Settings2Icon, Dumbbell } from 'lucide-react';
+import { X, Landmark, UserCircle, Loader2, AlertTriangle, Sparkles, Camera, Pencil, Check, Trash2, Settings as Settings2Icon, Dumbbell, Ticket } from 'lucide-react';
 
 interface BankAccountSettingsModalProps {
   isOpen: boolean;
@@ -120,6 +120,21 @@ export const BankAccountSettingsModal: React.FC<BankAccountSettingsModalProps> =
     } catch {
       setError('Chyba při mazání fotky.');
       setIsUploadingPhoto(false);
+    }
+  };
+
+  const handleMultisportToggle = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const updated = await storage.updateUser(currentUser.id, { hasMultisportCard: !currentUser.hasMultisportCard });
+      onUserUpdate(updated);
+      setSuccessMessage(currentUser.hasMultisportCard ? 'Multisport karta odebrána.' : 'Multisport karta nastavena.');
+      setTimeout(() => setSuccessMessage(null), 2500);
+    } catch (err: any) {
+      setError(err.message || 'Chyba při aktualizaci nastavení.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -303,6 +318,29 @@ export const BankAccountSettingsModal: React.FC<BankAccountSettingsModalProps> =
             </div>
           </div>
 
+          {/* ---- MULTISPORT CARD ---- */}
+          <div>
+            <h4 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+              <Ticket size={16} className="text-purple-500" />
+              Multisport karta
+            </h4>
+
+            <label className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-lg p-4 cursor-pointer hover:bg-slate-100 transition-colors">
+              <input
+                type="checkbox"
+                checked={currentUser.hasMultisportCard ?? false}
+                onChange={handleMultisportToggle}
+                disabled={isLoading}
+                className="w-4 h-4 text-purple-600 border-slate-300 rounded focus:ring-purple-500"
+                data-testid="multisport-toggle"
+              />
+              <div>
+                <p className="font-medium text-slate-800 text-sm">Mám Multisport kartu</p>
+                <p className="text-xs text-slate-500">U události se zobrazí počet hráčů s Multisport kartou</p>
+              </div>
+            </label>
+          </div>
+
           {/* ---- BANK ACCOUNT ---- */}
           <div>
             <h4 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-3 flex items-center gap-2">
@@ -466,7 +504,7 @@ export const BankAccountSettingsModal: React.FC<BankAccountSettingsModalProps> =
               className="w-full px-4 py-2 text-slate-400 hover:text-amber-600 text-sm font-medium flex items-center justify-center gap-1.5 transition-colors"
             >
               <Sparkles size={14} />
-              Seznam změn (v1.2.0)
+              Seznam změn (v1.7.0)
             </button>
           )}
         </div>

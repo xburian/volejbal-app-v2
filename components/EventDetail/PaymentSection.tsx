@@ -23,6 +23,7 @@ interface PaymentSectionProps {
   isCopied: boolean;
   onCopyToClipboard: () => void;
   onBankAccountChange: (value: string) => void;
+  multisportUsers?: { name: string }[];
 }
 
 export const PaymentSection: React.FC<PaymentSectionProps> = ({
@@ -37,6 +38,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
   isCopied,
   onCopyToClipboard,
   onBankAccountChange,
+  multisportUsers = [],
 }) => (
   <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 h-fit">
     <h3 className="text-lg font-semibold text-slate-700 mb-4 flex items-center gap-2">
@@ -105,6 +107,18 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
       <div className="bg-white p-4 rounded-lg border border-slate-200">
         <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Částka na osobu</p>
         <p className="text-3xl font-bold text-blue-600">{costPerPerson} Kč</p>
+        {multisportUsers.length > 0 && (
+          <div className="relative group mt-2">
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 px-2 py-1 rounded-full cursor-default">
+              🎫 {multisportUsers.length}× Multisport
+            </span>
+            <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-10 bg-slate-800 text-white text-xs rounded-lg px-3 py-2 shadow-lg whitespace-nowrap">
+              {multisportUsers.map((u, i) => (
+                <div key={i}>{u.name}</div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {countJoined > 0 && effectiveAccountNumber && qrString && (

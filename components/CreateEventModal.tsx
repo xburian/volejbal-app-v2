@@ -28,7 +28,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ selectedDate
     date: format(selectedDate, 'yyyy-MM-dd'),
     time: '18:00',
     location: currentConfig.defaultLocation,
-    totalCost: currentConfig.defaultCost,
+    totalCost: String(currentConfig.defaultCost),
     description: '',
   });
 
@@ -47,7 +47,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ selectedDate
         ...prev,
         title: config.label,
         location: config.defaultLocation,
-        totalCost: config.defaultCost,
+        totalCost: String(config.defaultCost),
       }));
     }
   };
@@ -67,7 +67,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ selectedDate
           accountNumber: selectedAccount?.accountNumber ?? '',
           selectedBankAccountId: selectedAccount?.id,
           id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random().toString(36),
-          totalCost: Number(formData.totalCost),
+          totalCost: Number(formData.totalCost) || 0,
           sportType: selectedSport,
         };
       });
@@ -79,7 +79,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ selectedDate
         accountNumber: selectedAccount?.accountNumber ?? '',
         selectedBankAccountId: selectedAccount?.id,
         id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
-        totalCost: Number(formData.totalCost),
+        totalCost: Number(formData.totalCost) || 0,
         sportType: selectedSport,
       };
       onCreate(newEvent);
@@ -219,7 +219,9 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ selectedDate
                 type="number"
                 min="0"
                 value={formData.totalCost}
-                onChange={e => setFormData({...formData, totalCost: Number(e.target.value)})}
+                onChange={e => setFormData({...formData, totalCost: e.target.value})}
+                onFocus={e => { if (e.target.value === '0') setFormData({...formData, totalCost: ''}); }}
+                onBlur={e => { if (e.target.value === '') setFormData({...formData, totalCost: '0'}); }}
                 className="w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>

@@ -16,7 +16,16 @@ npm run build            # tsc + vite build
 npm test                 # Vitest in watch mode
 npm test -- --run        # Run tests once
 npm test -- --run --coverage  # With coverage
+npm run lint             # ESLint check
+npm run lint:fix         # ESLint auto-fix
 ```
+
+## Linting & Pre-commit
+
+- **ESLint** (`eslint.config.js`): Flat config with `typescript-eslint`, `react-hooks`, `react-refresh`.
+- **Key rules**: `@typescript-eslint/no-unused-vars` (warn, `_` prefix ignored), `no-explicit-any` off, `set-state-in-effect` off (data loading pattern).
+- **`services/storage.ts`**: `rules-of-hooks` disabled — `useApi()` is a regular function, not a React hook.
+- **Pre-commit hook**: Husky + lint-staged — runs `eslint --max-warnings=0` on staged `*.{ts,tsx}` files before each commit.
 
 ## Architecture
 
@@ -60,6 +69,33 @@ All domain types in `types.ts`: `User`, `BankAccount`, `Participant`, `Volleybal
 - Storage tests use localStorage fallback (no Redis needed)
 
 ## Release Notes
+
+### v1.7.0 — Calendar Export, Multisport Card & Price Input UX (2026-05-15)
+
+#### 📅 Calendar Export (`utils/icalExport.ts`)
+- **`generateICS(events)`**: Builds a valid iCalendar (`.ics`) string from all upcoming events (future-only filter built in).
+- **`downloadICS(events)`**: Triggers browser file download as `sport-planovac-kalendar.ics`.
+- **VEVENT fields**: `DTSTART` from event date+time, `DTEND` +2 hours, `SUMMARY` = title, `LOCATION`, `DESCRIPTION` with cost + participant count.
+- **iCal text escaping**: Handles `\`, `;`, `,`, `\n` per RFC 5545.
+- **Export buttons**: Desktop sidebar header (Download icon) + mobile calendar view ("Export .ics" button above event list).
+- **No external dependencies**: Pure string generation, compatible with Google Calendar, Apple Calendar, Outlook.
+
+#### 🎫 Multisport Card Setting
+- **`User.hasMultisportCard?: boolean`**: New optional field on `User` type, persisted via existing `PUT /api/users` merge logic.
+- **Settings checkbox**: "Mám Multisport kartu" toggle in `BankAccountSettingsModal` under Profile section. Calls `storage.updateUser()` on toggle.
+- **Payment badge**: `PaymentSection` shows `🎫 N× Multisport` purple badge below cost-per-person when joined participants have the card.
+- **Hover tooltip**: Badge shows participant names on hover via CSS `group-hover`.
+- **Informational only**: No effect on cost-per-person calculation.
+- **Data flow**: `useDataLoading` now loads `users` list → `App.tsx` passes `allUsers` to `EventDetail` → computed `multisportUsers` passed to `PaymentSection`.
+
+#### 💰 Price Input UX Fix
+- **String-based state**: `totalCost` in `CreateEventModal` and `tempTotalCost` in `EventDetailHeader` changed from `number` to `string`.
+- **Focus behavior**: Clicking into a price field showing `0` auto-clears it so user can type directly.
+- **Blur behavior**: Leaving an empty price field auto-restores `0`.
+- **Conversion**: `Number(value) || 0` on submit/save ensures valid number is persisted.
+
+#### ✅ Tests (9 new, 274 total)
+- `utils/icalExport.test.ts` — 9 tests: VCALENDAR structure, DTSTART/DTEND, special char escaping, description content, past event filtering, empty calendar, multiple events, UID format, custom description.
 
 ### v1.6.0 — Statistics Redesign (2026-05-11)
 

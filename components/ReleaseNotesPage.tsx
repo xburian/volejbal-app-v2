@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Zap, CheckCircle2, Smartphone, Layout, FlaskConical, CreditCard, ArrowLeft, Trophy, BookOpen, UserCircle, BarChart3, Target, Puzzle, RefreshCw, Repeat2, Link, PawPrint, Swords } from 'lucide-react';
+import { Sparkles, Zap, CheckCircle2, Smartphone, Layout, FlaskConical, CreditCard, ArrowLeft, Trophy, BookOpen, UserCircle, BarChart3, Target, Puzzle, RefreshCw, Repeat2, Link, PawPrint, Swords, Download, Ticket } from 'lucide-react';
 
 interface ReleaseNotesPageProps {
   onClose: () => void;
@@ -12,6 +12,52 @@ interface ChangeEntry {
 }
 
 const versions: { version: string; date: string; title: string; changes: ChangeEntry[] }[] = [
+  {
+    version: '1.7.0',
+    date: '15. 5. 2026',
+    title: 'Export kalendáře, Multisport karta a vylepšení ceny',
+    changes: [
+      {
+        icon: <Download size={16} />,
+        title: 'Export do kalendáře',
+        items: [
+          'Export všech nadcházejících událostí do .ics souboru jedním kliknutím',
+          'Každá událost obsahuje datum, čas, místo, cenu a počet účastníků',
+          'Automatická délka 2 hodiny pro každou událost',
+          'Tlačítko v desktopové hlavičce i v mobilním kalendáři',
+          'Kompatibilní s Google Calendar, Apple Calendar, Outlook a dalšími',
+        ],
+      },
+      {
+        icon: <Ticket size={16} />,
+        title: 'Multisport karta',
+        items: [
+          'Nové zaškrtávací políčko „Mám Multisport kartu" v nastavení profilu',
+          'U události se zobrazí počet hráčů s Multisport kartou (🎫 badge)',
+          'Po najetí myší na badge se zobrazí jména držitelů karty',
+          'Čistě informativní — cena za osobu se nemění',
+        ],
+      },
+      {
+        icon: <CreditCard size={16} />,
+        title: 'Vylepšení zadávání ceny',
+        items: [
+          'Při kliknutí do pole ceny se hodnota 0 automaticky vymaže',
+          'Po opuštění prázdného pole se hodnota vrátí na 0',
+          'Platí při vytváření události i při úpravě ceny v detailu',
+          'Snazší zadávání — není třeba ručně mazat výchozí nulu',
+        ],
+      },
+      {
+        icon: <FlaskConical size={16} />,
+        title: 'Testy',
+        items: [
+          '9 nových testů pro iCal export (struktura, filtrování, escapování, více událostí)',
+          '274 testů celkem — vše prochází',
+        ],
+      },
+    ],
+  },
   {
     version: '1.6.0',
     date: '11. 5. 2026',

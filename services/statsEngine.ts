@@ -94,7 +94,7 @@ export function computeUserStats(events: SportEvent[]): Map<string, UserStats> {
       const winningTeam = round.teams[round.winningTeam];
       const losingTeam = round.teams[1 - round.winningTeam];
 
-      let teamSetsWon: [number, number] = [0, 0];
+      const teamSetsWon: [number, number] = [0, 0];
       if (round.score && Array.isArray(round.score)) {
         for (const [s0, s1] of round.score) {
           if (s0 + s1 === 0) continue;
@@ -427,7 +427,7 @@ export function computeDuoStats(events: SportEvent[]): DuoStats[] {
   for (const event of events) {
     for (const round of getAllRounds(event)) {
       if (round.winningTeam === undefined) continue;
-      let teamSetsWon: [number, number] = [0, 0];
+      const teamSetsWon: [number, number] = [0, 0];
       if (round.score && Array.isArray(round.score)) {
         for (const [s0, s1] of round.score) {
           if (s0 + s1 === 0) continue;
