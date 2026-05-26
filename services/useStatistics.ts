@@ -50,8 +50,6 @@ export function useStatistics(
       stats.eloRating = Math.round(eloMap.get(userId) ?? 1000);
       stats.reliabilityScore = computeReliabilityScore(stats);
       stats.dayOfWeekDistribution = computeDayHeatmap(pastEvents, userId);
-      const form = computeFormTrend(pastEvents, userId);
-      stats.recentFormRate = form.last5WinRate ?? form.allTimeWinRate;
     }
 
     const personalStats = currentUser ? statsMap.get(currentUser.id) || null : null;

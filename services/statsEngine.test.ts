@@ -197,18 +197,18 @@ describe('computeNemesis', () => {
 // ── Clutch Factor Tests ──
 
 describe('computeClutchFactor', () => {
-  it('correctly classifies close sets (margin ≤3)', () => {
+  it('correctly classifies close sets (margin ≤2)', () => {
     const events = [makeEvent('e1', PAST, [
       { userId: 'a', name: 'A', status: 'joined', hasPaid: true },
       { userId: 'b', name: 'B', status: 'joined', hasPaid: true },
     ], {
       teams: [[tm('a')], [tm('b')]],
       winningTeam: 0,
-      score: [[25, 23], [25, 22], [26, 24], [25, 20], [25, 24]], // 4 close (≤3): margins 2,3,2,1; 1 blowout: margin 5
+      score: [[25, 23], [25, 22], [26, 24], [25, 20], [25, 24]], // 3 close (≤2): margins 2,2,1; 2 blowout: margins 3,5
     })];
     const result = computeClutchFactor(events, 'a');
-    expect(result.clutchSetsPlayed).toBe(4); // 25-23(2), 25-22(3), 26-24(2), 25-24(1)
-    expect(result.clutchWinRate).toBeNull(); // only 4, need 5
+    expect(result.clutchSetsPlayed).toBe(3); // 25-23(2), 26-24(2), 25-24(1)
+    expect(result.clutchWinRate).toBeNull(); // only 3, need 5
   });
 
   it('returns non-null when above threshold', () => {
@@ -387,6 +387,127 @@ describe('computeDuoStats', () => {
     }));
     const duos = computeDuoStats(events);
     expect(duos).toHaveLength(0);
+  });
+});
+
+// ── v1.9 Rework Tests ──
+
+describe('computeUserStats streak behavior', () => {
+  it('does not reset attendance streak on maybe status', () => {
+    const events = [
+      makeEvent('e1', '2025-01-01', [{ userId: 'a', name: 'A', status: 'joined', hasPaid: true }]),
+      makeEvent('e2', '2025-01-02', [{ userId: 'a', name: 'A', status: 'joined', hasPaid: true }]),
+      makeEvent('e3', '2025-01-03', [{ userId: 'a', name: 'A', status: 'maybe', hasPaid: false }]),
+      makeEvent('e4', '2025-01-04', [{ userId: 'a', name: 'A', status: 'joined', hasPaid: true }]),
+    ];
+    const stats = computeUserStats(events);
+    const s = stats.get('a')!;
+    expect(s.longestStreak).toBe(3); // e1, e2, then e3=maybe doesn't break, e4 continues
+    expect(s.eventsJoined).toBe(3);
+    expect(s.eventsMaybe).toBe(1);
+  });
+
+  it('resets attendance streak on declined status', () => {
+    const events = [
+      makeEvent('e1', '2025-01-01', [{ userId: 'a', name: 'A', status: 'joined', hasPaid: true }]),
+      makeEvent('e2', '2025-01-02', [{ userId: 'a', name: 'A', status: 'joined', hasPaid: true }]),
+      makeEvent('e3', '2025-01-03', [{ userId: 'a', name: 'A', status: 'declined', hasPaid: false }]),
+      makeEvent('e4', '2025-01-04', [{ userId: 'a', name: 'A', status: 'joined', hasPaid: true }]),
+    ];
+    const stats = computeUserStats(events);
+    const s = stats.get('a')!;
+    expect(s.longestStreak).toBe(2); // e1, e2 (declined breaks it), e4 starts new streak of 1
+    expect(s.currentStreak).toBe(1);
+  });
+});
+
+describe('computeLeaderboard gamesPlayed threshold', () => {
+  it('excludes players with enough events but too few games', () => {
+    const statsMap = new Map<string, any>([
+      ['a', { userId: 'a', name: 'A', eventsJoined: 5, winRate: 0.8, gamesPlayed: 3, attendanceRate: 0.9, paymentRate: 1 }],
+      ['b', { userId: 'b', name: 'B', eventsJoined: 5, winRate: 0.6, gamesPlayed: 6, attendanceRate: 0.7, paymentRate: 0.8 }],
+    ]);
+    const eloMap = new Map([['a', 1100], ['b', 1050]]);
+    const lb = computeLeaderboard(statsMap, eloMap);
+    expect(lb).toHaveLength(1);
+    expect(lb[0].userId).toBe('b'); // 'a' excluded: gamesPlayed=3 < ELO_MIN_GAMES=5
+  });
+});
+
+describe('computeExtendedBadges consistent badge', () => {
+  it('awards consistent badge to player with most even monthly attendance', () => {
+    // Player A: 2 events in Jan, 2 in Feb, 2 in Mar → very consistent
+    // Player B: 5 events in Jan, 0 in Feb, 1 in Mar → inconsistent
+    const events = [
+      makeEvent('e1', '2025-01-01', [
+        { userId: 'a', name: 'A', status: 'joined', hasPaid: true },
+        { userId: 'b', name: 'B', status: 'joined', hasPaid: true },
+      ]),
+      makeEvent('e2', '2025-01-15', [
+        { userId: 'a', name: 'A', status: 'joined', hasPaid: true },
+        { userId: 'b', name: 'B', status: 'joined', hasPaid: true },
+      ]),
+      makeEvent('e3', '2025-02-01', [
+        { userId: 'a', name: 'A', status: 'joined', hasPaid: true },
+        { userId: 'b', name: 'B', status: 'joined', hasPaid: true },
+      ]),
+      makeEvent('e4', '2025-02-15', [
+        { userId: 'a', name: 'A', status: 'joined', hasPaid: true },
+        { userId: 'b', name: 'B', status: 'declined', hasPaid: false },
+      ]),
+      makeEvent('e5', '2025-03-01', [
+        { userId: 'a', name: 'A', status: 'joined', hasPaid: true },
+        { userId: 'b', name: 'B', status: 'joined', hasPaid: true },
+      ]),
+      makeEvent('e6', '2025-03-15', [
+        { userId: 'a', name: 'A', status: 'joined', hasPaid: true },
+        { userId: 'b', name: 'B', status: 'joined', hasPaid: true },
+      ]),
+    ];
+    const statsMap = computeUserStats(events);
+    const badges = computeExtendedBadges(statsMap, events);
+    const consistent = badges.find(b => b.type === 'consistent');
+    expect(consistent).toBeDefined();
+    expect(consistent!.userId).toBe('a'); // A has 2,2,2 per month (stddev=0)
+  });
+
+  it('does not award consistent badge when no player has 5+ events', () => {
+    const events = [
+      makeEvent('e1', '2025-01-01', [{ userId: 'a', name: 'A', status: 'joined', hasPaid: true }]),
+      makeEvent('e2', '2025-02-01', [{ userId: 'a', name: 'A', status: 'joined', hasPaid: true }]),
+    ];
+    const statsMap = computeUserStats(events);
+    const badges = computeExtendedBadges(statsMap, events);
+    const consistent = badges.find(b => b.type === 'consistent');
+    expect(consistent).toBeUndefined();
+  });
+});
+
+describe('computeClutchFactor margin ≤2', () => {
+  it('margin of 3 is classified as blowout, not clutch', () => {
+    const events = [makeEvent('e1', PAST, [
+      { userId: 'a', name: 'A', status: 'joined', hasPaid: true },
+      { userId: 'b', name: 'B', status: 'joined', hasPaid: true },
+    ], {
+      teams: [[tm('a')], [tm('b')]],
+      winningTeam: 0,
+      score: [[25, 22]], // margin 3 → blowout
+    })];
+    const result = computeClutchFactor(events, 'a');
+    expect(result.clutchSetsPlayed).toBe(0); // margin 3 is not clutch anymore
+  });
+
+  it('margin of 2 is classified as clutch', () => {
+    const events = [makeEvent('e1', PAST, [
+      { userId: 'a', name: 'A', status: 'joined', hasPaid: true },
+      { userId: 'b', name: 'B', status: 'joined', hasPaid: true },
+    ], {
+      teams: [[tm('a')], [tm('b')]],
+      winningTeam: 0,
+      score: [[25, 23]], // margin 2 → clutch
+    })];
+    const result = computeClutchFactor(events, 'a');
+    expect(result.clutchSetsPlayed).toBe(1);
   });
 });
 

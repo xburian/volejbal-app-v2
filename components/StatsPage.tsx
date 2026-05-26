@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { SportEvent, User, UserStats, Badge, DuoStats, SportConfig, SportType, SPORT_EMOJI, LeaderboardEntry, PlayerFormTrend, NemesisData, EventHealthMetrics, ClutchData } from '../types';
+import { SportEvent, User, UserStats, Badge, DuoStats, SportConfig, SportType, SPORT_EMOJI, LeaderboardEntry, PlayerFormTrend, NemesisData, EventHealthMetrics, ClutchData, MonthlyTrend } from '../types';
 import { useStatistics } from '../services/useStatistics';
 import {
   ArrowLeft, Loader2, Trophy, Flame, Ghost, HelpCircle, Wallet,
-  PartyPopper, TrendingUp, Calendar, Users, Target, BarChart3, Star, Swords, Zap, AlertCircle
+  PartyPopper, TrendingUp, Calendar, Users, Target, BarChart3, Star, Swords, Zap, AlertCircle, CheckCircle
 } from 'lucide-react';
 
 interface StatsPageProps {
@@ -24,6 +24,7 @@ const badgeIcons: Record<string, React.ReactNode> = {
   TrendingUp: <TrendingUp size={24} />,
   Zap: <Zap size={24} />,
   Calendar: <Calendar size={24} />,
+  CheckCircle: <CheckCircle size={24} />,
 };
 
 const badgeColors: Record<string, string> = {
@@ -103,13 +104,14 @@ function Sparkline({ results }: { results: boolean[] }) {
 // ── Section Cards ──
 
 function LeaderboardCard({ entries, currentUserId }: { entries: LeaderboardEntry[]; currentUserId: string }) {
-  if (entries.length === 0) return <InsufficientData message="Nedostatek dat pro žebříček (min. 3 události na hráče)" />;
+  if (entries.length === 0) return <InsufficientData message="Nedostatek dat pro žebříček (min. 3 události a 5 zápasů na hráče)" />;
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-      <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+      <h3 className="font-bold text-slate-800 mb-1 flex items-center gap-2">
         <Trophy size={18} className="text-yellow-500" />
         Žebříček
       </h3>
+      <p className="text-xs text-slate-400 mb-4">Řazeno podle ELO hodnocení (min. 5 zápasů)</p>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -151,10 +153,11 @@ function FormCard({ formTrend }: { formTrend: PlayerFormTrend }) {
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-      <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+      <h3 className="font-bold text-slate-800 mb-1 flex items-center gap-2">
         <TrendingUp size={18} className="text-blue-500" />
         Moje forma
       </h3>
+      <p className="text-xs text-slate-400 mb-4">Porovnání posledních zápasů s celkovým průměrem</p>
       <div className="flex items-center gap-4 flex-wrap">
         <Sparkline results={formTrend.recentResults} />
         <div className="flex gap-4">
@@ -173,7 +176,7 @@ function FormCard({ formTrend }: { formTrend: PlayerFormTrend }) {
       </div>
       {formTrend.recentResults.length > 0 && (
         <div className="mt-3 flex gap-1">
-          {formTrend.recentResults.map((won, i) => (
+          {[...formTrend.recentResults].reverse().map((won, i) => (
             <div key={i} className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center ${won ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
               {won ? 'V' : 'P'}
             </div>
@@ -190,10 +193,11 @@ function DayHeatmapCard({ heatmap }: { heatmap: number[] }) {
   const max = Math.max(...heatmap, 1);
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-      <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+      <h3 className="font-bold text-slate-800 mb-1 flex items-center gap-2">
         <Calendar size={18} className="text-indigo-500" />
         Denní rozložení
       </h3>
+      <p className="text-xs text-slate-400 mb-4">Ve které dny nejčastěji hrajete</p>
       <div className="space-y-2">
         {heatmap.map((count, i) => (
           <div key={i} className="flex items-center gap-2">
@@ -216,10 +220,11 @@ function NemesisCard({ nemesis }: { nemesis: NemesisData }) {
   if (!nemesis.nemesis && !nemesis.favorite) return <InsufficientData message="Nedostatek dat o soupeřích (min. 3 zápasy proti jednomu hráči)" />;
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-      <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+      <h3 className="font-bold text-slate-800 mb-1 flex items-center gap-2">
         <Swords size={18} className="text-red-500" />
         Soupeři
       </h3>
+      <p className="text-xs text-slate-400 mb-4">Hráči, proti kterým máte nejlepší a nejhorší bilanci (min. 3 zápasy)</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {nemesis.favorite && (
           <div className="bg-green-50 rounded-xl p-3 border border-green-200">
@@ -228,7 +233,7 @@ function NemesisCard({ nemesis }: { nemesis: NemesisData }) {
               <Avatar name={nemesis.favorite.name} photoUrl={nemesis.favorite.photoUrl} size={28} />
               <div>
                 <div className="text-sm font-medium text-slate-700">{nemesis.favorite.name}</div>
-                <div className="text-xs text-slate-500">{Math.round(nemesis.favorite.winRate * 100)}% výher z {nemesis.favorite.gamesAgainst}</div>
+              <div className="text-xs text-slate-500">Máte {Math.round(nemesis.favorite.winRate * 100)}% výher z {nemesis.favorite.gamesAgainst} zápasů</div>
               </div>
             </div>
           </div>
@@ -240,7 +245,7 @@ function NemesisCard({ nemesis }: { nemesis: NemesisData }) {
               <Avatar name={nemesis.nemesis.name} photoUrl={nemesis.nemesis.photoUrl} size={28} />
               <div>
                 <div className="text-sm font-medium text-slate-700">{nemesis.nemesis.name}</div>
-                <div className="text-xs text-slate-500">{Math.round(nemesis.nemesis.winRate * 100)}% výher z {nemesis.nemesis.gamesAgainst}</div>
+                <div className="text-xs text-slate-500">Máte jen {Math.round(nemesis.nemesis.winRate * 100)}% výher z {nemesis.nemesis.gamesAgainst} zápasů</div>
               </div>
             </div>
           </div>
@@ -251,22 +256,23 @@ function NemesisCard({ nemesis }: { nemesis: NemesisData }) {
 }
 
 function ClutchCard({ clutchData }: { clutchData: ClutchData }) {
-  if (clutchData.clutchWinRate === null) return <InsufficientData message="Nedostatek těsných setů pro clutch statistiku (min. 5 setů s rozdílem ≤3)" />;
+  if (clutchData.clutchWinRate === null) return <InsufficientData message="Nedostatek těsných setů pro clutch statistiku (min. 5 setů s rozdílem ≤2)" />;
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-      <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+      <h3 className="font-bold text-slate-800 mb-1 flex items-center gap-2">
         <Zap size={18} className="text-purple-500" />
         Clutch faktor
       </h3>
+      <p className="text-xs text-slate-400 mb-4">Výhry v těsných setech (≤2 body rozdíl) vs. jasných setech</p>
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-purple-50 rounded-xl p-3 text-center">
           <div className="text-lg font-bold text-purple-700">{Math.round(clutchData.clutchWinRate * 100)}%</div>
-          <div className="text-xs text-slate-500">Těsné sety (≤3b)</div>
+          <div className="text-xs text-slate-500">Těsné sety (≤2b)</div>
         </div>
         {clutchData.blowoutWinRate !== null && (
           <div className="bg-slate-50 rounded-xl p-3 text-center">
             <div className="text-lg font-bold text-slate-700">{Math.round(clutchData.blowoutWinRate * 100)}%</div>
-            <div className="text-xs text-slate-500">Jasné sety (&gt;3b)</div>
+            <div className="text-xs text-slate-500">Jasné sety (&gt;2b)</div>
           </div>
         )}
       </div>
@@ -313,17 +319,18 @@ function PersonalStatsCard({ stats, totalEventsCount }: { stats: UserStats; tota
   );
 }
 
-function BadgesRow({ badges }: { badges: Badge[] }) {
+function BadgesRow({ badges, currentUserId }: { badges: Badge[]; currentUserId: string }) {
   if (badges.length === 0) return null;
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-      <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+      <h3 className="font-bold text-slate-800 mb-1 flex items-center gap-2">
         <Trophy size={18} className="text-yellow-500" />
         Ocenění
       </h3>
+      <p className="text-xs text-slate-400 mb-4">Nejlepší hráč v každé kategorii</p>
       <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
         {badges.map(badge => (
-          <div key={badge.type} className={`flex-shrink-0 w-40 rounded-xl border-2 p-4 flex flex-col items-center text-center gap-2 ${badgeColors[badge.type] || 'bg-slate-50 border-slate-200'}`}>
+          <div key={badge.type} className={`flex-shrink-0 w-40 rounded-xl border-2 p-4 flex flex-col items-center text-center gap-2 ${badgeColors[badge.type] || 'bg-slate-50 border-slate-200'} ${badge.userId === currentUserId ? 'ring-2 ring-blue-400 ring-offset-1' : ''}`}>
             <div className="text-2xl">{badgeIcons[badge.iconName]}</div>
             <div className="font-bold text-sm">{badge.label}</div>
             <Avatar name={badge.userName} photoUrl={badge.photoUrl} size={28} />
@@ -399,6 +406,36 @@ function EventHealthCard({ health }: { health: EventHealthMetrics }) {
   );
 }
 
+function MonthlyTrendsCard({ trends }: { trends: MonthlyTrend[] }) {
+  if (trends.length < 2) return null;
+  const maxEvents = Math.max(...trends.map(t => t.eventCount), 1);
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+      <h3 className="font-bold text-slate-800 mb-1 flex items-center gap-2">
+        <BarChart3 size={18} className="text-blue-500" />
+        Měsíční přehled
+      </h3>
+      <p className="text-xs text-slate-400 mb-4">Počet událostí a průměrná účast v čase</p>
+      <div className="space-y-2">
+        {trends.map(trend => (
+          <div key={trend.month} className="flex items-center gap-2">
+            <span className="text-xs font-medium text-slate-500 w-16 shrink-0">{trend.label}</span>
+            <div className="flex-1 bg-slate-100 rounded-full h-5 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-blue-500 transition-all"
+                style={{ width: `${(trend.eventCount / maxEvents) * 100}%`, opacity: 0.4 + (trend.eventCount / maxEvents) * 0.6 }}
+              />
+            </div>
+            <span className="text-xs text-slate-600 w-20 text-right shrink-0" title={`${trend.eventCount} událostí, ø ${trend.averageAttendance} hráčů`}>
+              {trend.eventCount}× / ø {trend.averageAttendance}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 
 // ── Main Page ──
 
@@ -410,7 +447,7 @@ export const StatsPage: React.FC<StatsPageProps> = ({ events, currentUser, isLoa
     [events, sportFilter]
   );
 
-  const { personalStats, badges, duoStats, leaderboard, formTrend, nemesis, eventHealth, clutchData, dayHeatmap } = useStatistics(filteredEvents, currentUser, false, sportConfigs);
+  const { personalStats, monthlyTrends, badges, duoStats, leaderboard, formTrend, nemesis, eventHealth, clutchData, dayHeatmap } = useStatistics(filteredEvents, currentUser, false, sportConfigs);
 
   const hasEnoughData = filteredEvents.length >= 3;
 
@@ -479,13 +516,16 @@ export const StatsPage: React.FC<StatsPageProps> = ({ events, currentUser, isLoa
 
 
           {/* Badges */}
-          <BadgesRow badges={badges} />
+          <BadgesRow badges={badges} currentUserId={currentUser.id} />
 
           {/* Duos */}
           <BestDuos duos={duoStats} />
 
           {/* Event Health */}
           {eventHealth && <EventHealthCard health={eventHealth} />}
+
+          {/* Monthly Trends */}
+          <MonthlyTrendsCard trends={monthlyTrends} />
         </div>
       )}
     </div>

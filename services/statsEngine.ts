@@ -81,7 +81,7 @@ export function computeUserStats(events: SportEvent[]): Map<string, UserStats> {
         streak.current++;
         streak.lastJoined = true;
         if (streak.current > streak.longest) streak.longest = streak.current;
-      } else {
+      } else if (p.status === 'declined') {
         streak.lastJoined = false;
         streak.current = 0;
       }
@@ -322,7 +322,7 @@ export function computeClutchFactor(events: SportEvent[], userId: string): Clutc
       for (const [s0, s1] of round.score) {
         if (s0 + s1 === 0) continue;
         const margin = Math.abs(s0 - s1);
-        if (margin <= 3) { if (isWin) clutchWins++; else clutchLosses++; }
+        if (margin <= 2) { if (isWin) clutchWins++; else clutchLosses++; }
         else { if (isWin) blowoutWins++; else blowoutLosses++; }
       }
     }
@@ -348,7 +348,7 @@ export function computeReliabilityScore(stats: UserStats): number {
 export function computeLeaderboard(statsMap: Map<string, UserStats>, eloMap: Map<string, number>): LeaderboardEntry[] {
   const entries: LeaderboardEntry[] = [];
   for (const [userId, stats] of statsMap) {
-    if (stats.eventsJoined < THRESHOLDS.LEADERBOARD_MIN_EVENTS) continue;
+    if (stats.eventsJoined < THRESHOLDS.LEADERBOARD_MIN_EVENTS || stats.gamesPlayed < THRESHOLDS.ELO_MIN_GAMES) continue;
     entries.push({
       userId, name: stats.name, photoUrl: stats.photoUrl, rank: 0,
       eloRating: Math.round(eloMap.get(userId) ?? ELO_INITIAL),
@@ -542,7 +542,7 @@ export function computeExtendedBadges(statsMap: Map<string, UserStats>, events: 
   if (clutchRates.length > 0) {
     const best = clutchRates.reduce((a, b) => a.rate > b.rate ? a : b);
     const s = statsMap.get(best.userId);
-    if (s) badges.push({ type: 'clutchPlayer', label: 'Clutch Hráč', description: 'Nejvyšší výhry v těsných setech (≤3 body)', iconName: 'Zap', userId: s.userId, userName: s.name, photoUrl: s.photoUrl, value: `${Math.round(best.rate * 100)}% v clutchi` });
+    if (s) badges.push({ type: 'clutchPlayer', label: 'Clutch Hráč', description: 'Nejvyšší výhry v těsných setech (≤2 body)', iconName: 'Zap', userId: s.userId, userName: s.name, photoUrl: s.photoUrl, value: `${Math.round(best.rate * 100)}% v clutchi` });
   }
 
   // Weekday Warrior
@@ -559,6 +559,35 @@ export function computeExtendedBadges(statsMap: Map<string, UserStats>, events: 
   if (bestWarriorId && bestDays >= 3) {
     const s = statsMap.get(bestWarriorId);
     if (s) badges.push({ type: 'weekdayWarrior', label: 'Všední Válečník', description: 'Hraje v nejvíce různých dnech', iconName: 'Calendar', userId: s.userId, userName: s.name, photoUrl: s.photoUrl, value: `${bestDays} různých dnů` });
+  }
+
+  // Consistent Player — lowest stddev of monthly attendance (min 5 events)
+  const consistentCandidates = allStats.filter(s => s.eventsJoined >= 5);
+  if (consistentCandidates.length > 0) {
+    const monthlyAttendance = new Map<string, Map<string, number>>();
+    for (const event of events) {
+      const month = event.date.substring(0, 7);
+      for (const p of event.participants) {
+        if (p.status !== 'joined') continue;
+        if (!monthlyAttendance.has(p.userId)) monthlyAttendance.set(p.userId, new Map());
+        const userMonths = monthlyAttendance.get(p.userId)!;
+        userMonths.set(month, (userMonths.get(month) ?? 0) + 1);
+      }
+    }
+    let bestConsistentId = '', lowestStddev = Infinity;
+    for (const s of consistentCandidates) {
+      const userMonths = monthlyAttendance.get(s.userId);
+      if (!userMonths || userMonths.size < 2) continue;
+      const counts = Array.from(userMonths.values());
+      const mean = counts.reduce((a, b) => a + b, 0) / counts.length;
+      const variance = counts.reduce((sum, c) => sum + (c - mean) ** 2, 0) / counts.length;
+      const stddev = Math.sqrt(variance);
+      if (stddev < lowestStddev) { lowestStddev = stddev; bestConsistentId = s.userId; }
+    }
+    if (bestConsistentId) {
+      const s = statsMap.get(bestConsistentId);
+      if (s) badges.push({ type: 'consistent', label: 'Konzistentní Hráč', description: 'Nejrovnoměrnější účast napříč měsíci (min. 5 událostí)', iconName: 'CheckCircle', userId: s.userId, userName: s.name, photoUrl: s.photoUrl, value: `σ = ${lowestStddev.toFixed(1)}` });
+    }
   }
 
   return badges;
