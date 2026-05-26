@@ -38,6 +38,7 @@ async function start() {
   const photosHandler = await import('../api/photos.js');
   const bankAccountsHandler = await import('../api/bank-accounts.js');
   const sportConfigsHandler = await import('../api/sport-configs.js');
+  const issuesHandler = await import('../api/issues.js');
 
   app.all('/api/users', wrapHandler(usersHandler));
   app.all('/api/events-batch', wrapHandler(eventsBatchHandler));
@@ -46,6 +47,7 @@ async function start() {
   app.all('/api/photos', wrapHandler(photosHandler));
   app.all('/api/bank-accounts', wrapHandler(bankAccountsHandler));
   app.all('/api/sport-configs', wrapHandler(sportConfigsHandler));
+  app.all('/api/issues', wrapHandler(issuesHandler));
 
   const PORT = 3001;
   app.listen(PORT, () => {

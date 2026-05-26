@@ -211,3 +211,20 @@ export interface Badge {
   photoUrl?: string;
   value: string;
 }
+
+// ── Issue Tracker Types ──
+
+export type IssueTag = 'bug' | 'feature';
+export type IssueStatus = 'todo' | 'in_progress' | 'done';
+
+export interface Issue {
+  id: string;
+  title: string;
+  description: string;
+  tag: IssueTag;
+  status: IssueStatus;
+  authorId: string;
+  authorName: string;
+  createdAt: string;
+  updatedAt: string;
+}

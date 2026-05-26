@@ -35,7 +35,7 @@ npm run lint:fix         # ESLint auto-fix
 - **Views**: Login → Calendar/List toggle → Event detail (all state-driven, no router)
 
 ### Backend (Vercel Serverless Functions)
-- **Handlers in `api/`**: `users.ts`, `events.ts`, `events-batch.ts`, `attendance.ts`, `photos.ts`, `bank-accounts.ts`
+- **Handlers in `api/`**: `users.ts`, `events.ts`, `events-batch.ts`, `attendance.ts`, `photos.ts`, `bank-accounts.ts`, `issues.ts`
 - Each handler follows Vercel's `(req, res)` pattern with method-based routing inside
 - Local dev uses Express wrapper (`scripts/dev-server.ts`) that adapts Express req/res to Vercel interface
 - Vite proxies `/api/*` → `localhost:3001` in development
@@ -47,11 +47,12 @@ npm run lint:fix         # ESLint auto-fix
   - `event:{id}`, `events:all` (set of IDs)
   - `attendance:{eventId}_{userId}`, `attendance:event:{eventId}` (set), `attendance:user:{userId}` (set)
   - `photo:{id}` (base64 data), `bankaccount:user:{userId}`, `bankaccounts:users` (set)
+  - `issue:{id}`, `issues:all` (set of IDs)
 - Events are stored **without** participants — hydrated on GET by joining attendance + user data
 - `services/storage.ts` abstracts API calls; falls back to localStorage in tests (detects VITEST env)
 
 ### Types
-All domain types in `types.ts`: `User`, `BankAccount`, `Participant`, `VolleyballEvent`, `AttendanceRecord`, `DebtItem`, `ViewMode`.
+All domain types in `types.ts`: `User`, `BankAccount`, `Participant`, `VolleyballEvent`, `AttendanceRecord`, `DebtItem`, `ViewMode`, `Issue`, `IssueTag`, `IssueStatus`.
 
 ## Key Patterns
 
@@ -69,6 +70,34 @@ All domain types in `types.ts`: `User`, `BankAccount`, `Participant`, `Volleybal
 - Storage tests use localStorage fallback (no Redis needed)
 
 ## Release Notes
+
+### v1.8.0 — Issue Tracker Drawer (2026-05-26)
+
+#### 🐛 Issue Tracker (`components/IssueDrawer.tsx`)
+- **Slide-out drawer**: Opens from right side with animated slide-in (540px tablet, 600px desktop, full-width mobile).
+- **Issue submission form**: Collapsible form with title, description, and tag selector (Bug 🐛 / Vylepšení ✨).
+- **Status management**: Any user can change status via dropdown (K vyřešení → Rozpracováno → Hotovo).
+- **Filter by status**: Filter buttons with live counts for each status + "Vše" view.
+- **Optimistic UI**: Status changes and deletes update instantly with rollback on error.
+- **Animations**: Drawer slide-in, backdrop fade, staggered card pop-in (50ms delay per card), form fade-in-up.
+- **Data persistence**: Stored in Upstash Redis (`issue:{id}`, `issues:all`). localStorage fallback for tests.
+
+#### 🛠️ API Endpoint (`api/issues.ts`)
+- **`GET /api/issues`**: Lists all issues, sorted newest first.
+- **`POST /api/issues`**: Creates issue with auto-set `todo` status and timestamps.
+- **`PUT /api/issues`**: Updates issue fields (status, title, description).
+- **`DELETE /api/issues?id=xxx`**: Removes issue from Redis.
+
+#### 📦 Storage Layer
+- **`storage.getIssues()`**, **`createIssue()`**, **`updateIssue()`**, **`deleteIssue()`**: Full CRUD with localStorage fallback.
+
+#### 🎯 Integration
+- **Desktop**: Purple 💬 button in sidebar header opens the drawer.
+- **Mobile**: "Náměty a chyby" link in settings modal.
+- **Czech labels**: K vyřešení, Rozpracováno, Hotovo, Nový námět, Odeslat, Smazat.
+
+#### ✅ Tests (16 new, 290 total)
+- `components/IssueDrawer.test.tsx` — 16 tests: render/hide, issue list, tag badges, backdrop/X close, form toggle, submit, clear after submit, status filter, status change, delete, empty state, author display, done styling.
 
 ### v1.7.0 — Calendar Export, Multisport Card & Price Input UX (2026-05-15)
 

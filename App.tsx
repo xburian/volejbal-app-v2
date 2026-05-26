@@ -10,13 +10,14 @@ import { LoginScreen } from './components/LoginScreen';
 import { BankAccountSettingsModal } from './components/BankAccountSettingsModal';
 import { StatsPage } from './components/StatsPage';
 import { ReleaseNotesPage } from './components/ReleaseNotesPage';
+import { IssueDrawer } from './components/IssueDrawer';
 import { MobileBottomNav, MobileView } from './components/MobileBottomNav';
 import { MobileHeader } from './components/MobileHeader';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { usePersistedAuth } from './hooks/usePersistedAuth';
 import { useUrlState } from './hooks/useUrlState';
 import { useDataLoading } from './hooks/useDataLoading';
-import { Calendar as CalendarIcon, Trophy, LogOut, Loader2, Settings, BarChart3, Info, Download } from 'lucide-react';
+import { Calendar as CalendarIcon, Trophy, LogOut, Loader2, Settings, BarChart3, Info, Download, MessageSquarePlus } from 'lucide-react';
 import { isSameDay, startOfDay } from 'date-fns';
 import { downloadICS } from './utils/icalExport';
 
@@ -35,6 +36,7 @@ const App: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
+  const [showIssueDrawer, setShowIssueDrawer] = useState(false);
   const [sportFilter, setSportFilter] = useState<SportType | null>(null);
 
   // Auto-select first upcoming event
@@ -294,6 +296,9 @@ const App: React.FC = () => {
             <button onClick={() => { setShowChangelog(true); setShowStats(false); }} className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Seznam změn">
               <Info size={20} />
             </button>
+            <button onClick={() => setShowIssueDrawer(true)} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all" title="Náměty a chyby">
+              <MessageSquarePlus size={20} />
+            </button>
             <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Odhlásit">
               <LogOut size={20} />
             </button>
@@ -369,10 +374,16 @@ const App: React.FC = () => {
           onBankAccountsChange={setBankAccounts}
           onUserUpdate={handleUserUpdate}
           onShowChangelog={() => { setShowChangelog(true); setMobileView('changelog'); }}
+          onShowIssues={() => setShowIssueDrawer(true)}
           sportConfigs={sportConfigs}
           onSportConfigsChange={setSportConfigs}
         />
       )}
+      <IssueDrawer
+        isOpen={showIssueDrawer}
+        onClose={() => setShowIssueDrawer(false)}
+        currentUser={currentUser}
+      />
     </div>
   );
 };

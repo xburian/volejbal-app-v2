@@ -1,4 +1,4 @@
-import { SportEvent, User, AttendanceRecord, Participant, BankAccount, SportConfig, SportType, VALID_SPORT_TYPES, DEFAULT_SPORT_CONFIGS } from '../types';
+import { SportEvent, User, AttendanceRecord, Participant, BankAccount, SportConfig, SportType, VALID_SPORT_TYPES, DEFAULT_SPORT_CONFIGS, Issue } from '../types';
 
 // Local Storage Keys (fallback for offline / test / dev:vite mode)
 const LS_USERS = 'volleyball_users_db_v1';
@@ -6,6 +6,7 @@ const LS_EVENTS = 'volleyball_events_db_v1';
 const LS_ATTENDANCE = 'volleyball_attendance_db_v1';
 const LS_BANK_ACCOUNTS = 'volleyball_bank_accounts_db_v1';
 const LS_SPORT_CONFIGS = 'sport_configs_db_v1';
+const LS_ISSUES = 'volleyball_issues_db_v1';
 
 // Detect if API is available (running via `vercel dev` or deployed on Vercel)
 const API_BASE = '/api';
@@ -436,4 +437,69 @@ export const updateSportConfigs = async (configs: SportConfig[]): Promise<SportC
     body: JSON.stringify(valid),
   });
   return filterValidConfigs(updated);
+};
+
+// --- Issues ---
+
+export const getIssues = async (): Promise<Issue[]> => {
+  if (!useApi()) {
+    return getLS<Issue>(LS_ISSUES);
+  }
+
+  try {
+    return await apiFetch<Issue[]>('/issues');
+  } catch (e) {
+    console.error("Failed to load issues from API, falling back to localStorage", e);
+    return getLS<Issue>(LS_ISSUES);
+  }
+};
+
+export const createIssue = async (issue: Omit<Issue, 'status' | 'createdAt' | 'updatedAt'>): Promise<Issue> => {
+  const now = new Date().toISOString();
+  const fullIssue: Issue = {
+    ...issue,
+    status: 'todo',
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  if (!useApi()) {
+    const issues = getLS<Issue>(LS_ISSUES);
+    issues.push(fullIssue);
+    setLS(LS_ISSUES, issues);
+    return fullIssue;
+  }
+
+  return await apiFetch<Issue>('/issues', {
+    method: 'POST',
+    body: JSON.stringify(fullIssue),
+  });
+};
+
+export const updateIssue = async (id: string, updates: Partial<Pick<Issue, 'status' | 'title' | 'description'>>): Promise<Issue> => {
+  if (!useApi()) {
+    const issues = getLS<Issue>(LS_ISSUES);
+    const idx = issues.findIndex(i => i.id === id);
+    if (idx === -1) throw new Error('Issue not found');
+    issues[idx] = { ...issues[idx], ...updates, updatedAt: new Date().toISOString() };
+    setLS(LS_ISSUES, issues);
+    return issues[idx];
+  }
+
+  return await apiFetch<Issue>('/issues', {
+    method: 'PUT',
+    body: JSON.stringify({ id, ...updates }),
+  });
+};
+
+export const deleteIssue = async (id: string): Promise<void> => {
+  if (!useApi()) {
+    const issues = getLS<Issue>(LS_ISSUES);
+    setLS(LS_ISSUES, issues.filter(i => i.id !== id));
+    return;
+  }
+
+  await apiFetch<{ success: boolean }>(`/issues?id=${id}`, {
+    method: 'DELETE',
+  });
 };

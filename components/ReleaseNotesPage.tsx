@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Zap, CheckCircle2, Smartphone, Layout, FlaskConical, CreditCard, ArrowLeft, Trophy, BookOpen, UserCircle, BarChart3, Target, Puzzle, RefreshCw, Repeat2, Link, PawPrint, Swords, Download, Ticket } from 'lucide-react';
+import { Sparkles, Zap, CheckCircle2, Smartphone, Layout, FlaskConical, CreditCard, ArrowLeft, Trophy, BookOpen, UserCircle, BarChart3, Target, Puzzle, RefreshCw, Repeat2, Link, PawPrint, Swords, Download, Ticket, Bug, MessageSquarePlus } from 'lucide-react';
 
 interface ReleaseNotesPageProps {
   onClose: () => void;
@@ -12,6 +12,49 @@ interface ChangeEntry {
 }
 
 const versions: { version: string; date: string; title: string; changes: ChangeEntry[] }[] = [
+  {
+    version: '1.8.0',
+    date: '26. 5. 2026',
+    title: 'Náměty a chyby — Issue Tracker',
+    changes: [
+      {
+        icon: <Bug size={16} />,
+        title: 'Issue Tracker',
+        items: [
+          'Nový výsuvný panel z pravé strany pro hlášení chyb a návrhů na vylepšení',
+          'Formulář s názvem, popisem a štítkem (Bug 🐛 / Vylepšení ✨)',
+          'Správa stavu: K vyřešení → Rozpracováno → Hotovo (může měnit kdokoliv)',
+          'Filtrování podle stavu s živými počty',
+          'Optimistické aktualizace — změny se projeví okamžitě',
+        ],
+      },
+      {
+        icon: <Sparkles size={16} />,
+        title: 'Animace',
+        items: [
+          'Plynulý slide-in panel z pravé strany s pružinovým efektem',
+          'Postupné vysouvání karet s 50ms zpožděním',
+          'Fade-in pozadí a formuláře',
+        ],
+      },
+      {
+        icon: <MessageSquarePlus size={16} />,
+        title: 'Integrace',
+        items: [
+          'Fialové tlačítko 💬 v desktopové hlavičce',
+          'Odkaz „Náměty a chyby" v mobilním nastavení',
+          'Data uložena v Redis — sdílená mezi všemi uživateli',
+        ],
+      },
+      {
+        icon: <CheckCircle2 size={16} />,
+        title: 'Testy',
+        items: [
+          '16 nových testů (celkem 290): vykreslení, formulář, filtry, stavy, mazání, prázdný stav',
+        ],
+      },
+    ],
+  },
   {
     version: '1.7.0',
     date: '15. 5. 2026',

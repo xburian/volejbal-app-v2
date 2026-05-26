@@ -11,6 +11,7 @@ interface BankAccountSettingsModalProps {
   onBankAccountsChange: (accounts: BankAccount[]) => void;
   onUserUpdate: (user: User) => void;
   onShowChangelog?: () => void;
+  onShowIssues?: () => void;
   sportConfigs?: SportConfig[];
   onSportConfigsChange?: (configs: SportConfig[]) => void;
 }
@@ -23,6 +24,7 @@ export const BankAccountSettingsModal: React.FC<BankAccountSettingsModalProps> =
   onBankAccountsChange,
   onUserUpdate,
   onShowChangelog,
+  onShowIssues,
   sportConfigs = [],
   onSportConfigsChange,
 }) => {
@@ -504,7 +506,16 @@ export const BankAccountSettingsModal: React.FC<BankAccountSettingsModalProps> =
               className="w-full px-4 py-2 text-slate-400 hover:text-amber-600 text-sm font-medium flex items-center justify-center gap-1.5 transition-colors"
             >
               <Sparkles size={14} />
-              Seznam změn (v1.7.0)
+              Seznam změn (v1.8.0)
+            </button>
+          )}
+          {onShowIssues && (
+            <button
+              onClick={() => { onClose(); onShowIssues(); }}
+              className="w-full px-4 py-2 text-slate-400 hover:text-purple-600 text-sm font-medium flex items-center justify-center gap-1.5 transition-colors"
+            >
+              <Sparkles size={14} />
+              Náměty a chyby
             </button>
           )}
         </div>
