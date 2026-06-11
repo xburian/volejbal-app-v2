@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { SportEvent, User, DebtItem, BankAccount, SportConfig } from '@/types.ts';
 import * as storage from '@/services/storage.ts';
 import { calculateDebts } from '@/utils/debt.ts';
@@ -7,6 +7,8 @@ interface UseDataLoadingProps {
   currentUser: User | null;
 }
 
+const REFRESH_THROTTLE_MS = 30_000; // 30 seconds
+
 export function useDataLoading({ currentUser }: UseDataLoadingProps) {
   const [events, setEvents] = useState<SportEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -14,6 +16,7 @@ export function useDataLoading({ currentUser }: UseDataLoadingProps) {
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [sportConfigs, setSportConfigs] = useState<SportConfig[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const lastFetchedAt = useRef<number>(0);
 
   const loadEvents = useCallback(async () => {
     setIsLoading(true);
@@ -50,13 +53,33 @@ export function useDataLoading({ currentUser }: UseDataLoadingProps) {
     }
   }, []);
 
+  const refreshAll = useCallback(async () => {
+    lastFetchedAt.current = Date.now();
+    await Promise.all([loadEvents(), loadUsers(), loadBankAccounts(), loadSportConfigs()]);
+  }, [loadEvents, loadUsers, loadBankAccounts, loadSportConfigs]);
+
+  // Initial load on login
   useEffect(() => {
     if (!currentUser) return;
-    loadEvents();
-    loadUsers();
-    loadBankAccounts();
-    loadSportConfigs();
-  }, [currentUser, loadEvents, loadUsers, loadBankAccounts, loadSportConfigs]);
+    refreshAll();
+  }, [currentUser, refreshAll]);
+
+  // Refetch when tab becomes visible again (throttled)
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        const elapsed = Date.now() - lastFetchedAt.current;
+        if (elapsed >= REFRESH_THROTTLE_MS) {
+          refreshAll();
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [currentUser, refreshAll]);
 
   // Recalculate debts
   useEffect(() => {
@@ -109,6 +132,7 @@ export function useDataLoading({ currentUser }: UseDataLoadingProps) {
     users,
     loadEvents,
     loadUsers,
+    refreshAll,
     createEvent,
     createEventsBatch,
     updateEvent,

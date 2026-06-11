@@ -71,6 +71,22 @@ All domain types in `types.ts`: `User`, `BankAccount`, `Participant`, `Volleybal
 
 ## Release Notes
 
+### v1.9.0 — Auto-Refresh & Manual Data Reload (2026-06-11)
+
+#### 🔄 Visibility-Based Auto-Refresh (`hooks/useDataLoading.ts`)
+- **Tab focus refetch**: When user returns to the app tab after ≥30 seconds, all data (events, users, bank accounts, sport configs) is automatically re-fetched from the server.
+- **Throttled**: `lastFetchedAt` ref tracks last fetch timestamp; skips refresh if < 30s elapsed (avoids excessive API calls on rapid tab switching).
+- **`refreshAll()` function**: New unified callback that fetches all data in parallel via `Promise.all` and updates the timestamp.
+- **Initial load refactored**: Login-triggered `useEffect` now calls `refreshAll()` instead of 4 separate load functions.
+
+#### 🔃 Manual Refresh Button
+- **Desktop**: Cyan-themed `RefreshCw` icon button in sidebar header (between Download and Settings). Title: "Obnovit data".
+- **Mobile**: `RefreshCw` button in `MobileHeader` calendar view (circular white/translucent style, next to user photo). `data-testid="mobile-refresh"`.
+- **Optional prop**: `MobileHeader` accepts `onRefresh?: () => void` — button only renders when provided.
+
+#### ✅ Tests (0 new, 295 total)
+- All 295 existing tests pass — no regressions. `onRefresh` prop is optional, so existing `MobileHeader` tests are unaffected.
+
 ### v1.8.0 — Issue Tracker Drawer (2026-05-26)
 
 #### 🐛 Issue Tracker (`components/IssueDrawer.tsx`)

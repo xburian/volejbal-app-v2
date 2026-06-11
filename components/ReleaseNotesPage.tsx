@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Zap, CheckCircle2, Smartphone, Layout, FlaskConical, CreditCard, ArrowLeft, Trophy, BookOpen, UserCircle, BarChart3, Target, Puzzle, RefreshCw, Repeat2, Link, PawPrint, Swords, Download, Ticket, Bug, MessageSquarePlus } from 'lucide-react';
+import { Sparkles, Zap, CheckCircle2, Smartphone, Layout, FlaskConical, CreditCard, ArrowLeft, Trophy, BookOpen, UserCircle, BarChart3, Target, Puzzle, RefreshCw, Repeat2, Link, PawPrint, Swords, Download, Ticket, Bug, MessageSquarePlus, Eye } from 'lucide-react';
 
 interface ReleaseNotesPageProps {
   onClose: () => void;
@@ -12,6 +12,31 @@ interface ChangeEntry {
 }
 
 const versions: { version: string; date: string; title: string; changes: ChangeEntry[] }[] = [
+  {
+    version: '1.9.0',
+    date: '11. 6. 2026',
+    title: 'Automatické obnovení dat',
+    changes: [
+      {
+        icon: <Eye size={16} />,
+        title: 'Obnovení při návratu do záložky',
+        items: [
+          'Když se vrátíte do záložky po více než 30 sekundách, data se automaticky obnoví',
+          'Události, uživatelé, bankovní účty i konfigurace sportů — vše se aktualizuje najednou',
+          'Žádná zbytečná volání — pokud jste byli pryč méně než 30 s, obnovení se přeskočí',
+        ],
+      },
+      {
+        icon: <RefreshCw size={16} />,
+        title: 'Tlačítko „Obnovit data"',
+        items: [
+          'Nové tlačítko 🔄 v desktopové hlavičce — kliknutím okamžitě načtete aktuální data',
+          'Na mobilu se tlačítko zobrazuje v hlavičce na úvodní obrazovce kalendáře',
+          'Užitečné, když víte, že se změnila účast nebo platby jiných hráčů',
+        ],
+      },
+    ],
+  },
   {
     version: '1.8.0',
     date: '26. 5. 2026',

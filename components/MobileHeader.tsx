@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, LogOut, ArrowLeft } from 'lucide-react';
+import { Trophy, LogOut, ArrowLeft, RefreshCw } from 'lucide-react';
 import { MobileView } from './MobileBottomNav';
 import { User, SportEvent } from '../types';
 
@@ -9,6 +9,7 @@ interface MobileHeaderProps {
   selectedEvent: SportEvent | undefined;
   onBack: () => void;
   onLogout: () => void;
+  onRefresh?: () => void;
 }
 
 export const MobileHeader: React.FC<MobileHeaderProps> = ({
@@ -17,6 +18,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   selectedEvent,
   onBack,
   onLogout,
+  onRefresh,
 }) => {
   return (
     <div className="flex flex-col shadow-md z-20 relative bg-blue-700 text-white">
@@ -76,6 +78,16 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                   className="w-8 h-8 rounded-full object-cover border-2 border-white/30"
                 />
               )}
+              {onRefresh && (
+                <button
+                  data-testid="mobile-refresh"
+                  onClick={onRefresh}
+                  className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
+                  title="Obnovit data"
+                >
+                  <RefreshCw size={18} />
+                </button>
+              )}
               <button
                 data-testid="mobile-logout"
                 onClick={onLogout}
@@ -90,4 +102,3 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
     </div>
   );
 };
-

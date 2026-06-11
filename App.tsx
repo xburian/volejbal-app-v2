@@ -17,7 +17,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { usePersistedAuth } from './hooks/usePersistedAuth';
 import { useUrlState } from './hooks/useUrlState';
 import { useDataLoading } from './hooks/useDataLoading';
-import { Calendar as CalendarIcon, Trophy, LogOut, Loader2, Settings, BarChart3, Info, Download, MessageSquarePlus } from 'lucide-react';
+import { Calendar as CalendarIcon, Trophy, LogOut, Loader2, Settings, BarChart3, Info, Download, MessageSquarePlus, RefreshCw } from 'lucide-react';
 import { isSameDay, startOfDay } from 'date-fns';
 import { downloadICS } from './utils/icalExport';
 
@@ -26,7 +26,7 @@ const App: React.FC = () => {
   const { selectedEventId, setSelectedEventId, clearSelection, mobileView, setMobileView } = useUrlState();
   const {
     events, isLoading, unpaidDebts, bankAccounts, setBankAccounts,
-    sportConfigs, setSportConfigs, users, loadEvents, createEvent, createEventsBatch, updateEvent, deleteEvent,
+    sportConfigs, setSportConfigs, users, loadEvents, refreshAll, createEvent, createEventsBatch, updateEvent, deleteEvent,
   } = useDataLoading({ currentUser });
 
   const [viewDate, setViewDate] = useState<Date>(new Date());
@@ -172,6 +172,7 @@ const App: React.FC = () => {
           selectedEvent={selectedEvent}
           onBack={handleMobileBack}
           onLogout={handleLogout}
+          onRefresh={refreshAll}
         />
 
         {mobileView === 'calendar' && <UnpaidBanner debts={unpaidDebts} />}
@@ -290,6 +291,9 @@ const App: React.FC = () => {
             <button onClick={() => downloadICS(events)} className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all" title="Export do kalendáře">
               <Download size={20} />
             </button>
+            <button onClick={refreshAll} className="p-2 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-all" title="Obnovit data">
+              <RefreshCw size={20} />
+            </button>
             <button onClick={() => setIsSettingsOpen(true)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Bankovní účty">
               <Settings size={20} />
             </button>
@@ -389,4 +393,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-
