@@ -278,33 +278,35 @@ const App: React.FC = () => {
       {/* Desktop Sidebar */}
       <div className="hidden md:flex w-[400px] lg:w-[450px] flex-col bg-white border-r border-slate-200 h-screen sticky top-0 overflow-hidden">
         {/* Desktop Header */}
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-          <div className="flex items-center gap-3 font-bold text-xl text-slate-800">
-            <div className="bg-blue-600 text-white p-2 rounded-lg"><Trophy size={20} /></div>
-            Sport Plánovač
-          </div>
-          <div className="flex items-center gap-3">
+        <div className="border-b border-slate-100 bg-slate-50">
+          <div className="px-6 pt-5 pb-3 flex items-center justify-between">
+            <div className="flex items-center gap-3 font-bold text-xl text-slate-800">
+              <div className="bg-blue-600 text-white p-2 rounded-lg"><Trophy size={20} /></div>
+              Sport Plánovač
+            </div>
             <span className="text-sm font-medium text-slate-600">Ahoj, {currentUser.name}</span>
+          </div>
+          <div className="px-6 pb-4 flex items-center justify-center gap-1">
             <button onClick={() => setShowStats(true)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Statistiky">
-              <BarChart3 size={20} />
+              <BarChart3 size={18} />
             </button>
             <button onClick={() => downloadICS(events)} className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all" title="Export do kalendáře">
-              <Download size={20} />
+              <Download size={18} />
             </button>
             <button onClick={refreshAll} className="p-2 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-all" title="Obnovit data">
-              <RefreshCw size={20} />
+              <RefreshCw size={18} />
             </button>
-            <button onClick={() => setIsSettingsOpen(true)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Bankovní účty">
-              <Settings size={20} />
+            <button onClick={() => setIsSettingsOpen(true)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Nastavení">
+              <Settings size={18} />
             </button>
             <button onClick={() => { setShowChangelog(true); setShowStats(false); }} className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Seznam změn">
-              <Info size={20} />
+              <Info size={18} />
             </button>
             <button onClick={() => setShowIssueDrawer(true)} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all" title="Náměty a chyby">
-              <MessageSquarePlus size={20} />
+              <MessageSquarePlus size={18} />
             </button>
             <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Odhlásit">
-              <LogOut size={20} />
+              <LogOut size={18} />
             </button>
           </div>
         </div>
