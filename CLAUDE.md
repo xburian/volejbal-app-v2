@@ -71,6 +71,27 @@ All domain types in `types.ts`: `User`, `BankAccount`, `Participant`, `Volleybal
 
 ## Release Notes
 
+### v1.10.0 — Weather Forecast in Event Detail (2026-06-15)
+
+#### 🌤️ Weather Badge (`components/EventDetail/WeatherBadge.tsx`)
+- **Weather in header**: Event detail header shows weather forecast for Brno (fixed location, 49.1951°N 16.6068°E).
+- **Two-column header**: Left column = event info (title, date, location, cost), right column = weather, separated by vertical dividers.
+- **Display**: Large weather emoji, Czech label (Jasno, Zataženo, Déšť…), min/max temperature, precipitation % (if > 0).
+- **Mobile**: Weather drops below event info on small screens (full width).
+- **Forecast range**: Only shown for dates within Open-Meteo's 16-day window; silently hidden for past/far-future events.
+
+#### 🌐 Weather Hook (`hooks/useWeather.ts`)
+- **Open-Meteo API**: Free, no API key required. Fetches daily forecast (temp max/min, weather code, precipitation probability).
+- **Session cache**: Results cached in `sessionStorage` keyed by date (1-hour TTL) — avoids redundant API calls when switching events.
+- **Abort controller**: Cancels in-flight requests when event changes.
+- **Graceful degradation**: Returns `null` on error or out-of-range dates.
+
+#### 🗺️ Weather Codes (`utils/weatherCodes.ts`)
+- **30 WMO codes** mapped to Czech labels + emoji (☀️ Jasno, ⛅ Polojasno, 🌧️ Déšť, ❄️ Sněžení, ⛈️ Bouřka, etc.).
+
+#### ✅ Tests (7 new, 302 total)
+- `hooks/useWeather.test.ts` — 7 tests: valid forecast fetch, future out-of-range, past date, API error, network error, session cache hit, today's date.
+
 ### v1.9.0 — Auto-Refresh & Manual Data Reload (2026-06-11)
 
 #### 🔄 Visibility-Based Auto-Refresh (`hooks/useDataLoading.ts`)
