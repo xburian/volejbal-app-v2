@@ -13,6 +13,49 @@ interface ChangeEntry {
 
 const versions: { version: string; date: string; title: string; changes: ChangeEntry[] }[] = [
   {
+    version: '1.11.0',
+    date: '12. 8. 2026',
+    title: 'Automatická účast & oprava žebříčku',
+    changes: [
+      {
+        icon: <Zap size={16} />,
+        title: 'Automatická účast',
+        items: [
+          'Nová sekce v Nastavení — vyberte sporty, u kterých chcete být automaticky přihlášeni',
+          'Při vytvoření nové události daného sportu vás aplikace okamžitě přidá jako účastníka',
+          'Funguje i pro hromadně vytvořené opakující se události',
+        ],
+      },
+      {
+        icon: <BarChart3 size={16} />,
+        title: 'Oprava žebříčku — kompozitní skóre',
+        items: [
+          'Žebříček nyní řadí podle skóre = ELO × docházka, ne jen podle samotného ELO',
+          'Hráč s vysokým ELO ale nízkou docházkou se nemůže dostat na 1. místo',
+          'Sloupec „Skóre" zobrazuje kompozitní skóre, v závorce surové ELO',
+          'Opravena chyba: status „možná" nyní správně resetuje sérii docházky (stejně jako „nejdu")',
+        ],
+      },
+    ],
+  },
+  {
+    version: '1.10.0',
+    date: '15. 6. 2026',
+    title: 'Předpověď počasí v detailu události',
+    changes: [
+      {
+        icon: <Sparkles size={16} />,
+        title: 'Počasí v hlavičce události',
+        items: [
+          'Detail události zobrazuje předpověď počasí pro Brno (Open-Meteo API, zdarma)',
+          'Velký emoji, český popis (Jasno, Zataženo, Déšť…), min/max teplota, srážky',
+          'Zobrazí se jen pro události v rámci 16denního výhledu — starší a vzdálené tiše skryje',
+          'Výsledky se ukládají do sessionStorage — žádné zbytečné opakované volání API',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.9.0',
     date: '11. 6. 2026',
     title: 'Automatické obnovení dat',
