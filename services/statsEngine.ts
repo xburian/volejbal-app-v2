@@ -81,7 +81,7 @@ export function computeUserStats(events: SportEvent[]): Map<string, UserStats> {
         streak.current++;
         streak.lastJoined = true;
         if (streak.current > streak.longest) streak.longest = streak.current;
-      } else if (p.status === 'declined') {
+      } else if (p.status === 'declined' || p.status === 'maybe') {
         streak.lastJoined = false;
         streak.current = 0;
       }
@@ -349,15 +349,17 @@ export function computeLeaderboard(statsMap: Map<string, UserStats>, eloMap: Map
   const entries: LeaderboardEntry[] = [];
   for (const [userId, stats] of statsMap) {
     if (stats.eventsJoined < THRESHOLDS.LEADERBOARD_MIN_EVENTS || stats.gamesPlayed < THRESHOLDS.ELO_MIN_GAMES) continue;
+    const eloRating = Math.round(eloMap.get(userId) ?? ELO_INITIAL);
     entries.push({
       userId, name: stats.name, photoUrl: stats.photoUrl, rank: 0,
-      eloRating: Math.round(eloMap.get(userId) ?? ELO_INITIAL),
+      eloRating,
+      compositeScore: Math.round(eloRating * (0.5 + 0.5 * stats.attendanceRate)),
       winRate: stats.winRate, gamesPlayed: stats.gamesPlayed,
       attendanceRate: stats.attendanceRate,
       reliabilityScore: computeReliabilityScore(stats),
     });
   }
-  entries.sort((a, b) => b.eloRating - a.eloRating);
+  entries.sort((a, b) => b.compositeScore - a.compositeScore);
   entries.forEach((e, i) => { e.rank = i + 1; });
   return entries;
 }

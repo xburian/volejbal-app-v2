@@ -36,6 +36,7 @@ export interface User {
   name: string;
   photoUrl?: string; // URL or base64 encoded image
   hasMultisportCard?: boolean; // Multisport discount card holder
+  autoAttendSportTypes?: SportType[]; // sport types to auto-join on event creation
 }
 
 export interface BankAccount {
@@ -168,6 +169,7 @@ export interface LeaderboardEntry {
   photoUrl?: string;
   rank: number;
   eloRating: number;
+  compositeScore: number;
   winRate: number;
   gamesPlayed: number;
   attendanceRate: number;

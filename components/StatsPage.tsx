@@ -111,14 +111,14 @@ function LeaderboardCard({ entries, currentUserId }: { entries: LeaderboardEntry
         <Trophy size={18} className="text-yellow-500" />
         Žebříček
       </h3>
-      <p className="text-xs text-slate-400 mb-4">Řazeno podle ELO hodnocení (min. 5 zápasů)</p>
+      <p className="text-xs text-slate-400 mb-4">Řazeno podle skóre (ELO × docházka, min. 5 zápasů)</p>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-xs text-slate-500 border-b border-slate-100">
               <th className="text-left py-2 pr-2">#</th>
               <th className="text-left py-2">Hráč</th>
-              <th className="text-right py-2 px-2" title="Hodnocení síly hráče (start 1000). Roste s výhrami, klesá s prohrami. Výhra proti silnějšímu soupeři dá více bodů.">ELO</th>
+              <th className="text-right py-2 px-2" title="Kompozitní skóre = ELO × docházka. Zohledňuje herní sílu i pravidelnou účast.">Skóre</th>
               <th className="text-right py-2 px-2">Výhry</th>
               <th className="text-right py-2 px-2 hidden sm:table-cell">Zápasy</th>
               <th className="text-right py-2 pl-2 hidden sm:table-cell" title="Spolehlivost: 60% docházka + 40% platební morálka">Spolehl.</th>
@@ -134,7 +134,10 @@ function LeaderboardCard({ entries, currentUserId }: { entries: LeaderboardEntry
                     <span className={`font-medium truncate max-w-[120px] ${entry.userId === currentUserId ? 'text-blue-700' : 'text-slate-700'}`}>{entry.name}</span>
                   </div>
                 </td>
-                <td className="text-right py-2 px-2 font-bold text-slate-700">{entry.eloRating}</td>
+                <td className="text-right py-2 px-2 font-bold text-slate-700">
+                  <span>{entry.compositeScore}</span>
+                  <span className="text-xs font-normal text-slate-400 ml-1">({entry.eloRating})</span>
+                </td>
                 <td className="text-right py-2 px-2 text-slate-600">{Math.round(entry.winRate * 100)}%</td>
                 <td className="text-right py-2 px-2 text-slate-500 hidden sm:table-cell">{entry.gamesPlayed}</td>
                 <td className="text-right py-2 pl-2 text-slate-500 hidden sm:table-cell">{entry.reliabilityScore}%</td>

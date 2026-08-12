@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { BankAccount, User, SportConfig, maskAccountNumber } from '../types';
+import { BankAccount, User, SportConfig, SportType, VALID_SPORT_TYPES, SPORT_EMOJI, maskAccountNumber } from '../types';
 import * as storage from '../services/storage';
-import { X, Landmark, UserCircle, Loader2, AlertTriangle, Sparkles, Camera, Pencil, Check, Trash2, Settings as Settings2Icon, Dumbbell, Ticket } from 'lucide-react';
+import { X, Landmark, UserCircle, Loader2, AlertTriangle, Sparkles, Camera, Pencil, Check, Trash2, Settings as Settings2Icon, Dumbbell, Ticket, Zap } from 'lucide-react';
 
 interface BankAccountSettingsModalProps {
   isOpen: boolean;
@@ -132,6 +132,25 @@ export const BankAccountSettingsModal: React.FC<BankAccountSettingsModalProps> =
       const updated = await storage.updateUser(currentUser.id, { hasMultisportCard: !currentUser.hasMultisportCard });
       onUserUpdate(updated);
       setSuccessMessage(currentUser.hasMultisportCard ? 'Multisport karta odebrána.' : 'Multisport karta nastavena.');
+      setTimeout(() => setSuccessMessage(null), 2500);
+    } catch (err: any) {
+      setError(err.message || 'Chyba při aktualizaci nastavení.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAutoAttendToggle = async (sportType: SportType) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const current = currentUser.autoAttendSportTypes ?? [];
+      const newList = current.includes(sportType)
+        ? current.filter(s => s !== sportType)
+        : [...current, sportType];
+      const updated = await storage.updateUser(currentUser.id, { autoAttendSportTypes: newList });
+      onUserUpdate(updated);
+      setSuccessMessage('Nastavení automatické účasti uloženo.');
       setTimeout(() => setSuccessMessage(null), 2500);
     } catch (err: any) {
       setError(err.message || 'Chyba při aktualizaci nastavení.');
@@ -341,6 +360,39 @@ export const BankAccountSettingsModal: React.FC<BankAccountSettingsModalProps> =
                 <p className="text-xs text-slate-500">U události se zobrazí počet hráčů s Multisport kartou</p>
               </div>
             </label>
+          </div>
+
+          {/* ---- AUTO-ATTEND ---- */}
+          <div>
+            <h4 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+              <Zap size={16} className="text-emerald-500" />
+              Automatická účast
+            </h4>
+
+            <div className="space-y-2">
+              {VALID_SPORT_TYPES.map(type => (
+                <label
+                  key={type}
+                  className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-lg p-4 cursor-pointer hover:bg-slate-100 transition-colors"
+                  data-testid={`auto-attend-label-${type}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={(currentUser.autoAttendSportTypes ?? []).includes(type)}
+                    onChange={() => handleAutoAttendToggle(type)}
+                    disabled={isLoading}
+                    className="w-4 h-4 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500"
+                    data-testid={`auto-attend-checkbox-${type}`}
+                  />
+                  <div>
+                    <p className="font-medium text-slate-800 text-sm">
+                      {SPORT_EMOJI[type]} {sportConfigs.find(c => c.type === type)?.label ?? type.charAt(0).toUpperCase() + type.slice(1)}
+                    </p>
+                    <p className="text-xs text-slate-500">Při vytvoření nové události tohoto sportu vás automaticky přihlásí</p>
+                  </div>
+                </label>
+              ))}
+            </div>
           </div>
 
           {/* ---- BANK ACCOUNT ---- */}

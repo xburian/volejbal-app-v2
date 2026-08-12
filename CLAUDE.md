@@ -71,6 +71,26 @@ All domain types in `types.ts`: `User`, `BankAccount`, `Participant`, `Volleybal
 
 ## Release Notes
 
+### v1.11.0 — Auto-Attend & Stats Ranking Fix (2026-08-12)
+
+#### ⚡ Auto-Attend Setting (`components/BankAccountSettingsModal.tsx`)
+- **New Settings section**: "Automatická účast" — one checkbox per sport type (Volejbal, Tenis, Badminton).
+- **Persisted on `User`**: New optional field `autoAttendSportTypes?: SportType[]` stored via existing `PUT /api/users` merge logic.
+- **Auto-join on create**: When a new event is created whose `sportType` is in the user's `autoAttendSportTypes`, the user is automatically added as a `'joined'` participant. Works for both single events and recurring batch-created events.
+
+#### 📊 Stats Ranking Fix (`services/statsEngine.ts`)
+- **Composite score**: Leaderboard now sorts by `round(eloRating × (0.5 + 0.5 × attendanceRate))` instead of raw ELO. A high-ELO player who rarely attends is ranked below a slightly-lower-ELO player who shows up consistently.
+- **`'maybe'` streak reset**: `'maybe'` attendance status now resets the streak (same as `'declined'`). Previously it silently froze the streak counter, inflating longest-streak values.
+- **StatsPage display**: Leaderboard "ELO" column renamed to "Skóre"; shows composite score with raw ELO in parentheses. Subtitle updated to explain the formula.
+
+#### 🛡️ Defensive Fix (`hooks/useDataLoading.ts`)
+- `setEvents` calls in `createEvent`, `createEventsBatch`, `updateEvent`, `deleteEvent`, and `loadEvents` now fall back to `[]` if the API returns `null`/`undefined`, preventing a render crash on unexpected API responses.
+
+#### ✅ Tests (14 new, 316 total)
+- `components/BankAccountSettingsModal.test.tsx` — 7 tests: section heading, per-sport checkboxes, unchecked default, checked state, add/remove toggle, error handling.
+- `App.test.tsx` — 3 tests: auto-attend calls `updateAttendance` on match, skips on mismatch, skips when list is empty.
+- `services/statsEngine.test.ts` — 4 tests: composite score formula, attendance-weighted ranking, `'maybe'` streak reset, leaderboard sort.
+
 ### v1.10.0 — Weather Forecast in Event Detail (2026-06-15)
 
 #### 🌤️ Weather Badge (`components/EventDetail/WeatherBadge.tsx`)
