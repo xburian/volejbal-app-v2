@@ -21,7 +21,7 @@ export function useDataLoading({ currentUser }: UseDataLoadingProps) {
   const loadEvents = useCallback(async () => {
     setIsLoading(true);
     try {
-      setEvents(await storage.getEvents());
+      setEvents((await storage.getEvents()) ?? []);
     } catch (error) {
       console.error("Failed to load events", error);
     } finally {
@@ -93,7 +93,7 @@ export function useDataLoading({ currentUser }: UseDataLoadingProps) {
   const createEvent = useCallback(async (newEvent: SportEvent) => {
     setIsLoading(true);
     const updatedList = await storage.createEvent(newEvent);
-    setEvents(updatedList);
+    setEvents(updatedList ?? []);
     setIsLoading(false);
     return updatedList;
   }, []);
@@ -102,7 +102,7 @@ export function useDataLoading({ currentUser }: UseDataLoadingProps) {
     setIsLoading(true);
     try {
       const updatedList = await storage.createEventsBatch(newEvents);
-      setEvents(updatedList);
+      setEvents(updatedList ?? []);
       return updatedList;
     } finally {
       setIsLoading(false);
@@ -110,13 +110,13 @@ export function useDataLoading({ currentUser }: UseDataLoadingProps) {
   }, []);
 
   const updateEvent = useCallback(async (updatedEvent: SportEvent) => {
-    setEvents(await storage.updateEvent(updatedEvent));
+    setEvents((await storage.updateEvent(updatedEvent)) ?? []);
   }, []);
 
   const deleteEvent = useCallback(async (id: string) => {
     setIsLoading(true);
     const updatedList = await storage.deleteEvent(id);
-    setEvents(updatedList);
+    setEvents(updatedList ?? []);
     setIsLoading(false);
     return updatedList;
   }, []);

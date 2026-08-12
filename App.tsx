@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SportEvent, SportType } from './types';
+import * as storage from './services/storage';
 import { CalendarView } from './components/CalendarView';
 import { EventDetail } from './components/EventDetail';
 import { EventList } from './components/EventList';
@@ -90,6 +91,17 @@ const App: React.FC = () => {
         }
       }
       setMobileView('detail');
+
+      const autoAttendTypes = currentUser?.autoAttendSportTypes ?? [];
+      if (autoAttendTypes.length > 0 && currentUser) {
+        const allCreated = Array.isArray(newEventOrBatch) ? newEventOrBatch : [newEventOrBatch];
+        const toJoin = allCreated.filter(e => autoAttendTypes.includes(e.sportType ?? 'volejbal'));
+        if (toJoin.length > 0) {
+          await Promise.all(toJoin.map(e => storage.updateAttendance(e.id, currentUser.id, 'joined')));
+          storage.invalidateEventsCache();
+          await loadEvents();
+        }
+      }
     } catch (error: any) {
       console.error('Failed to create event(s):', error);
       alert(error.message || 'Nepodařilo se vytvořit události.');

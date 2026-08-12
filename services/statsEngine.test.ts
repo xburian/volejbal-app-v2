@@ -264,7 +264,7 @@ describe('computeReliabilityScore', () => {
 // ── Leaderboard Tests ──
 
 describe('computeLeaderboard', () => {
-  it('sorts by ELO descending and assigns ranks', () => {
+  it('sorts by compositeScore descending and assigns ranks', () => {
     const statsMap = new Map<string, any>([
       ['a', { userId: 'a', name: 'A', eventsJoined: 5, winRate: 0.8, gamesPlayed: 10, attendanceRate: 0.9, paymentRate: 1 }],
       ['b', { userId: 'b', name: 'B', eventsJoined: 5, winRate: 0.6, gamesPlayed: 10, attendanceRate: 0.7, paymentRate: 0.8 }],
@@ -393,7 +393,7 @@ describe('computeDuoStats', () => {
 // ── v1.9 Rework Tests ──
 
 describe('computeUserStats streak behavior', () => {
-  it('does not reset attendance streak on maybe status', () => {
+  it('resets attendance streak on maybe status', () => {
     const events = [
       makeEvent('e1', '2025-01-01', [{ userId: 'a', name: 'A', status: 'joined', hasPaid: true }]),
       makeEvent('e2', '2025-01-02', [{ userId: 'a', name: 'A', status: 'joined', hasPaid: true }]),
@@ -402,7 +402,7 @@ describe('computeUserStats streak behavior', () => {
     ];
     const stats = computeUserStats(events);
     const s = stats.get('a')!;
-    expect(s.longestStreak).toBe(3); // e1, e2, then e3=maybe doesn't break, e4 continues
+    expect(s.longestStreak).toBe(2); // e1+e2 was longest; e3=maybe resets, e4 is only 1
     expect(s.eventsJoined).toBe(3);
     expect(s.eventsMaybe).toBe(1);
   });
@@ -511,3 +511,55 @@ describe('computeClutchFactor margin ≤2', () => {
   });
 });
 
+
+// ── Composite Score / Leaderboard Ranking Tests ──
+
+describe('computeLeaderboard composite score', () => {
+  it('compositeScore = round(eloRating * (0.5 + 0.5 * attendanceRate))', () => {
+    const statsMap = new Map<string, any>([
+      ['a', { userId: 'a', name: 'A', eventsJoined: 5, winRate: 0.8, gamesPlayed: 10, attendanceRate: 0.8, paymentRate: 1 }],
+    ]);
+    const eloMap = new Map([['a', 1100]]);
+    const lb = computeLeaderboard(statsMap, eloMap);
+    expect(lb[0].compositeScore).toBe(Math.round(1100 * (0.5 + 0.5 * 0.8)));
+  });
+
+  it('player with lower ELO but higher attendance outranks player with higher ELO and low attendance', () => {
+    const statsMap = new Map<string, any>([
+      ['highElo', { userId: 'highElo', name: 'High ELO', eventsJoined: 4, winRate: 0.8, gamesPlayed: 10, attendanceRate: 0.3, paymentRate: 1 }],
+      ['highAtt', { userId: 'highAtt', name: 'High Att', eventsJoined: 5, winRate: 0.6, gamesPlayed: 10, attendanceRate: 0.9, paymentRate: 0.9 }],
+    ]);
+    const eloMap = new Map([['highElo', 1200], ['highAtt', 1100]]);
+    const lb = computeLeaderboard(statsMap, eloMap);
+    // highElo composite: round(1200 * (0.5 + 0.5 * 0.3)) = round(780) = 780
+    // highAtt composite: round(1100 * (0.5 + 0.5 * 0.9)) = round(1045) = 1045
+    expect(lb[0].userId).toBe('highAtt');
+    expect(lb[1].userId).toBe('highElo');
+  });
+
+  it('player with perfect attendance gets full ELO as compositeScore', () => {
+    const statsMap = new Map<string, any>([
+      ['a', { userId: 'a', name: 'A', eventsJoined: 5, winRate: 0.7, gamesPlayed: 6, attendanceRate: 1.0, paymentRate: 1 }],
+    ]);
+    const eloMap = new Map([['a', 1000]]);
+    const lb = computeLeaderboard(statsMap, eloMap);
+    expect(lb[0].compositeScore).toBe(1000);
+  });
+});
+
+// ── Maybe Streak Behavior ──
+
+describe('computeUserStats maybe streak reset', () => {
+  it('maybe status resets attendance streak the same as declined', () => {
+    const events = [
+      makeEvent('e1', '2025-01-01', [{ userId: 'a', name: 'A', status: 'joined', hasPaid: true }]),
+      makeEvent('e2', '2025-01-08', [{ userId: 'a', name: 'A', status: 'joined', hasPaid: true }]),
+      makeEvent('e3', '2025-01-15', [{ userId: 'a', name: 'A', status: 'maybe', hasPaid: false }]),
+      makeEvent('e4', '2025-01-22', [{ userId: 'a', name: 'A', status: 'joined', hasPaid: true }]),
+    ];
+    const statsMap = computeUserStats(events);
+    const stats = statsMap.get('a')!;
+    expect(stats.currentStreak).toBe(1);
+    expect(stats.longestStreak).toBe(2);
+  });
+});

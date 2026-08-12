@@ -13,11 +13,13 @@ vi.mock('./services/storage', () => ({
   deleteUser: vi.fn(),
   getEvents: vi.fn(),
   createEvent: vi.fn(),
+  createEventsBatch: vi.fn(),
   updateEvent: vi.fn(),
   deleteEvent: vi.fn(),
-  setAttendance: vi.fn(),
+  updateAttendance: vi.fn(),
   getBankAccounts: vi.fn(),
   getSportConfigs: vi.fn(),
+  invalidateEventsCache: vi.fn(),
 }));
 
 describe('App Integration', () => {
@@ -33,6 +35,7 @@ describe('App Integration', () => {
     vi.mocked(storage.getEvents).mockResolvedValue([]);
     vi.mocked(storage.getBankAccounts).mockResolvedValue([]);
     vi.mocked(storage.getSportConfigs).mockResolvedValue([]);
+    vi.mocked(storage.updateAttendance).mockResolvedValue(undefined as any);
   });
 
   it('shows login screen initially', async () => {
@@ -432,3 +435,76 @@ describe('Calendar Date Selection', () => {
   });
 });
 
+describe('Auto-attend on event creation', () => {
+  beforeEach(() => {
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('selectedEventId');
+    localStorage.removeItem('mobileView');
+    vi.resetAllMocks();
+    vi.mocked(storage.getUsers).mockResolvedValue([]);
+    vi.mocked(storage.getEvents).mockResolvedValue([]);
+    vi.mocked(storage.getBankAccounts).mockResolvedValue([]);
+    vi.mocked(storage.getSportConfigs).mockResolvedValue([]);
+    vi.mocked(storage.createEvent).mockResolvedValue(undefined as any);
+    vi.mocked(storage.updateAttendance).mockResolvedValue(undefined as any);
+    vi.mocked(storage.invalidateEventsCache).mockReturnValue(undefined);
+  });
+
+  const loginAs = async (user: object) => {
+    vi.mocked(storage.getUsers).mockResolvedValue([user as any]);
+    await act(async () => { render(<App />); });
+    await waitFor(() => { expect(screen.getByText((user as any).name)).toBeInTheDocument(); }, { timeout: 5000 });
+    await act(async () => { fireEvent.click(screen.getByText((user as any).name)); });
+    await waitFor(() => { expect(screen.getAllByText('Sport Plánovač').length).toBeGreaterThan(0); }, { timeout: 5000 });
+  };
+
+  const openCreateModal = async () => {
+    const addButtons = screen.getAllByRole('button');
+    const addBtn = addButtons.find(btn => btn.textContent?.includes('Přidat'));
+    expect(addBtn).toBeDefined();
+    await act(async () => { fireEvent.click(addBtn!); });
+    await waitFor(() => { expect(screen.getByText('Přidat událost')).toBeInTheDocument(); });
+  };
+
+  const submitEventForm = async (title: string) => {
+    const inputs = screen.getAllByRole('textbox');
+    fireEvent.change(inputs[0], { target: { value: title } });
+    const submitBtn = screen.getByText('Vytvořit událost');
+    await act(async () => { fireEvent.click(submitBtn); });
+  };
+
+  it('calls updateAttendance when created event sportType matches autoAttendSportTypes', async () => {
+    const testUser = { id: 'u1', name: 'TestUser', autoAttendSportTypes: ['volejbal' as const] };
+    await loginAs(testUser);
+    await openCreateModal();
+    await submitEventForm('Testovací volejbal');
+
+    await waitFor(() => {
+      expect(storage.updateAttendance).toHaveBeenCalledWith(
+        expect.any(String),
+        testUser.id,
+        'joined'
+      );
+    }, { timeout: 3000 });
+  });
+
+  it('does not call updateAttendance when sportType not in autoAttendSportTypes', async () => {
+    const testUser = { id: 'u1', name: 'TestUser', autoAttendSportTypes: ['tenis' as const] };
+    await loginAs(testUser);
+    await openCreateModal();
+    await submitEventForm('Testovací volejbal');
+
+    await new Promise(r => setTimeout(r, 500));
+    expect(storage.updateAttendance).not.toHaveBeenCalled();
+  });
+
+  it('does not call updateAttendance when autoAttendSportTypes is empty', async () => {
+    const testUser = { id: 'u1', name: 'TestUser', autoAttendSportTypes: [] };
+    await loginAs(testUser);
+    await openCreateModal();
+    await submitEventForm('Testovací volejbal');
+
+    await new Promise(r => setTimeout(r, 500));
+    expect(storage.updateAttendance).not.toHaveBeenCalled();
+  });
+});

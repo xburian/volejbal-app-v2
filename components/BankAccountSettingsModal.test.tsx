@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BankAccountSettingsModal } from './BankAccountSettingsModal';
-import { User, BankAccount } from '../types';
+import { User, BankAccount, SportConfig } from '../types';
 
 // Mock storage module
 vi.mock('../services/storage', () => ({
@@ -25,6 +25,17 @@ const mockUserWithPhoto: User = {
   ...mockUser,
   photoUrl: 'data:image/png;base64,abc123',
 };
+
+const mockUserWithAutoAttend: User = {
+  ...mockUser,
+  autoAttendSportTypes: ['volejbal'],
+};
+
+const mockSportConfigs: SportConfig[] = [
+  { type: 'volejbal', label: 'Volejbal', maxPlayers: 12, defaultCost: 1000, defaultLocation: 'Hala', teamSize: null },
+  { type: 'tenis', label: 'Tenis', maxPlayers: 4, defaultCost: 500, defaultLocation: 'Tenisový kurt', teamSize: 2 },
+  { type: 'badminton', label: 'Badminton', maxPlayers: 4, defaultCost: 400, defaultLocation: 'Sportovní centrum', teamSize: 2 },
+];
 
 const defaultProps = {
   isOpen: true,
@@ -206,6 +217,75 @@ describe('BankAccountSettingsModal — Profile Section', () => {
   it('displays user ID prefix', () => {
     render(<BankAccountSettingsModal {...defaultProps} />);
     expect(screen.getByText(/ID: user-123/)).toBeInTheDocument();
+  });
+});
+
+describe('BankAccountSettingsModal — Auto-attend Section', () => {
+  it('renders auto-attend section heading', () => {
+    render(<BankAccountSettingsModal {...defaultProps} sportConfigs={mockSportConfigs} />);
+    expect(screen.getByText('Automatická účast')).toBeInTheDocument();
+  });
+
+  it('renders a checkbox for each sport type', () => {
+    render(<BankAccountSettingsModal {...defaultProps} sportConfigs={mockSportConfigs} />);
+    expect(screen.getByTestId('auto-attend-checkbox-volejbal')).toBeInTheDocument();
+    expect(screen.getByTestId('auto-attend-checkbox-tenis')).toBeInTheDocument();
+    expect(screen.getByTestId('auto-attend-checkbox-badminton')).toBeInTheDocument();
+  });
+
+  it('all checkboxes are unchecked when autoAttendSportTypes is undefined', () => {
+    render(<BankAccountSettingsModal {...defaultProps} sportConfigs={mockSportConfigs} />);
+    expect(screen.getByTestId('auto-attend-checkbox-volejbal')).not.toBeChecked();
+    expect(screen.getByTestId('auto-attend-checkbox-tenis')).not.toBeChecked();
+    expect(screen.getByTestId('auto-attend-checkbox-badminton')).not.toBeChecked();
+  });
+
+  it('checkbox is checked for sport type in autoAttendSportTypes, others unchecked', () => {
+    render(<BankAccountSettingsModal {...defaultProps} currentUser={mockUserWithAutoAttend} sportConfigs={mockSportConfigs} />);
+    expect(screen.getByTestId('auto-attend-checkbox-volejbal')).toBeChecked();
+    expect(screen.getByTestId('auto-attend-checkbox-tenis')).not.toBeChecked();
+    expect(screen.getByTestId('auto-attend-checkbox-badminton')).not.toBeChecked();
+  });
+
+  it('checking a sport type calls updateUser with that type added', async () => {
+    const updatedUser = { ...mockUser, autoAttendSportTypes: ['volejbal'] as const };
+    (storage.updateUser as ReturnType<typeof vi.fn>).mockResolvedValue(updatedUser);
+
+    render(<BankAccountSettingsModal {...defaultProps} sportConfigs={mockSportConfigs} />);
+    fireEvent.click(screen.getByTestId('auto-attend-checkbox-volejbal'));
+
+    await waitFor(() => {
+      expect(storage.updateUser).toHaveBeenCalledWith('user-123-abcdef', { autoAttendSportTypes: ['volejbal'] });
+    });
+    await waitFor(() => {
+      expect(defaultProps.onUserUpdate).toHaveBeenCalledWith(updatedUser);
+    });
+  });
+
+  it('unchecking a sport type calls updateUser with that type removed', async () => {
+    const updatedUser = { ...mockUserWithAutoAttend, autoAttendSportTypes: [] };
+    (storage.updateUser as ReturnType<typeof vi.fn>).mockResolvedValue(updatedUser);
+
+    render(<BankAccountSettingsModal {...defaultProps} currentUser={mockUserWithAutoAttend} sportConfigs={mockSportConfigs} />);
+    fireEvent.click(screen.getByTestId('auto-attend-checkbox-volejbal'));
+
+    await waitFor(() => {
+      expect(storage.updateUser).toHaveBeenCalledWith('user-123-abcdef', { autoAttendSportTypes: [] });
+    });
+    await waitFor(() => {
+      expect(defaultProps.onUserUpdate).toHaveBeenCalledWith(updatedUser);
+    });
+  });
+
+  it('shows error message when auto-attend toggle fails', async () => {
+    (storage.updateUser as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Server error'));
+
+    render(<BankAccountSettingsModal {...defaultProps} sportConfigs={mockSportConfigs} />);
+    fireEvent.click(screen.getByTestId('auto-attend-checkbox-volejbal'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Server error')).toBeInTheDocument();
+    });
   });
 });
 
