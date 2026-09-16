@@ -36,8 +36,12 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ selectedDate
   const [recurrence, setRecurrence] = useState<RecurrenceConfig>({
     enabled: false,
     frequency: 'weekly',
+    mode: 'count',
     count: 4,
+    untilDate: format(selectedDate, 'yyyy-MM-dd'),
   });
+
+  const recurringDates = recurrence.enabled ? generateRecurringDates(formData.date, recurrence) : [];
 
   const handleSportChange = (type: SportType) => {
     setSelectedSport(type);
@@ -181,20 +185,57 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ selectedDate
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Počet opakování</label>
-                  <input
-                    type="number"
-                    min={2}
-                    max={26}
-                    value={recurrence.count}
-                    onChange={e => setRecurrence({ ...recurrence, count: Math.min(26, Math.max(2, Number(e.target.value))) })}
-                    className="w-full px-2 py-1.5 bg-white text-slate-900 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none h-[34px]"
-                    data-testid="recurrence-count"
-                  />
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Konec opakování</label>
+                  <div className="flex gap-1" data-testid="recurrence-mode-toggle">
+                    <button
+                      type="button"
+                      onClick={() => setRecurrence({ ...recurrence, mode: 'count' })}
+                      className={`flex-1 px-2 rounded-lg text-xs font-medium border h-[34px] transition-colors ${recurrence.mode === 'count' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-300 hover:border-blue-300'}`}
+                      data-testid="recurrence-mode-count"
+                    >
+                      Počet
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRecurrence({ ...recurrence, mode: 'until' })}
+                      className={`flex-1 px-2 rounded-lg text-xs font-medium border h-[34px] transition-colors ${recurrence.mode === 'until' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-300 hover:border-blue-300'}`}
+                      data-testid="recurrence-mode-until"
+                    >
+                      Do data
+                    </button>
+                  </div>
                 </div>
                 <div className="col-span-2">
-                  <p className="text-xs text-slate-500">
-                    Vytvoří {recurrence.count} událost{recurrence.count > 4 ? 'í' : recurrence.count > 1 ? 'i' : ''} ({recurrence.frequency === 'weekly' ? 'každý týden' : 'každé 2 týdny'})
+                  {recurrence.mode === 'count' ? (
+                    <>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Počet opakování</label>
+                      <input
+                        type="number"
+                        min={2}
+                        max={26}
+                        value={recurrence.count}
+                        onChange={e => setRecurrence({ ...recurrence, count: Math.min(26, Math.max(2, Number(e.target.value))) })}
+                        className="w-full px-2 py-1.5 bg-white text-slate-900 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none h-[34px]"
+                        data-testid="recurrence-count"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Opakovat do data</label>
+                      <input
+                        type="date"
+                        min={formData.date}
+                        value={recurrence.untilDate}
+                        onChange={e => setRecurrence({ ...recurrence, untilDate: e.target.value < formData.date ? formData.date : e.target.value })}
+                        className="w-full px-2 py-1.5 bg-white text-slate-900 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none h-[34px]"
+                        data-testid="recurrence-until-date"
+                      />
+                    </>
+                  )}
+                </div>
+                <div className="col-span-2">
+                  <p className="text-xs text-slate-500" data-testid="recurrence-preview">
+                    Vytvoří {recurringDates.length} událost{recurringDates.length > 4 ? 'í' : recurringDates.length > 1 ? 'i' : ''} ({recurrence.frequency === 'weekly' ? 'každý týden' : 'každé 2 týdny'})
                   </p>
                 </div>
               </div>
@@ -280,7 +321,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ selectedDate
               className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
             >
               {recurrence.enabled
-                ? `Vytvořit ${recurrence.count} událostí`
+                ? `Vytvořit ${recurringDates.length} událostí`
                 : 'Vytvořit událost'}
             </button>
           </div>

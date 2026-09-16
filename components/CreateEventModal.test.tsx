@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CreateEventModal } from './CreateEventModal';
 import { SportConfig, SportEvent } from '../types';
+import { generateRecurringDates } from '../utils/recurrence';
 
 const defaultConfigs: SportConfig[] = [
   { type: 'volejbal', label: 'Volejbal', maxPlayers: 12, defaultCost: 1000, defaultLocation: 'Hala', teamSize: null },
@@ -160,6 +161,101 @@ describe('CreateEventModal — Recurrence', () => {
       expect(event.sportType).toBe('volejbal');
       expect(event.totalCost).toBe(1000);
     }
+  });
+});
+
+describe('CreateEventModal — Recurrence until-date mode', () => {
+  it('toggling to "Do data" swaps the count input for a date input', async () => {
+    renderModal();
+    await userEvent.click(screen.getByTestId('recurrence-toggle'));
+
+    expect(screen.getByTestId('recurrence-count')).toBeInTheDocument();
+    expect(screen.queryByTestId('recurrence-until-date')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId('recurrence-mode-until'));
+
+    expect(screen.queryByTestId('recurrence-count')).not.toBeInTheDocument();
+    expect(screen.getByTestId('recurrence-until-date')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId('recurrence-mode-count'));
+
+    expect(screen.getByTestId('recurrence-count')).toBeInTheDocument();
+    expect(screen.queryByTestId('recurrence-until-date')).not.toBeInTheDocument();
+  });
+
+  it('submits a batch matching generateRecurringDates for the chosen until date', async () => {
+    const onCreateSpy = vi.fn();
+    renderModal(onCreateSpy);
+
+    await userEvent.click(screen.getByTestId('recurrence-toggle'));
+    await userEvent.click(screen.getByTestId('recurrence-mode-until'));
+
+    const untilInput = screen.getByTestId('recurrence-until-date') as HTMLInputElement;
+    fireEvent.change(untilInput, { target: { value: '2026-06-03' } });
+
+    const expected = generateRecurringDates('2026-05-13', {
+      enabled: true,
+      frequency: 'weekly',
+      mode: 'until',
+      count: 4,
+      untilDate: '2026-06-03',
+    });
+
+    const submitBtn = screen.getByRole('button', { name: new RegExp(`vytvořit ${expected.length}`, 'i') });
+    fireEvent.click(submitBtn);
+
+    expect(onCreateSpy).toHaveBeenCalledTimes(1);
+    const events: SportEvent[] = onCreateSpy.mock.calls[0][0];
+    expect(events.map(e => e.date)).toEqual(expected);
+  });
+
+  it('preview text and submit button reflect the live computed count for both frequencies', async () => {
+    renderModal();
+    await userEvent.click(screen.getByTestId('recurrence-toggle'));
+    await userEvent.click(screen.getByTestId('recurrence-mode-until'));
+
+    const untilInput = screen.getByTestId('recurrence-until-date') as HTMLInputElement;
+    fireEvent.change(untilInput, { target: { value: '2026-06-03' } });
+
+    expect(screen.getByTestId('recurrence-preview').textContent).toContain('Vytvoří 4');
+    expect(screen.getByRole('button', { name: /vytvořit 4/i })).toBeInTheDocument();
+
+    await userEvent.selectOptions(screen.getByTestId('recurrence-frequency'), 'biweekly');
+
+    expect(screen.getByTestId('recurrence-preview').textContent).toContain('Vytvoří 2');
+    expect(screen.getByRole('button', { name: /vytvořit 2/i })).toBeInTheDocument();
+  });
+
+  it('clamps an until date earlier than the event date back to the event date', async () => {
+    renderModal();
+    await userEvent.click(screen.getByTestId('recurrence-toggle'));
+    await userEvent.click(screen.getByTestId('recurrence-mode-until'));
+
+    const untilInput = screen.getByTestId('recurrence-until-date') as HTMLInputElement;
+    expect(untilInput.min).toBe('2026-05-13');
+
+    fireEvent.change(untilInput, { target: { value: '2026-05-01' } });
+
+    expect(untilInput.value).toBe('2026-05-13');
+  });
+
+  it('caps a far-future until date at 26 generated events', async () => {
+    const onCreateSpy = vi.fn();
+    renderModal(onCreateSpy);
+
+    await userEvent.click(screen.getByTestId('recurrence-toggle'));
+    await userEvent.click(screen.getByTestId('recurrence-mode-until'));
+
+    const untilInput = screen.getByTestId('recurrence-until-date') as HTMLInputElement;
+    fireEvent.change(untilInput, { target: { value: '2030-01-01' } });
+
+    expect(screen.getByTestId('recurrence-preview').textContent).toContain('Vytvoří 26');
+
+    const submitBtn = screen.getByRole('button', { name: /vytvořit 26/i });
+    fireEvent.click(submitBtn);
+
+    const events: SportEvent[] = onCreateSpy.mock.calls[0][0];
+    expect(events).toHaveLength(26);
   });
 });
 
