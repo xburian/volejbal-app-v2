@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "npm run dev:api & npm run dev:vite",
+    "dev:mock": "LOCAL_MOCK_DB=true npm run dev",
     "dev:api": "tsx watch scripts/dev-server.ts",
     "dev:vite": "vite",
     "build": "tsc && vite build",
@@ -13,7 +14,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "prepare": "husky",
-    "migrate": "tsx scripts/migrate-firebase-to-redis.ts"
+    "migrate": "tsx scripts/migrate-firebase-to-redis.ts",
+    "migrate:teams": "tsx scripts/migrate-to-teams.ts"
   },
   "dependencies": {
     "@upstash/redis": "^1.38.0",
@@ -25,19 +27,20 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.0.3",
-    "@vitest/coverage-v8": "^4.1.9",
+    "@vitest/coverage-v8": "^4.1.11",
     "dotenv": "^17.4.2",
     "eslint": "^10.6.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "express": "^5.2.1",
-    "firebase": "^12.15.0",
+    "firebase": "^12.19.0",
     "globals": "^17.7.0",
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
@@ -45,9 +48,21 @@
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.62.0",
-    "vercel": "^54.18.2",
     "vite": "^8.1.0",
-    "vitest": "^4.0.14"
+    "vitest": "^4.1.11"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "^1.14.5",
+    "body-parser": "^2.3.0",
+    "brace-expansion": "^5.0.12",
+    "browserslist": "^4.29.3",
+    "nanoid": "^3.3.18",
+    "path-to-regexp": "^8.4.2",
+    "postcss": "^8.5.28",
+    "protobufjs": "^7.6.6",
+    "qs": "^6.16.0",
+    "undici": "^7.30.0",
+    "baseline-browser-mapping": "^2.11.27"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

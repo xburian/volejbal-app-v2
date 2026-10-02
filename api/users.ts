@@ -1,10 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { Redis } from '@upstash/redis';
+import { redis } from './_utils/redis.js';
+import { getAuthTeam } from './_utils/auth.js';
 
-const redis = new Redis({
-  url: process.env.volejbal_KV_REST_API_URL!,
-  token: process.env.volejbal_KV_REST_API_TOKEN!,
-});
+const DEFAULT_TEAM_ID = 'team-nahravame-si';
 
 interface ApiRequest extends IncomingMessage {
   body: any;
@@ -18,15 +16,22 @@ interface ApiResponse extends ServerResponse {
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
   try {
+    const authTeam = getAuthTeam(req);
+    if (!authTeam) {
+      return res.status(401).json({ error: 'Neautorizováno. Přihlaste se prosím k týmu.' });
+    }
+
+    const teamId = authTeam.teamId;
+
     switch (req.method) {
       case 'GET':
-        return await handleGet(req, res);
+        return await handleGet(req, res, teamId);
       case 'POST':
-        return await handlePost(req, res);
+        return await handlePost(req, res, teamId);
       case 'PUT':
-        return await handlePut(req, res);
+        return await handlePut(req, res, teamId);
       case 'DELETE':
-        return await handleDelete(req, res);
+        return await handleDelete(req, res, teamId);
       default:
         return res.status(405).json({ error: 'Method not allowed' });
     }
@@ -36,9 +41,18 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   }
 }
 
-// GET /api/users — list all users (sorted, with lightweight photo URLs)
-async function handleGet(req: ApiRequest, res: ApiResponse) {
-  const userIds = await redis.smembers('users:all');
+// GET /api/users — list users for team (sorted, with lightweight photo URLs)
+async function handleGet(req: ApiRequest, res: ApiResponse, teamId: string) {
+  let userIds = await redis.smembers(`team:${teamId}:users`);
+
+  // Backward compatibility fallback for default team
+  if ((!userIds || userIds.length === 0) && teamId === DEFAULT_TEAM_ID) {
+    userIds = await redis.smembers('users:all');
+    if (userIds && userIds.length > 0) {
+      await redis.sadd(`team:${teamId}:users`, userIds[0], ...userIds.slice(1));
+    }
+  }
+
   if (!userIds || userIds.length === 0) {
     return res.status(200).json([]);
   }
@@ -87,22 +101,23 @@ async function handleGet(req: ApiRequest, res: ApiResponse) {
 }
 
 // POST /api/users — create user { name, photoUrl? }
-async function handlePost(req: ApiRequest, res: ApiResponse) {
+async function handlePost(req: ApiRequest, res: ApiResponse, teamId: string) {
   const { id, name, photoUrl } = req.body;
 
   if (!name || !name.trim()) {
     return res.status(400).json({ error: 'Name is required' });
   }
 
-  // Check for duplicate name
-  const existingUsers = await getAllUsers();
+  // Check for duplicate name WITHIN the team
+  const existingUsers = await getTeamUsers(teamId);
   if (existingUsers.some((u: any) => u.name.toLowerCase() === name.trim().toLowerCase())) {
-    return res.status(409).json({ error: 'Uživatel s tímto jménem již existuje.' });
+    return res.status(409).json({ error: 'Hráč s tímto jménem v týmu již existuje.' });
   }
 
   const newUser: any = {
     id: id || generateId(),
     name: name.trim(),
+    teamId,
   };
 
   // If photoUrl is base64, store separately and use a lightweight URL
@@ -114,13 +129,14 @@ async function handlePost(req: ApiRequest, res: ApiResponse) {
   }
 
   await redis.set(`user:${newUser.id}`, JSON.stringify(newUser));
+  await redis.sadd(`team:${teamId}:users`, newUser.id);
   await redis.sadd('users:all', newUser.id);
 
   return res.status(201).json(newUser);
 }
 
 // PUT /api/users — update user { id, ...updates }
-async function handlePut(req: ApiRequest, res: ApiResponse) {
+async function handlePut(req: ApiRequest, res: ApiResponse, teamId: string) {
   const { id, ...updates } = req.body;
 
   if (!id) {
@@ -133,22 +149,30 @@ async function handlePut(req: ApiRequest, res: ApiResponse) {
   }
 
   const parsed = typeof existing === 'string' ? JSON.parse(existing) : existing;
-  const updatedUser = { ...parsed, ...updates };
+
+  // Verify user belongs to this team
+  const isMember = await redis.sismember(`team:${teamId}:users`, id);
+  if (!isMember && parsed.teamId && parsed.teamId !== teamId) {
+    return res.status(403).json({ error: 'Tento uživatel nepatří do vašeho týmu.' });
+  }
+
+  const updatedUser = { ...parsed, ...updates, teamId: parsed.teamId || teamId };
 
   await redis.set(`user:${id}`, JSON.stringify(updatedUser));
   return res.status(200).json(updatedUser);
 }
 
 // DELETE /api/users?id=xxx — delete user + cascade attendance
-async function handleDelete(req: ApiRequest, res: ApiResponse) {
+async function handleDelete(req: ApiRequest, res: ApiResponse, teamId: string) {
   const id = req.query.id as string;
 
   if (!id) {
     return res.status(400).json({ error: 'User ID is required' });
   }
 
-  // 1. Delete user
+  // 1. Delete user from Redis sets
   await redis.del(`user:${id}`);
+  await redis.srem(`team:${teamId}:users`, id);
   await redis.srem('users:all', id);
 
   // 2. Delete user's photo
@@ -167,6 +191,10 @@ async function handleDelete(req: ApiRequest, res: ApiResponse) {
     await pipeline.exec();
   }
   await redis.del(`attendance:user:${id}`);
+
+  // 4. Cascade delete bank account if configured
+  await redis.del(`bankaccount:user:${id}`);
+  await redis.srem('bankaccounts:users', id);
 
   return res.status(200).json({ success: true });
 }
@@ -188,8 +216,8 @@ function parseJson(val: any): any {
   return val;
 }
 
-async function getAllUsers(): Promise<any[]> {
-  const userIds = await redis.smembers('users:all');
+async function getTeamUsers(teamId: string): Promise<any[]> {
+  const userIds = await redis.smembers(`team:${teamId}:users`);
   if (!userIds || userIds.length === 0) return [];
 
   const pipeline = redis.pipeline();
@@ -199,4 +227,3 @@ async function getAllUsers(): Promise<any[]> {
   const results = await pipeline.exec();
   return results.filter(Boolean).map((r: any) => typeof r === 'string' ? JSON.parse(r) : r);
 }
-

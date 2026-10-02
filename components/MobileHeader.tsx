@@ -1,14 +1,16 @@
 import React from 'react';
-import { Trophy, LogOut, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Trophy, LogOut, ArrowLeft, RefreshCw, Users } from 'lucide-react';
 import { MobileView } from './MobileBottomNav';
-import { User, SportEvent } from '../types';
+import { User, SportEvent, Team } from '../types';
 
 interface MobileHeaderProps {
   mobileView: MobileView;
   currentUser: User;
   selectedEvent: SportEvent | undefined;
+  currentTeam?: Team | null;
   onBack: () => void;
   onLogout: () => void;
+  onLogoutTeam?: () => void;
   onRefresh?: () => void;
 }
 
@@ -16,8 +18,10 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   mobileView,
   currentUser,
   selectedEvent,
+  currentTeam,
   onBack,
   onLogout,
+  onLogoutTeam,
   onRefresh,
 }) => {
   return (
@@ -66,11 +70,18 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
           </>
         ) : (
           <>
-            <div className="flex items-center gap-2 font-bold text-lg">
-              <Trophy size={24} />
-              <span>Sport Plánovač</span>
-            </div>
             <div className="flex items-center gap-2">
+              <Trophy size={24} className="shrink-0" />
+              <div>
+                <div className="font-bold text-base leading-tight">Sport Plánovač</div>
+                {currentTeam && (
+                  <div className="text-[11px] font-medium text-blue-200 truncate max-w-[130px]">
+                    Tým: {currentTeam.name}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
               {currentUser.photoUrl && (
                 <img
                   src={currentUser.photoUrl}
@@ -88,10 +99,21 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                   <RefreshCw size={18} />
                 </button>
               )}
+              {onLogoutTeam && (
+                <button
+                  data-testid="mobile-logout-team"
+                  onClick={onLogoutTeam}
+                  className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
+                  title="Změnit tým"
+                >
+                  <Users size={18} />
+                </button>
+              )}
               <button
                 data-testid="mobile-logout"
                 onClick={onLogout}
                 className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
+                title="Odhlásit hráče"
               >
                 <LogOut size={18} />
               </button>

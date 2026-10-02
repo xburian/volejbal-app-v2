@@ -118,5 +118,37 @@ describe('MobileHeader', () => {
     );
     expect(screen.queryByAltText('Honza')).not.toBeInTheDocument();
   });
+
+  it('renders currentTeam name badge when currentTeam is provided', () => {
+    const mockTeam = { id: 'team-nahravame-si', name: 'nahravame-si', createdAt: '2026-01-01' };
+    render(
+      <MobileHeader
+        mobileView="calendar"
+        currentUser={mockUser}
+        currentTeam={mockTeam}
+        selectedEvent={undefined}
+        onBack={vi.fn()}
+        onLogout={vi.fn()}
+      />
+    );
+    expect(screen.getByText('Tým: nahravame-si')).toBeInTheDocument();
+  });
+
+  it('calls onLogoutTeam when team switch button is clicked', async () => {
+    const onLogoutTeam = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <MobileHeader
+        mobileView="calendar"
+        currentUser={mockUser}
+        selectedEvent={undefined}
+        onBack={vi.fn()}
+        onLogout={vi.fn()}
+        onLogoutTeam={onLogoutTeam}
+      />
+    );
+    await user.click(screen.getByTestId('mobile-logout-team'));
+    expect(onLogoutTeam).toHaveBeenCalled();
+  });
 });
 

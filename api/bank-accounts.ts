@@ -1,10 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { Redis } from '@upstash/redis';
+import { getAuthTeam } from './_utils/auth.js';
+import { redis } from './_utils/redis.js';
 
-const redis = new Redis({
-  url: process.env.volejbal_KV_REST_API_URL!,
-  token: process.env.volejbal_KV_REST_API_TOKEN!,
-});
+const DEFAULT_TEAM_ID = 'team-nahravame-si';
 
 interface ApiRequest extends IncomingMessage {
   body: any;
@@ -18,11 +16,18 @@ interface ApiResponse extends ServerResponse {
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
   try {
+    const authTeam = getAuthTeam(req);
+    if (!authTeam) {
+      return res.status(401).json({ error: 'Neautorizováno. Přihlaste se prosím k týmu.' });
+    }
+
+    const teamId = authTeam.teamId;
+
     switch (req.method) {
       case 'GET':
-        return await handleGet(res);
+        return await handleGet(res, teamId);
       case 'POST':
-        return await handlePost(req, res);
+        return await handlePost(req, res, teamId);
       default:
         return res.status(405).json({ error: 'Method not allowed' });
     }
@@ -32,15 +37,30 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   }
 }
 
-// GET /api/bank-accounts — list all user bank accounts
-async function handleGet(res: ApiResponse) {
-  const userAccountIds = await redis.smembers('bankaccounts:users');
-  if (!userAccountIds || userAccountIds.length === 0) {
+// GET /api/bank-accounts — list bank accounts belonging to this team's members
+async function handleGet(res: ApiResponse, teamId: string) {
+  let teamUserIds = await redis.smembers(`team:${teamId}:users`);
+  if ((!teamUserIds || teamUserIds.length === 0) && teamId === DEFAULT_TEAM_ID) {
+    teamUserIds = await redis.smembers('users:all');
+  }
+
+  if (!teamUserIds || teamUserIds.length === 0) {
+    return res.status(200).json([]);
+  }
+
+  const allAccountUserIds = await redis.smembers('bankaccounts:users');
+  if (!allAccountUserIds || allAccountUserIds.length === 0) {
+    return res.status(200).json([]);
+  }
+
+  // Filter to only users who are in this team
+  const relevantUserIds = allAccountUserIds.filter(userId => teamUserIds.includes(userId));
+  if (relevantUserIds.length === 0) {
     return res.status(200).json([]);
   }
 
   const pipeline = redis.pipeline();
-  for (const userId of userAccountIds) {
+  for (const userId of relevantUserIds) {
     pipeline.get(`bankaccount:user:${userId}`);
   }
   const results = await pipeline.exec();
@@ -58,7 +78,7 @@ async function handleGet(res: ApiResponse) {
 }
 
 // POST /api/bank-accounts — create personal bank account { ownerName, accountNumber, userId }
-async function handlePost(req: ApiRequest, res: ApiResponse) {
+async function handlePost(req: ApiRequest, res: ApiResponse, teamId: string) {
   const { ownerName, accountNumber, userId } = req.body;
 
   if (!ownerName || !ownerName.trim()) {
@@ -69,6 +89,12 @@ async function handlePost(req: ApiRequest, res: ApiResponse) {
   }
   if (!userId) {
     return res.status(400).json({ error: 'userId je povinné.' });
+  }
+
+  // Verify user belongs to this team
+  const isMember = await redis.sismember(`team:${teamId}:users`, userId);
+  if (!isMember && teamId !== DEFAULT_TEAM_ID) {
+    return res.status(403).json({ error: 'Uživatel nepatří do vašeho týmu.' });
   }
 
   // Check if user already has a bank account
@@ -101,4 +127,3 @@ function parseJson(val: any): any {
   }
   return val;
 }
-

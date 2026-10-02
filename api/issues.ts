@@ -1,10 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { Redis } from '@upstash/redis';
-
-const redis = new Redis({
-  url: process.env.volejbal_KV_REST_API_URL!,
-  token: process.env.volejbal_KV_REST_API_TOKEN!,
-});
+import { redis } from './_utils/redis.js';
 
 interface ApiRequest extends IncomingMessage {
   body: any;
