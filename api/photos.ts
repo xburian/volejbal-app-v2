@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Redis } from '@upstash/redis';
+import { getAuthTeam } from './utils/auth.js';
 
 const redis = new Redis({
   url: process.env.volejbal_KV_REST_API_URL!,
@@ -20,6 +21,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   try {
     switch (req.method) {
       case 'GET':
+        // GET remains public so that <img> tags without custom auth headers can display photos
         return await handleGet(req, res);
       case 'POST':
         return await handlePost(req, res);
@@ -34,7 +36,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   }
 }
 
-// GET /api/photos?id=userId — serve photo as raw image
+// GET /api/photos?id=userId — serve photo as raw image (public for <img>)
 async function handleGet(req: ApiRequest, res: ApiResponse) {
   const id = req.query.id as string;
   if (!id) {
@@ -64,8 +66,13 @@ async function handleGet(req: ApiRequest, res: ApiResponse) {
   res.end(buffer);
 }
 
-// POST /api/photos — store photo { userId, photoBase64 }
+// POST /api/photos — store photo { userId, photoBase64 } (protected)
 async function handlePost(req: ApiRequest, res: ApiResponse) {
+  const authTeam = getAuthTeam(req);
+  if (!authTeam) {
+    return res.status(401).json({ error: 'Neautorizováno. Přihlaste se prosím k týmu.' });
+  }
+
   const { userId, photoBase64 } = req.body;
 
   if (!userId || !photoBase64) {
@@ -89,8 +96,13 @@ async function handlePost(req: ApiRequest, res: ApiResponse) {
   return res.status(200).json({ photoUrl });
 }
 
-// DELETE /api/photos?id=userId — remove photo
+// DELETE /api/photos?id=userId — remove photo (protected)
 async function handleDelete(req: ApiRequest, res: ApiResponse) {
+  const authTeam = getAuthTeam(req);
+  if (!authTeam) {
+    return res.status(401).json({ error: 'Neautorizováno. Přihlaste se prosím k týmu.' });
+  }
+
   const id = req.query.id as string;
   if (!id) {
     return res.status(400).json({ error: 'User ID is required' });
@@ -108,4 +120,3 @@ async function handleDelete(req: ApiRequest, res: ApiResponse) {
 
   return res.status(200).json({ success: true });
 }
-

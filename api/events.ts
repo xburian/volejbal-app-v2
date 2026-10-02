@@ -1,10 +1,13 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Redis } from '@upstash/redis';
+import { getAuthTeam } from './utils/auth.js';
 
 const redis = new Redis({
   url: process.env.volejbal_KV_REST_API_URL!,
   token: process.env.volejbal_KV_REST_API_TOKEN!,
 });
+
+const DEFAULT_TEAM_ID = 'team-nahravame-si';
 
 /** Allowed sport types — anything else falls back to 'volejbal' */
 const VALID_SPORT_TYPES = ['volejbal', 'tenis', 'badminton'] as const;
@@ -21,15 +24,22 @@ interface ApiResponse extends ServerResponse {
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
   try {
+    const authTeam = getAuthTeam(req);
+    if (!authTeam) {
+      return res.status(401).json({ error: 'Neautorizováno. Přihlaste se prosím k týmu.' });
+    }
+
+    const teamId = authTeam.teamId;
+
     switch (req.method) {
       case 'GET':
-        return await handleGet(res);
+        return await handleGet(res, teamId);
       case 'POST':
-        return await handlePost(req, res);
+        return await handlePost(req, res, teamId);
       case 'PUT':
-        return await handlePut(req, res);
+        return await handlePut(req, res, teamId);
       case 'DELETE':
-        return await handleDelete(req, res);
+        return await handleDelete(req, res, teamId);
       default:
         return res.status(405).json({ error: 'Method not allowed' });
     }
@@ -39,10 +49,18 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   }
 }
 
-// GET /api/events — list all events with hydrated participants
-async function handleGet(res: ApiResponse) {
-  // Fetch raw events
-  const eventIds = await redis.smembers('events:all');
+// GET /api/events — list all events for team with hydrated participants
+async function handleGet(res: ApiResponse, teamId: string) {
+  let eventIds = await redis.smembers(`team:${teamId}:events`);
+
+  // Backward compatibility fallback for default team
+  if ((!eventIds || eventIds.length === 0) && teamId === DEFAULT_TEAM_ID) {
+    eventIds = await redis.smembers('events:all');
+    if (eventIds && eventIds.length > 0) {
+      await redis.sadd(`team:${teamId}:events`, eventIds[0], ...eventIds.slice(1));
+    }
+  }
+
   if (!eventIds || eventIds.length === 0) {
     return res.status(200).json([]);
   }
@@ -53,8 +71,12 @@ async function handleGet(res: ApiResponse) {
   }
   const rawEvents = (await eventPipeline.exec()).filter(Boolean).map(parseJson);
 
-  // Fetch all users for name resolution
-  const userIds = await redis.smembers('users:all');
+  // Fetch users of this team for name resolution
+  let userIds = await redis.smembers(`team:${teamId}:users`);
+  if ((!userIds || userIds.length === 0) && teamId === DEFAULT_TEAM_ID) {
+    userIds = await redis.smembers('users:all');
+  }
+
   const usersMap: Record<string, any> = {};
   if (userIds && userIds.length > 0) {
     const userPipeline = redis.pipeline();
@@ -94,20 +116,22 @@ async function handleGet(res: ApiResponse) {
 
       const rawType = event.sportType ?? 'volejbal';
       const sportType = VALID_SPORT_TYPES.includes(rawType) ? rawType : 'volejbal';
-      return { ...event, participants, sportType };
+      return { ...event, participants, sportType, teamId: event.teamId || teamId };
     })
   );
 
   return res.status(200).json(hydratedEvents);
 }
 
-// POST /api/events — create event
-async function handlePost(req: ApiRequest, res: ApiResponse) {
+// POST /api/events — create event for team
+async function handlePost(req: ApiRequest, res: ApiResponse, teamId: string) {
   const { participants: _participants, ...eventData } = req.body;
 
   if (!eventData.id) {
     eventData.id = generateId();
   }
+
+  eventData.teamId = teamId;
 
   // Normalize invalid sport types to 'volejbal'
   if (eventData.sportType && !VALID_SPORT_TYPES.includes(eventData.sportType)) {
@@ -115,13 +139,14 @@ async function handlePost(req: ApiRequest, res: ApiResponse) {
   }
 
   await redis.set(`event:${eventData.id}`, JSON.stringify(eventData));
+  await redis.sadd(`team:${teamId}:events`, eventData.id);
   await redis.sadd('events:all', eventData.id);
 
   return res.status(201).json({ success: true, id: eventData.id });
 }
 
 // PUT /api/events — update event
-async function handlePut(req: ApiRequest, res: ApiResponse) {
+async function handlePut(req: ApiRequest, res: ApiResponse, teamId: string) {
   const { participants: _participants, ...eventData } = req.body;
 
   if (!eventData.id) {
@@ -134,7 +159,14 @@ async function handlePut(req: ApiRequest, res: ApiResponse) {
   }
 
   const parsed = parseJson(existing);
-  const updated = { ...parsed, ...eventData };
+
+  // Verify ownership
+  const isTeamEvent = await redis.sismember(`team:${teamId}:events`, eventData.id);
+  if (!isTeamEvent && parsed.teamId && parsed.teamId !== teamId) {
+    return res.status(403).json({ error: 'Tato událost nepatří do vašeho týmu.' });
+  }
+
+  const updated = { ...parsed, ...eventData, teamId: parsed.teamId || teamId };
 
   // Remove keys explicitly set to null (e.g. winningTeam cleared between rounds)
   for (const key of Object.keys(updated)) {
@@ -148,15 +180,16 @@ async function handlePut(req: ApiRequest, res: ApiResponse) {
 }
 
 // DELETE /api/events?id=xxx — delete event + cascade attendance
-async function handleDelete(req: ApiRequest, res: ApiResponse) {
+async function handleDelete(req: ApiRequest, res: ApiResponse, teamId: string) {
   const id = req.query.id as string;
 
   if (!id) {
     return res.status(400).json({ error: 'Event ID is required' });
   }
 
-  // 1. Delete event
+  // 1. Delete event from sets and keys
   await redis.del(`event:${id}`);
+  await redis.srem(`team:${teamId}:events`, id);
   await redis.srem('events:all', id);
 
   // 2. Cascade delete attendance records for this event
@@ -188,4 +221,3 @@ function parseJson(val: any): any {
   }
   return val;
 }
-

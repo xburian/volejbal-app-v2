@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Redis } from '@upstash/redis';
+import { getAuthTeam } from './utils/auth.js';
 
 const redis = new Redis({
   url: process.env.volejbal_KV_REST_API_URL!,
@@ -27,11 +28,18 @@ const DEFAULT_SPORT_CONFIGS = [
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
   try {
+    const authTeam = getAuthTeam(req);
+    if (!authTeam) {
+      return res.status(401).json({ error: 'Neautorizováno. Přihlaste se prosím k týmu.' });
+    }
+
+    const teamId = authTeam.teamId;
+
     switch (req.method) {
       case 'GET':
-        return await handleGet(res);
+        return await handleGet(res, teamId);
       case 'PUT':
-        return await handlePut(req, res);
+        return await handlePut(req, res, teamId);
       default:
         return res.status(405).json({ error: 'Method not allowed' });
     }
@@ -41,28 +49,34 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   }
 }
 
-async function handleGet(res: ApiResponse) {
-  const existing: any = await redis.get('sportconfigs');
-  if (existing) {
-    const parsed: any[] = typeof existing === 'string' ? JSON.parse(existing) : existing;
-    // Strip out any sport types not in the allow-list
+async function handleGet(res: ApiResponse, teamId: string) {
+  // Check team-scoped configs first
+  const teamConfigs: any = await redis.get(`team:${teamId}:sportconfigs`);
+  if (teamConfigs) {
+    const parsed: any[] = typeof teamConfigs === 'string' ? JSON.parse(teamConfigs) : teamConfigs;
     const filtered = parsed.filter((c: any) => VALID_SPORT_TYPES.includes(c.type));
     return res.status(200).json(filtered);
   }
 
-  // Seed defaults on first read
-  await redis.set('sportconfigs', JSON.stringify(DEFAULT_SPORT_CONFIGS));
+  // Fallback to legacy global configs
+  const globalConfigs: any = await redis.get('sportconfigs');
+  if (globalConfigs) {
+    const parsed: any[] = typeof globalConfigs === 'string' ? JSON.parse(globalConfigs) : globalConfigs;
+    const filtered = parsed.filter((c: any) => VALID_SPORT_TYPES.includes(c.type));
+    return res.status(200).json(filtered);
+  }
+
+  // Default fallback
   return res.status(200).json(DEFAULT_SPORT_CONFIGS);
 }
 
-async function handlePut(req: ApiRequest, res: ApiResponse) {
+async function handlePut(req: ApiRequest, res: ApiResponse, teamId: string) {
   const configs = req.body;
   if (!Array.isArray(configs)) {
     return res.status(400).json({ error: 'Body must be an array of sport configs' });
   }
   // Only persist configs whose type is in the allow-list
   const validConfigs = configs.filter((c: any) => VALID_SPORT_TYPES.includes(c.type));
-  await redis.set('sportconfigs', JSON.stringify(validConfigs));
+  await redis.set(`team:${teamId}:sportconfigs`, JSON.stringify(validConfigs));
   return res.status(200).json(validConfigs);
 }
-

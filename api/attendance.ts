@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Redis } from '@upstash/redis';
+import { getAuthTeam } from './utils/auth.js';
 
 const redis = new Redis({
   url: process.env.volejbal_KV_REST_API_URL!,
@@ -20,6 +21,11 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   try {
     if (req.method !== 'PUT') {
       return res.status(405).json({ error: 'Method not allowed. Use PUT.' });
+    }
+
+    const authTeam = getAuthTeam(req);
+    if (!authTeam) {
+      return res.status(401).json({ error: 'Neautorizováno. Přihlaste se prosím k týmu.' });
     }
 
     const { eventId, userId, status, hasPaid } = req.body;
@@ -55,4 +61,3 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     return res.status(500).json({ error: error.message || 'Internal server error' });
   }
 }
-

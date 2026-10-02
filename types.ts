@@ -31,9 +31,22 @@ export const DEFAULT_SPORT_CONFIGS: SportConfig[] = [
   { type: 'badminton', label: 'Badminton', maxPlayers: 4, defaultCost: 400, defaultLocation: 'Sportovní centrum', teamSize: 2 },
 ];
 
+export interface Team {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+export interface TeamAuthResponse {
+  accessToken: string;
+  refreshToken: string;
+  team: Team;
+}
+
 export interface User {
   id: string;
   name: string;
+  teamId?: string;
   photoUrl?: string; // URL or base64 encoded image
   hasMultisportCard?: boolean; // Multisport discount card holder
   autoAttendSportTypes?: SportType[]; // sport types to auto-join on event creation
@@ -91,6 +104,7 @@ export interface SportEvent {
   score?: [number, number][];
   gameHistory?: GameRound[]; // completed previous rounds
   sportType?: SportType; // optional for backward compat — defaults to 'volejbal'
+  teamId?: string; // club/group tenant ID
 }
 
 /** @deprecated Use SportEvent instead */

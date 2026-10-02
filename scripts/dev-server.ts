@@ -39,7 +39,11 @@ async function start() {
   const bankAccountsHandler = await import('../api/bank-accounts.js');
   const sportConfigsHandler = await import('../api/sport-configs.js');
   const issuesHandler = await import('../api/issues.js');
+  const authHandler = await import('../api/auth.js');
+  const teamsHandler = await import('../api/teams.js');
 
+  app.all('/api/auth', wrapHandler(authHandler));
+  app.all('/api/teams', wrapHandler(teamsHandler));
   app.all('/api/users', wrapHandler(usersHandler));
   app.all('/api/events-batch', wrapHandler(eventsBatchHandler));
   app.all('/api/events', wrapHandler(eventsHandler));
@@ -52,7 +56,7 @@ async function start() {
   const PORT = 3001;
   app.listen(PORT, () => {
     console.log(`🚀 Local API server running on http://localhost:${PORT}`);
-    console.log(`   Routes: /api/users, /api/events, /api/events-batch, /api/attendance, /api/photos, /api/bank-accounts, /api/sport-configs`);
+    console.log(`   Routes: /api/auth, /api/teams, /api/users, /api/events, /api/events-batch, /api/attendance, /api/photos, /api/bank-accounts, /api/sport-configs`);
     console.log(`   Redis: ${process.env.volejbal_KV_REST_API_URL ? '✅ connected' : '❌ missing volejbal_KV_REST_API_URL'}`);
   });
 }

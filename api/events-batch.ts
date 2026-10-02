@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Redis } from '@upstash/redis';
+import { getAuthTeam } from './utils/auth.js';
 
 const redis = new Redis({
   url: process.env.volejbal_KV_REST_API_URL!,
@@ -27,6 +28,12 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   }
 
   try {
+    const authTeam = getAuthTeam(req);
+    if (!authTeam) {
+      return res.status(401).json({ error: 'Neautorizováno. Přihlaste se prosím k týmu.' });
+    }
+
+    const teamId = authTeam.teamId;
     const { events } = req.body;
 
     // Validation
@@ -55,6 +62,8 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         eventData.id = generateId();
       }
 
+      eventData.teamId = teamId;
+
       // Normalize invalid sport types
       if (eventData.sportType && !VALID_SPORT_TYPES.includes(eventData.sportType)) {
         eventData.sportType = 'volejbal';
@@ -69,6 +78,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
     for (const eventData of normalizedEvents) {
       pipeline.set(`event:${eventData.id}`, JSON.stringify(eventData));
+      pipeline.sadd(`team:${teamId}:events`, eventData.id);
       pipeline.sadd('events:all', eventData.id);
       ids.push(eventData.id);
     }
@@ -88,4 +98,3 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substring(2);
 }
-
