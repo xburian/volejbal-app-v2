@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "npm run dev:api & npm run dev:vite",
+    "dev:mock": "LOCAL_MOCK_DB=true npm run dev",
     "dev:api": "tsx watch scripts/dev-server.ts",
     "dev:vite": "vite",
     "build": "tsc && vite build",

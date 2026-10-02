@@ -39,6 +39,7 @@ async function start() {
   const sportConfigsHandler = await import('../api/sport-configs.js');
   const issuesHandler = await import('../api/issues.js');
   const authHandler = await import('../api/auth.js');
+  const { isMockDb, resetMockDb, seedRandomMockDb, getMockDbStats } = await import('../api/_utils/redis.js');
 
   app.all('/api/auth', wrapHandler(authHandler));
   app.all('/api/teams', wrapHandler(authHandler));
@@ -51,12 +52,44 @@ async function start() {
   app.all('/api/sport-configs', wrapHandler(sportConfigsHandler));
   app.all('/api/issues', wrapHandler(issuesHandler));
 
+  // Dev mock database tools (local dev server only)
+  app.post('/api/dev/seed', async (_req, res) => {
+    try {
+      const result = await seedRandomMockDb();
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/dev/reset', async (_req, res) => {
+    try {
+      const result = await resetMockDb();
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/dev/status', async (_req, res) => {
+    try {
+      const stats = await getMockDbStats();
+      res.json(stats);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   const PORT = 3001;
   app.listen(PORT, () => {
     console.log(`🚀 Local API server running on http://localhost:${PORT}`);
-    console.log(`   Routes: /api/auth, /api/teams, /api/users, /api/events, /api/events-batch, /api/attendance, /api/photos, /api/bank-accounts, /api/sport-configs`);
-    const hasRedis = Boolean(process.env.volejbal_KV_REST_API_URL || process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL);
-    console.log(`   Redis: ${hasRedis ? '✅ connected' : '❌ missing volejbal_KV_REST_API_URL / KV_REST_API_URL in .env.local'}`);
+    console.log(`   Routes: /api/auth, /api/teams, /api/users, /api/events, /api/events-batch, /api/attendance, /api/photos, /api/bank-accounts, /api/sport-configs, /api/issues`);
+    if (isMockDb()) {
+      console.log(`   Storage: 💾 IN-MEMORY MOCK DB active (persisting to .mock-db.json)`);
+      console.log(`   Dev tools: POST /api/dev/seed, POST /api/dev/reset, GET /api/dev/status`);
+    } else {
+      console.log(`   Storage: ☁️ UPSTASH REDIS connected`);
+    }
   });
 }
 

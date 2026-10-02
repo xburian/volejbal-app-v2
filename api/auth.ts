@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { Redis } from '@upstash/redis';
+import { redis } from './_utils/redis.js';
 import {
   hashPassword,
   verifyPassword,
@@ -9,21 +9,6 @@ import {
   getClientIp,
   checkRateLimit,
 } from './_utils/auth.js';
-
-const redisUrl =
-  process.env.volejbal_KV_REST_API_URL ||
-  process.env.KV_REST_API_URL ||
-  process.env.UPSTASH_REDIS_REST_URL;
-
-const redisToken =
-  process.env.volejbal_KV_REST_API_TOKEN ||
-  process.env.KV_REST_API_TOKEN ||
-  process.env.UPSTASH_REDIS_REST_TOKEN;
-
-const redis = new Redis({
-  url: redisUrl || 'https://placeholder.upstash.io',
-  token: redisToken || 'placeholder',
-});
 
 interface ApiRequest extends IncomingMessage {
   body: any;

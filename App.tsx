@@ -16,6 +16,7 @@ import { IssueDrawer } from './components/IssueDrawer';
 import { MobileBottomNav, MobileView } from './components/MobileBottomNav';
 import { MobileHeader } from './components/MobileHeader';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { DevTestingToolbar } from './components/DevTestingToolbar';
 import { usePersistedAuth } from './hooks/usePersistedAuth';
 import { useUrlState } from './hooks/useUrlState';
 import { useDataLoading } from './hooks/useDataLoading';
@@ -427,6 +428,9 @@ const App: React.FC = () => {
         onClose={() => setShowIssueDrawer(false)}
         currentUser={currentUser}
       />
+      {import.meta.env.DEV && (
+        <DevTestingToolbar onTeamSwitch={handleTeamLogin} onDataRefresh={refreshAll} />
+      )}
     </div>
   );
 };

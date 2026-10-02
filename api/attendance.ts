@@ -1,11 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { Redis } from '@upstash/redis';
+import { redis } from './_utils/redis.js';
 import { getAuthTeam } from './_utils/auth.js';
-
-const redis = new Redis({
-  url: (process.env.volejbal_KV_REST_API_URL || process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL)!,
-  token: (process.env.volejbal_KV_REST_API_TOKEN || process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN)!,
-});
 
 interface ApiRequest extends IncomingMessage {
   body: any;
