@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { hashPassword, createAccessToken } from './utils/auth.js';
+import { hashPassword, createAccessToken } from '../../api/_utils/auth.js';
 
 // In-memory Redis simulation
 class MockRedis {
@@ -138,7 +138,7 @@ describe('API /api/auth handler', () => {
     mockRedisInstance.sets.clear();
     mockRedisInstance.ttls.clear();
 
-    const mod = await import('./auth.js');
+    const mod = await import('../../api/auth.js');
     handler = mod.default;
 
     // Seed a test team in mock Redis
@@ -153,8 +153,8 @@ describe('API /api/auth handler', () => {
   });
 
   describe('HTTP Method and Action Validation', () => {
-    it('rejects non-POST requests with 405', async () => {
-      const { req, res } = createReqRes({ method: 'GET' });
+    it('rejects unsupported HTTP methods with 405', async () => {
+      const { req, res } = createReqRes({ method: 'PUT' });
       await handler(req, res);
       expect(res.getStatus()).toBe(405);
       expect(res.getJson()).toEqual({ error: 'Method not allowed' });

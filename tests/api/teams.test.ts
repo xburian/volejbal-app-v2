@@ -96,7 +96,7 @@ describe('API /api/teams handler', () => {
     mockRedisInstance.data.clear();
     mockRedisInstance.sets.clear();
 
-    const mod = await import('./teams.js');
+    const mod = await import('../../api/auth.js');
     handler = mod.default;
   });
 

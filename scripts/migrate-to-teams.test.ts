@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { runMigration } from './migrate-to-teams.js';
-import { verifyPassword } from '../api/utils/auth.js';
+import { verifyPassword } from '../api/_utils/auth.js';
 
 class MockRedis {
   data = new Map<string, any>();

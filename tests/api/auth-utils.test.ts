@@ -7,7 +7,7 @@ import {
   createRefreshToken,
   getAuthTeam,
   getClientIp,
-} from './auth.js';
+} from '../../api/_utils/auth.js';
 
 describe('api/utils/auth', () => {
   describe('Password Hashing & Verification', () => {

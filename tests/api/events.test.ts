@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createAccessToken } from './utils/auth.js';
+import { createAccessToken } from '../../api/_utils/auth.js';
 
 class MockRedis {
   data = new Map<string, any>();
@@ -126,7 +126,7 @@ describe('API /api/events handler', () => {
     mockRedisInstance.data.clear();
     mockRedisInstance.sets.clear();
 
-    const mod = await import('./events.js');
+    const mod = await import('../../api/events.js');
     handler = mod.default;
   });
 
@@ -217,4 +217,58 @@ describe('API /api/events handler', () => {
     const teamEvents = await mockRedisInstance.smembers('team:team-1:events');
     expect(teamEvents).not.toContain(createdId);
   });
+
+  describe('Batch Event Creation', () => {
+    it('rejects empty events array with 400', async () => {
+      const { req, res } = createReqRes({
+        method: 'POST',
+        body: { events: [] },
+        token: team1Token,
+      });
+      await handler(req, res);
+      expect(res.getStatus()).toBe(400);
+      expect(res.getJson().error).toMatch(/must not be empty/);
+    });
+
+    it('rejects batch size exceeding 26 events with 400', async () => {
+      const events = Array.from({ length: 27 }, (_, i) => ({
+        title: `Hra ${i}`,
+        date: '2026-05-01',
+        time: '18:00',
+        location: 'Hala',
+      }));
+      const { req, res } = createReqRes({
+        method: 'POST',
+        body: { events },
+        token: team1Token,
+      });
+      await handler(req, res);
+      expect(res.getStatus()).toBe(400);
+      expect(res.getJson().error).toMatch(/exceeds maximum of 26/);
+    });
+
+    it('creates batch of events successfully and assigns teamId', async () => {
+      const events = [
+        { title: 'Trénink 1', date: '2026-05-01', time: '18:00', location: 'Hala', sportType: 'volejbal' },
+        { title: 'Trénink 2', date: '2026-05-08', time: '18:00', location: 'Hala', sportType: 'tenis' },
+      ];
+      const { req, res } = createReqRes({
+        method: 'POST',
+        body: { events },
+        token: team1Token,
+      });
+      await handler(req, res);
+      expect(res.getStatus()).toBe(201);
+      const data = res.getJson();
+      expect(data.success).toBe(true);
+      expect(data.count).toBe(2);
+      expect(data.ids).toHaveLength(2);
+
+      // Verify events in team
+      const teamEvents = await mockRedisInstance.smembers('team:team-1:events');
+      expect(teamEvents).toContain(data.ids[0]);
+      expect(teamEvents).toContain(data.ids[1]);
+    });
+  });
 });
+

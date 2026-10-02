@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createAccessToken } from './utils/auth.js';
+import { createAccessToken } from '../../api/_utils/auth.js';
 
 class MockRedis {
   data = new Map<string, any>();
@@ -125,7 +125,7 @@ describe('API /api/users handler', () => {
     mockRedisInstance.data.clear();
     mockRedisInstance.sets.clear();
 
-    const mod = await import('./users.js');
+    const mod = await import('../../api/users.js');
     handler = mod.default;
   });
 

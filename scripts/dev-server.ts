@@ -30,22 +30,20 @@ function wrapHandler(handlerModule: any) {
 }
 
 async function start() {
-  // Dynamically import the API handlers (after env vars are loaded)
+  // Dynamically import the consolidated API handlers (after env vars are loaded)
   const usersHandler = await import('../api/users.js');
   const eventsHandler = await import('../api/events.js');
-  const eventsBatchHandler = await import('../api/events-batch.js');
   const attendanceHandler = await import('../api/attendance.js');
   const photosHandler = await import('../api/photos.js');
   const bankAccountsHandler = await import('../api/bank-accounts.js');
   const sportConfigsHandler = await import('../api/sport-configs.js');
   const issuesHandler = await import('../api/issues.js');
   const authHandler = await import('../api/auth.js');
-  const teamsHandler = await import('../api/teams.js');
 
   app.all('/api/auth', wrapHandler(authHandler));
-  app.all('/api/teams', wrapHandler(teamsHandler));
+  app.all('/api/teams', wrapHandler(authHandler));
   app.all('/api/users', wrapHandler(usersHandler));
-  app.all('/api/events-batch', wrapHandler(eventsBatchHandler));
+  app.all('/api/events-batch', wrapHandler(eventsHandler));
   app.all('/api/events', wrapHandler(eventsHandler));
   app.all('/api/attendance', wrapHandler(attendanceHandler));
   app.all('/api/photos', wrapHandler(photosHandler));

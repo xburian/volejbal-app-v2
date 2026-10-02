@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Redis } from '@upstash/redis';
-import { getAuthTeam } from './utils/auth.js';
+import { getAuthTeam } from './_utils/auth.js';
 
 const redis = new Redis({
   url: process.env.volejbal_KV_REST_API_URL!,
@@ -8,6 +8,7 @@ const redis = new Redis({
 });
 
 const DEFAULT_TEAM_ID = 'team-nahravame-si';
+const MAX_BATCH_SIZE = 26;
 
 /** Allowed sport types — anything else falls back to 'volejbal' */
 const VALID_SPORT_TYPES = ['volejbal', 'tenis', 'badminton'] as const;
@@ -123,9 +124,13 @@ async function handleGet(res: ApiResponse, teamId: string) {
   return res.status(200).json(hydratedEvents);
 }
 
-// POST /api/events — create event for team
+// POST /api/events or /api/events-batch — create event(s) for team
 async function handlePost(req: ApiRequest, res: ApiResponse, teamId: string) {
-  const { participants: _participants, ...eventData } = req.body;
+  if (req.body?.events || Array.isArray(req.body) || (req.url && req.url.includes('events-batch'))) {
+    return await handleBatchPost(req, res, teamId);
+  }
+
+  const { participants: _participants, ...eventData } = req.body || {};
 
   if (!eventData.id) {
     eventData.id = generateId();
@@ -143,6 +148,62 @@ async function handlePost(req: ApiRequest, res: ApiResponse, teamId: string) {
   await redis.sadd('events:all', eventData.id);
 
   return res.status(201).json({ success: true, id: eventData.id });
+}
+
+// POST /api/events (batch mode) — create multiple events in an atomic pipeline
+async function handleBatchPost(req: ApiRequest, res: ApiResponse, teamId: string) {
+  const events = req.body?.events || (Array.isArray(req.body) ? req.body : null);
+
+  // Validation
+  if (!events || !Array.isArray(events)) {
+    return res.status(400).json({ error: 'Request body must contain an "events" array' });
+  }
+
+  if (events.length === 0) {
+    return res.status(400).json({ error: 'Events array must not be empty' });
+  }
+
+  if (events.length > MAX_BATCH_SIZE) {
+    return res.status(400).json({
+      error: `Batch size exceeds maximum of ${MAX_BATCH_SIZE} events`,
+      maxAllowed: MAX_BATCH_SIZE,
+      received: events.length,
+    });
+  }
+
+  // Normalize and validate each event
+  const normalizedEvents: any[] = [];
+  for (const event of events) {
+    const { participants: _participants, ...eventData } = event;
+
+    if (!eventData.id) {
+      eventData.id = generateId();
+    }
+
+    eventData.teamId = teamId;
+
+    // Normalize invalid sport types
+    if (eventData.sportType && !VALID_SPORT_TYPES.includes(eventData.sportType)) {
+      eventData.sportType = 'volejbal';
+    }
+
+    normalizedEvents.push(eventData);
+  }
+
+  // Atomic pipeline — all or nothing
+  const pipeline = redis.pipeline();
+  const ids: string[] = [];
+
+  for (const eventData of normalizedEvents) {
+    pipeline.set(`event:${eventData.id}`, JSON.stringify(eventData));
+    pipeline.sadd(`team:${teamId}:events`, eventData.id);
+    pipeline.sadd('events:all', eventData.id);
+    ids.push(eventData.id);
+  }
+
+  await pipeline.exec();
+
+  return res.status(201).json({ success: true, ids, count: ids.length });
 }
 
 // PUT /api/events — update event

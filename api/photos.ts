@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Redis } from '@upstash/redis';
-import { getAuthTeam } from './utils/auth.js';
+import { getAuthTeam } from './_utils/auth.js';
 
 const redis = new Redis({
   url: process.env.volejbal_KV_REST_API_URL!,

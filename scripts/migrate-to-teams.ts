@@ -8,7 +8,7 @@
 import { config } from 'dotenv';
 import { resolve } from 'node:path';
 import { Redis } from '@upstash/redis';
-import { hashPassword } from '../api/utils/auth.js';
+import { hashPassword } from '../api/_utils/auth.js';
 
 // Load .env.local
 config({ path: resolve(process.cwd(), '.env.local') });
