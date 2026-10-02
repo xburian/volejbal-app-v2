@@ -1,7 +1,13 @@
 import crypto from 'node:crypto';
 
 function getSecret(): string {
-  return process.env.AUTH_SECRET || process.env.volejbal_KV_REST_API_TOKEN || 'fallback-dev-secret-do-not-use-in-production';
+  return (
+    process.env.AUTH_SECRET ||
+    process.env.volejbal_KV_REST_API_TOKEN ||
+    process.env.KV_REST_API_TOKEN ||
+    process.env.UPSTASH_REDIS_REST_TOKEN ||
+    'fallback-dev-secret-do-not-use-in-production'
+  );
 }
 
 /**

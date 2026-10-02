@@ -55,7 +55,8 @@ async function start() {
   app.listen(PORT, () => {
     console.log(`🚀 Local API server running on http://localhost:${PORT}`);
     console.log(`   Routes: /api/auth, /api/teams, /api/users, /api/events, /api/events-batch, /api/attendance, /api/photos, /api/bank-accounts, /api/sport-configs`);
-    console.log(`   Redis: ${process.env.volejbal_KV_REST_API_URL ? '✅ connected' : '❌ missing volejbal_KV_REST_API_URL'}`);
+    const hasRedis = Boolean(process.env.volejbal_KV_REST_API_URL || process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL);
+    console.log(`   Redis: ${hasRedis ? '✅ connected' : '❌ missing volejbal_KV_REST_API_URL / KV_REST_API_URL in .env.local'}`);
   });
 }
 

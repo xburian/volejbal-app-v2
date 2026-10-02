@@ -10,9 +10,19 @@ import {
   checkRateLimit,
 } from './_utils/auth.js';
 
+const redisUrl =
+  process.env.volejbal_KV_REST_API_URL ||
+  process.env.KV_REST_API_URL ||
+  process.env.UPSTASH_REDIS_REST_URL;
+
+const redisToken =
+  process.env.volejbal_KV_REST_API_TOKEN ||
+  process.env.KV_REST_API_TOKEN ||
+  process.env.UPSTASH_REDIS_REST_TOKEN;
+
 const redis = new Redis({
-  url: process.env.volejbal_KV_REST_API_URL!,
-  token: process.env.volejbal_KV_REST_API_TOKEN!,
+  url: redisUrl || 'https://placeholder.upstash.io',
+  token: redisToken || 'placeholder',
 });
 
 interface ApiRequest extends IncomingMessage {
@@ -30,6 +40,18 @@ const REFRESH_TOKEN_TTL_SECONDS = 180 * 24 * 60 * 60; // 180 days
 export const DEFAULT_TEAM_ID = 'team-nahravame-si';
 export const DEFAULT_TEAM_NAME = 'nahravame-si';
 export const DEFAULT_TEAM_INITIAL_PASSWORD = '1234';
+
+function getParsedBody(req: ApiRequest): any {
+  if (!req.body) return {};
+  if (typeof req.body === 'string') {
+    try {
+      return JSON.parse(req.body);
+    } catch {
+      return {};
+    }
+  }
+  return req.body;
+}
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
   try {
@@ -82,7 +104,9 @@ async function handleGetTeams(res: ApiResponse) {
 
 // POST dispatcher for auth actions and team creation
 async function handlePost(req: ApiRequest, res: ApiResponse) {
-  const { action, name } = req.body || {};
+  const body = getParsedBody(req);
+  req.body = body;
+  const { action, name } = body;
 
   if (action === 'create-team' || (!action && name !== undefined) || (req.url && req.url.includes('teams'))) {
     return await handleCreateTeam(req, res);
@@ -104,7 +128,8 @@ async function handlePost(req: ApiRequest, res: ApiResponse) {
 
 // POST /api/teams or POST /api/auth { action: 'create-team', name, password }
 async function handleCreateTeam(req: ApiRequest, res: ApiResponse) {
-  const { name, password } = req.body || {};
+  const body = getParsedBody(req);
+  const { name, password } = body || {};
 
   if (!name || typeof name !== 'string' || !name.trim()) {
     return res.status(400).json({ error: 'Název týmu je povinný.' });
@@ -178,40 +203,59 @@ async function handleCreateTeam(req: ApiRequest, res: ApiResponse) {
  * Ensures the default team 'nahravame-si' exists and existing data is indexed
  */
 async function ensureDefaultTeam() {
-  const exists = await redis.get(`team:${DEFAULT_TEAM_ID}`);
-  if (!exists) {
-    const defaultTeam = {
-      id: DEFAULT_TEAM_ID,
-      name: DEFAULT_TEAM_NAME,
-      passwordHash: hashPassword(DEFAULT_TEAM_INITIAL_PASSWORD),
-      createdAt: new Date().toISOString(),
-    };
-    await redis.set(`team:${DEFAULT_TEAM_ID}`, JSON.stringify(defaultTeam));
-    await redis.sadd('teams:all', DEFAULT_TEAM_ID);
-  }
-
-  // Check if users:all exists and need to be mirrored to team-nahravame-si:users
-  const userCount = await redis.scard(`team:${DEFAULT_TEAM_ID}:users`);
-  if (userCount === 0) {
-    const legacyUserIds = await redis.smembers('users:all');
-    if (legacyUserIds && legacyUserIds.length > 0) {
-      await redis.sadd(`team:${DEFAULT_TEAM_ID}:users`, legacyUserIds[0], ...legacyUserIds.slice(1));
+  try {
+    const exists = await redis.get(`team:${DEFAULT_TEAM_ID}`);
+    if (!exists) {
+      const defaultTeam = {
+        id: DEFAULT_TEAM_ID,
+        name: DEFAULT_TEAM_NAME,
+        passwordHash: hashPassword(DEFAULT_TEAM_INITIAL_PASSWORD),
+        createdAt: new Date().toISOString(),
+      };
+      await redis.set(`team:${DEFAULT_TEAM_ID}`, JSON.stringify(defaultTeam));
+      await redis.sadd('teams:all', DEFAULT_TEAM_ID);
     }
-  }
 
-  // Check if events:all exists and need to be mirrored to team-nahravame-si:events
-  const eventCount = await redis.scard(`team:${DEFAULT_TEAM_ID}:events`);
-  if (eventCount === 0) {
-    const legacyEventIds = await redis.smembers('events:all');
-    if (legacyEventIds && legacyEventIds.length > 0) {
-      await redis.sadd(`team:${DEFAULT_TEAM_ID}:events`, legacyEventIds[0], ...legacyEventIds.slice(1));
+    // Safely mirror legacy users if needed
+    try {
+      const userCount = await redis.scard(`team:${DEFAULT_TEAM_ID}:users`);
+      if (userCount === 0) {
+        const legacyUserIds = await redis.smembers('users:all');
+        if (legacyUserIds && legacyUserIds.length > 0) {
+          for (let i = 0; i < legacyUserIds.length; i += 50) {
+            const chunk = legacyUserIds.slice(i, i + 50);
+            await redis.sadd(`team:${DEFAULT_TEAM_ID}:users`, chunk[0], ...chunk.slice(1));
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Lazy migration user mirroring warning:', e);
     }
+
+    // Safely mirror legacy events if needed
+    try {
+      const eventCount = await redis.scard(`team:${DEFAULT_TEAM_ID}:events`);
+      if (eventCount === 0) {
+        const legacyEventIds = await redis.smembers('events:all');
+        if (legacyEventIds && legacyEventIds.length > 0) {
+          for (let i = 0; i < legacyEventIds.length; i += 50) {
+            const chunk = legacyEventIds.slice(i, i + 50);
+            await redis.sadd(`team:${DEFAULT_TEAM_ID}:events`, chunk[0], ...chunk.slice(1));
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Lazy migration event mirroring warning:', e);
+    }
+  } catch (error) {
+    console.error('ensureDefaultTeam error:', error);
   }
 }
 
 // POST /api/auth { action: 'login', teamId, password }
 async function handleLogin(req: ApiRequest, res: ApiResponse) {
-  const { teamId, password } = req.body;
+  const body = getParsedBody(req);
+  const { teamId, password } = body;
   const ip = getClientIp(req);
 
   const allowed = await checkRateLimit(redis, ip, 10, 60);
@@ -223,6 +267,11 @@ async function handleLogin(req: ApiRequest, res: ApiResponse) {
     return res.status(400).json({ error: 'Vyberte tým a zadejte heslo.' });
   }
 
+  // Ensure default team exists if user is logging into it
+  if (teamId === DEFAULT_TEAM_ID) {
+    await ensureDefaultTeam();
+  }
+
   const rawTeam: any = await redis.get(`team:${teamId}`);
   if (!rawTeam) {
     return res.status(401).json({ error: 'Tým nebyl nalezen nebo heslo není správné.' });
@@ -230,7 +279,7 @@ async function handleLogin(req: ApiRequest, res: ApiResponse) {
 
   const team = typeof rawTeam === 'string' ? JSON.parse(rawTeam) : rawTeam;
 
-  if (!verifyPassword(password, team.passwordHash)) {
+  if (!team.passwordHash || !verifyPassword(password, team.passwordHash)) {
     return res.status(401).json({ error: 'Nesprávné heslo týmu.' });
   }
 
@@ -260,7 +309,8 @@ async function handleLogin(req: ApiRequest, res: ApiResponse) {
 
 // POST /api/auth { action: 'refresh', refreshToken }
 async function handleRefresh(req: ApiRequest, res: ApiResponse) {
-  const { refreshToken } = req.body;
+  const body = getParsedBody(req);
+  const { refreshToken } = body;
   if (!refreshToken || typeof refreshToken !== 'string') {
     return res.status(400).json({ error: 'Chybí refresh token.' });
   }
@@ -290,7 +340,8 @@ async function handleRefresh(req: ApiRequest, res: ApiResponse) {
 
 // POST /api/auth { action: 'logout', refreshToken }
 async function handleLogout(req: ApiRequest, res: ApiResponse) {
-  const { refreshToken } = req.body;
+  const body = getParsedBody(req);
+  const { refreshToken } = body;
   if (refreshToken) {
     const rawRecord: any = await redis.get(`refreshtoken:${refreshToken}`);
     if (rawRecord) {
@@ -312,7 +363,8 @@ async function handleChangePassword(req: ApiRequest, res: ApiResponse) {
     return res.status(401).json({ error: 'Neautorizováno. Přihlaste se prosím k týmu.' });
   }
 
-  const { oldPassword, newPassword } = req.body;
+  const body = getParsedBody(req);
+  const { oldPassword, newPassword } = body;
 
   if (!oldPassword || !newPassword) {
     return res.status(400).json({ error: 'Zadejte stávající i nové heslo.' });
