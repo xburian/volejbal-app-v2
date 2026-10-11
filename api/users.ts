@@ -2,8 +2,6 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { redis } from './_utils/redis.js';
 import { getAuthTeam } from './_utils/auth.js';
 
-const DEFAULT_TEAM_ID = 'team-nahravame-si';
-
 interface ApiRequest extends IncomingMessage {
   body: any;
   query: Record<string, string | string[]>;
@@ -43,15 +41,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
 // GET /api/users — list users for team (sorted, with lightweight photo URLs)
 async function handleGet(req: ApiRequest, res: ApiResponse, teamId: string) {
-  let userIds = await redis.smembers(`team:${teamId}:users`);
-
-  // Backward compatibility fallback for default team
-  if ((!userIds || userIds.length === 0) && teamId === DEFAULT_TEAM_ID) {
-    userIds = await redis.smembers('users:all');
-    if (userIds && userIds.length > 0) {
-      await redis.sadd(`team:${teamId}:users`, userIds[0], ...userIds.slice(1));
-    }
-  }
+  const userIds = await redis.smembers(`team:${teamId}:users`);
 
   if (!userIds || userIds.length === 0) {
     return res.status(200).json([]);
@@ -65,28 +55,14 @@ async function handleGet(req: ApiRequest, res: ApiResponse, teamId: string) {
 
   const users = results.filter(Boolean).map((r: any) => parseJson(r));
 
-  // Lazy migration: extract any remaining base64 photos AND assign teamId if missing
+  // Extract any remaining base64 photos into separate keys
   const migrationPipeline = redis.pipeline();
   let hasMigrations = false;
 
   for (const user of users) {
-    let modified = false;
-
-    // 1. Photo migration
     if (user.photoUrl && user.photoUrl.startsWith('data:')) {
       migrationPipeline.set(`photo:${user.id}`, user.photoUrl);
       user.photoUrl = `/api/photos?id=${user.id}&v=${Date.now()}`;
-      modified = true;
-    }
-
-    // 2. Team migration: assign teamId only if not already set
-    if (!user.teamId) {
-      user.teamId = teamId;
-      migrationPipeline.sadd(`team:${teamId}:users`, user.id);
-      modified = true;
-    }
-
-    if (modified) {
       migrationPipeline.set(`user:${user.id}`, JSON.stringify(user));
       hasMigrations = true;
     }
@@ -144,7 +120,6 @@ async function handlePost(req: ApiRequest, res: ApiResponse, teamId: string) {
 
   await redis.set(`user:${newUser.id}`, JSON.stringify(newUser));
   await redis.sadd(`team:${teamId}:users`, newUser.id);
-  await redis.sadd('users:all', newUser.id);
 
   return res.status(201).json(newUser);
 }
@@ -166,11 +141,11 @@ async function handlePut(req: ApiRequest, res: ApiResponse, teamId: string) {
 
   // Verify user belongs to this team
   const isMember = await redis.sismember(`team:${teamId}:users`, id);
-  if (!isMember && parsed.teamId && parsed.teamId !== teamId) {
+  if (!isMember) {
     return res.status(403).json({ error: 'Tento uživatel nepatří do vašeho týmu.' });
   }
 
-  const updatedUser = { ...parsed, ...updates, teamId: parsed.teamId || teamId };
+  const updatedUser = { ...parsed, ...updates, teamId };
 
   await redis.set(`user:${id}`, JSON.stringify(updatedUser));
   return res.status(200).json(updatedUser);
@@ -187,7 +162,6 @@ async function handleDelete(req: ApiRequest, res: ApiResponse, teamId: string) {
   // 1. Delete user from Redis sets
   await redis.del(`user:${id}`);
   await redis.srem(`team:${teamId}:users`, id);
-  await redis.srem('users:all', id);
 
   // 2. Delete user's photo
   await redis.del(`photo:${id}`);

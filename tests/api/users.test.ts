@@ -243,32 +243,58 @@ describe('API /api/users handler', () => {
     expect(teamUsers).not.toContain(user.id);
   });
 
-  it('lazily migrates legacy users without teamId on GET', async () => {
-    // Simulate legacy user in Redis without teamId
-    const legacyUser = { id: 'usr-legacy-1', name: 'Legacy Petr' };
-    await mockRedisInstance.set('user:usr-legacy-1', JSON.stringify(legacyUser));
-    await mockRedisInstance.sadd('users:all', 'usr-legacy-1');
+  it('strictly isolates users per team on GET', async () => {
+    // Create user in team 1
+    const { req: req1, res: res1 } = createReqRes({
+      method: 'POST',
+      body: { name: 'Team1 User' },
+      token: team1Token,
+    });
+    await handler(req1, res1);
 
-    // Default team token
-    const defaultTeamToken = createAccessToken({ teamId: 'team-nahravame-si', teamName: 'nahravame-si' });
+    // Create user in team 2
+    const { req: req2, res: res2 } = createReqRes({
+      method: 'POST',
+      body: { name: 'Team2 User' },
+      token: team2Token,
+    });
+    await handler(req2, res2);
 
-    // GET /api/users
-    const { req, res } = createReqRes({ method: 'GET', token: defaultTeamToken });
-    await handler(req, res);
-    expect(res.getStatus()).toBe(200);
+    // GET for team 1 should only return team 1's user
+    const { req: getReq1, res: getRes1 } = createReqRes({ method: 'GET', token: team1Token });
+    await handler(getReq1, getRes1);
+    expect(getRes1.getStatus()).toBe(200);
+    const users1 = getRes1.getJson();
+    expect(users1.length).toBe(1);
+    expect(users1[0].name).toBe('Team1 User');
 
-    const users = res.getJson();
-    const migrated = users.find((u: any) => u.id === 'usr-legacy-1');
-    expect(migrated).toBeDefined();
-    expect(migrated.teamId).toBe('team-nahravame-si');
+    // GET for team 2 should only return team 2's user
+    const { req: getReq2, res: getRes2 } = createReqRes({ method: 'GET', token: team2Token });
+    await handler(getReq2, getRes2);
+    expect(getRes2.getStatus()).toBe(200);
+    const users2 = getRes2.getJson();
+    expect(users2.length).toBe(1);
+    expect(users2[0].name).toBe('Team2 User');
+  });
 
-    // Verify Redis has persisted the teamId
-    const raw = await mockRedisInstance.get('user:usr-legacy-1');
-    const stored = JSON.parse(raw);
-    expect(stored.teamId).toBe('team-nahravame-si');
+  it('rejects updating a user that belongs to a different team with 403', async () => {
+    // Create user in team 1
+    const { req: createReq, res: createRes } = createReqRes({
+      method: 'POST',
+      body: { name: 'Team1 Player' },
+      token: team1Token,
+    });
+    await handler(createReq, createRes);
+    const user = createRes.getJson();
 
-    // Verify added to team:team-nahravame-si:users
-    const inSet = await mockRedisInstance.sismember('team:team-nahravame-si:users', 'usr-legacy-1');
-    expect(inSet).toBe(1);
+    // Try to update with team 2's token
+    const { req: updateReq, res: updateRes } = createReqRes({
+      method: 'PUT',
+      body: { id: user.id, name: 'Hacked Name' },
+      token: team2Token,
+    });
+    await handler(updateReq, updateRes);
+    expect(updateRes.getStatus()).toBe(403);
+    expect(updateRes.getJson().error).toBe('Tento uživatel nepatří do vašeho týmu.');
   });
 });

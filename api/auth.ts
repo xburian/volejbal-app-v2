@@ -201,42 +201,6 @@ async function ensureDefaultTeam() {
       await redis.set(`team:${DEFAULT_TEAM_ID}`, JSON.stringify(defaultTeam));
       await redis.sadd('teams:all', DEFAULT_TEAM_ID);
     }
-
-    // Safely mirror legacy users if needed
-    try {
-      const userCount = await redis.scard(`team:${DEFAULT_TEAM_ID}:users`);
-      if (userCount === 0) {
-        const legacyUserIds = await redis.smembers('users:all');
-        if (legacyUserIds && legacyUserIds.length > 0) {
-          for (let i = 0; i < legacyUserIds.length; i += 50) {
-            const chunk = legacyUserIds.slice(i, i + 50);
-            if (chunk.length > 0) {
-              await redis.sadd(`team:${DEFAULT_TEAM_ID}:users`, chunk[0], ...chunk.slice(1));
-            }
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('Lazy migration user mirroring warning:', e);
-    }
-
-    // Safely mirror legacy events if needed
-    try {
-      const eventCount = await redis.scard(`team:${DEFAULT_TEAM_ID}:events`);
-      if (eventCount === 0) {
-        const legacyEventIds = await redis.smembers('events:all');
-        if (legacyEventIds && legacyEventIds.length > 0) {
-          for (let i = 0; i < legacyEventIds.length; i += 50) {
-            const chunk = legacyEventIds.slice(i, i + 50);
-            if (chunk.length > 0) {
-              await redis.sadd(`team:${DEFAULT_TEAM_ID}:events`, chunk[0], ...chunk.slice(1));
-            }
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('Lazy migration event mirroring warning:', e);
-    }
   } catch (error) {
     console.error('ensureDefaultTeam error:', error);
   }

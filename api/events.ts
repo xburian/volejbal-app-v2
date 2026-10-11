@@ -2,7 +2,6 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { redis } from './_utils/redis.js';
 import { getAuthTeam } from './_utils/auth.js';
 
-const DEFAULT_TEAM_ID = 'team-nahravame-si';
 const MAX_BATCH_SIZE = 26;
 
 /** Allowed sport types — anything else falls back to 'volejbal' */
@@ -47,15 +46,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
 // GET /api/events — list all events for team with hydrated participants
 async function handleGet(res: ApiResponse, teamId: string) {
-  let eventIds = await redis.smembers(`team:${teamId}:events`);
-
-  // Backward compatibility fallback for default team
-  if ((!eventIds || eventIds.length === 0) && teamId === DEFAULT_TEAM_ID) {
-    eventIds = await redis.smembers('events:all');
-    if (eventIds && eventIds.length > 0) {
-      await redis.sadd(`team:${teamId}:events`, eventIds[0], ...eventIds.slice(1));
-    }
-  }
+  const eventIds = await redis.smembers(`team:${teamId}:events`);
 
   if (!eventIds || eventIds.length === 0) {
     return res.status(200).json([]);
@@ -67,29 +58,8 @@ async function handleGet(res: ApiResponse, teamId: string) {
   }
   const rawEvents = (await eventPipeline.exec()).filter(Boolean).map(parseJson);
 
-  // Lazy migration: assign teamId to legacy events if not already set
-  const migrationPipeline = redis.pipeline();
-  let hasMigrations = false;
-
-  for (const event of rawEvents) {
-    if (!event.teamId) {
-      event.teamId = teamId;
-      const { participants: _p, ...eventToSave } = event;
-      migrationPipeline.set(`event:${event.id}`, JSON.stringify(eventToSave));
-      migrationPipeline.sadd(`team:${teamId}:events`, event.id);
-      hasMigrations = true;
-    }
-  }
-
-  if (hasMigrations) {
-    await migrationPipeline.exec();
-  }
-
   // Fetch users of this team for name resolution
-  let userIds = await redis.smembers(`team:${teamId}:users`);
-  if ((!userIds || userIds.length === 0) && teamId === DEFAULT_TEAM_ID) {
-    userIds = await redis.smembers('users:all');
-  }
+  const userIds = await redis.smembers(`team:${teamId}:users`);
 
   const usersMap: Record<string, any> = {};
   if (userIds && userIds.length > 0) {
@@ -158,7 +128,6 @@ async function handlePost(req: ApiRequest, res: ApiResponse, teamId: string) {
 
   await redis.set(`event:${eventData.id}`, JSON.stringify(eventData));
   await redis.sadd(`team:${teamId}:events`, eventData.id);
-  await redis.sadd('events:all', eventData.id);
 
   return res.status(201).json({ success: true, id: eventData.id });
 }
@@ -210,7 +179,6 @@ async function handleBatchPost(req: ApiRequest, res: ApiResponse, teamId: string
   for (const eventData of normalizedEvents) {
     pipeline.set(`event:${eventData.id}`, JSON.stringify(eventData));
     pipeline.sadd(`team:${teamId}:events`, eventData.id);
-    pipeline.sadd('events:all', eventData.id);
     ids.push(eventData.id);
   }
 
@@ -236,11 +204,11 @@ async function handlePut(req: ApiRequest, res: ApiResponse, teamId: string) {
 
   // Verify ownership
   const isTeamEvent = await redis.sismember(`team:${teamId}:events`, eventData.id);
-  if (!isTeamEvent && parsed.teamId && parsed.teamId !== teamId) {
+  if (!isTeamEvent) {
     return res.status(403).json({ error: 'Tato událost nepatří do vašeho týmu.' });
   }
 
-  const updated = { ...parsed, ...eventData, teamId: parsed.teamId || teamId };
+  const updated = { ...parsed, ...eventData, teamId };
 
   // Remove keys explicitly set to null (e.g. winningTeam cleared between rounds)
   for (const key of Object.keys(updated)) {
@@ -264,7 +232,6 @@ async function handleDelete(req: ApiRequest, res: ApiResponse, teamId: string) {
   // 1. Delete event from sets and keys
   await redis.del(`event:${id}`);
   await redis.srem(`team:${teamId}:events`, id);
-  await redis.srem('events:all', id);
 
   // 2. Cascade delete attendance records for this event
   const attendanceKeys = await redis.smembers(`attendance:event:${id}`);

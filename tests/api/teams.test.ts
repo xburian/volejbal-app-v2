@@ -126,19 +126,23 @@ describe('API /api/teams handler', () => {
       expect(teams[0].passwordHash).toBeUndefined(); // Never expose hashes
     });
 
-    it('mirrors legacy users:all and events:all during lazy migration', async () => {
-      await mockRedisInstance.sadd('users:all', 'u1', 'u2');
-      await mockRedisInstance.sadd('events:all', 'e1', 'e2', 'e3');
+    it('does not overwrite existing default team if already present', async () => {
+      const existingDefault = {
+        id: 'team-nahravame-si',
+        name: 'nahravame-si',
+        passwordHash: 'custom-hash',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      };
+      await mockRedisInstance.set('team:team-nahravame-si', JSON.stringify(existingDefault));
+      await mockRedisInstance.sadd('teams:all', 'team-nahravame-si');
 
       const { req, res } = createReqRes({ method: 'GET' });
       await handler(req, res);
       expect(res.getStatus()).toBe(200);
 
-      const teamUsers = await mockRedisInstance.smembers('team:team-nahravame-si:users');
-      expect(teamUsers).toEqual(expect.arrayContaining(['u1', 'u2']));
-
-      const teamEvents = await mockRedisInstance.smembers('team:team-nahravame-si:events');
-      expect(teamEvents).toEqual(expect.arrayContaining(['e1', 'e2', 'e3']));
+      const raw = await mockRedisInstance.get('team:team-nahravame-si');
+      const team = JSON.parse(raw);
+      expect(team.passwordHash).toBe('custom-hash');
     });
 
     it('returns all existing teams without sensitive data', async () => {

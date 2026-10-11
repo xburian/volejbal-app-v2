@@ -271,43 +271,60 @@ describe('API /api/events handler', () => {
     });
   });
 
-  describe('Lazy TeamId Migration', () => {
-    it('lazily migrates legacy events without teamId on GET', async () => {
-      // Simulate legacy event in Redis without teamId
-      const legacyEvent = {
-        id: 'evt-legacy-1',
-        title: 'Starý trénink',
-        date: '2026-04-01',
-        time: '18:00',
-        location: 'Stará hala',
-        totalCost: 1000,
-        accountNumber: '123/0100',
-        sportType: 'volejbal',
-      };
-      await mockRedisInstance.set('event:evt-legacy-1', JSON.stringify(legacyEvent));
-      await mockRedisInstance.sadd('events:all', 'evt-legacy-1');
+  describe('Multi-Tenancy Isolation', () => {
+    it('strictly isolates events per team on GET', async () => {
+      // Create event in team 1
+      const { req: req1, res: res1 } = createReqRes({
+        method: 'POST',
+        body: { title: 'Team 1 Event', date: '2026-05-01', time: '18:00', sportType: 'volejbal' },
+        token: team1Token,
+      });
+      await handler(req1, res1);
 
-      // Default team token
-      const defaultTeamToken = createAccessToken({ teamId: 'team-nahravame-si', teamName: 'nahravame-si' });
+      // Create event in team 2
+      const { req: req2, res: res2 } = createReqRes({
+        method: 'POST',
+        body: { title: 'Team 2 Event', date: '2026-05-02', time: '19:00', sportType: 'volejbal' },
+        token: team2Token,
+      });
+      await handler(req2, res2);
 
-      // GET /api/events
-      const { req, res } = createReqRes({ method: 'GET', token: defaultTeamToken });
-      await handler(req, res);
-      expect(res.getStatus()).toBe(200);
+      // GET for team 1 should only return team 1's event
+      const { req: getReq1, res: getRes1 } = createReqRes({ method: 'GET', token: team1Token });
+      await handler(getReq1, getRes1);
+      expect(getRes1.getStatus()).toBe(200);
+      const events1 = getRes1.getJson();
+      expect(events1.length).toBe(1);
+      expect(events1[0].title).toBe('Team 1 Event');
 
-      const events = res.getJson();
-      const migrated = events.find((e: any) => e.id === 'evt-legacy-1');
-      expect(migrated).toBeDefined();
-      expect(migrated.teamId).toBe('team-nahravame-si');
+      // GET for team 2 should only return team 2's event
+      const { req: getReq2, res: getRes2 } = createReqRes({ method: 'GET', token: team2Token });
+      await handler(getReq2, getRes2);
+      expect(getRes2.getStatus()).toBe(200);
+      const events2 = getRes2.getJson();
+      expect(events2.length).toBe(1);
+      expect(events2[0].title).toBe('Team 2 Event');
+    });
 
-      // Verify Redis has persisted the teamId on the event
-      const raw = await mockRedisInstance.get('event:evt-legacy-1');
-      const stored = JSON.parse(raw);
-      expect(stored.teamId).toBe('team-nahravame-si');
+    it('rejects updating an event belonging to another team with 403', async () => {
+      // Create event in team 1
+      const { req: createReq, res: createRes } = createReqRes({
+        method: 'POST',
+        body: { title: 'Team 1 Event', date: '2026-05-01', time: '18:00', sportType: 'volejbal' },
+        token: team1Token,
+      });
+      await handler(createReq, createRes);
+      const eventId = createRes.getJson().id;
 
-      // Verify added to team:team-nahravame-si:events
-      const inSet = await mockRedisInstance.sismember('team:team-nahravame-si:events', 'evt-legacy-1');
-      expect(inSet).toBe(1);
+      // Try to update with team 2's token
+      const { req: updateReq, res: updateRes } = createReqRes({
+        method: 'PUT',
+        body: { id: eventId, title: 'Hacked Title' },
+        token: team2Token,
+      });
+      await handler(updateReq, updateRes);
+      expect(updateRes.getStatus()).toBe(403);
+      expect(updateRes.getJson().error).toBe('Tato událost nepatří do vašeho týmu.');
     });
   });
 });
