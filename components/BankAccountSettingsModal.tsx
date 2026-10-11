@@ -46,8 +46,8 @@ export const BankAccountSettingsModal: React.FC<BankAccountSettingsModalProps> =
 
   // Sport config editing
   const [editingSport, setEditingSport] = useState<string | null>(null);
-  const [tempMaxPlayers, setTempMaxPlayers] = useState(0);
-  const [tempDefaultCost, setTempDefaultCost] = useState(0);
+  const [tempMaxPlayers, setTempMaxPlayers] = useState('0');
+  const [tempDefaultCost, setTempDefaultCost] = useState('0');
 
   // Team password change
   const [isChangingTeamPassword, setIsChangingTeamPassword] = useState(false);
@@ -221,8 +221,10 @@ export const BankAccountSettingsModal: React.FC<BankAccountSettingsModalProps> =
   };
 
   const handleSaveSportConfig = async (type: string) => {
+    const maxPlayersNum = Math.max(2, Number(tempMaxPlayers) || 2);
+    const defaultCostNum = Math.max(0, Number(tempDefaultCost) || 0);
     const updated = sportConfigs.map(c =>
-      c.type === type ? { ...c, maxPlayers: tempMaxPlayers, defaultCost: tempDefaultCost } : c
+      c.type === type ? { ...c, maxPlayers: maxPlayersNum, defaultCost: defaultCostNum } : c
     );
     setIsLoading(true);
     setError(null);
@@ -522,22 +524,26 @@ export const BankAccountSettingsModal: React.FC<BankAccountSettingsModalProps> =
                           <div>
                             <label className="block text-xs text-slate-500 mb-0.5">Max hráčů</label>
                             <input
-                              type="number"
-                              min="2"
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              placeholder="2"
                               value={tempMaxPlayers}
-                              onChange={e => setTempMaxPlayers(Number(e.target.value))}
-                              className="w-full px-2 py-1 border border-blue-300 rounded text-sm focus:ring-1 focus:ring-blue-200 outline-none"
+                              onChange={e => setTempMaxPlayers(e.target.value.replace(/\D/g, ''))}
+                              className="w-full px-2 py-1 border border-blue-300 rounded text-sm focus:ring-1 focus:ring-blue-200 outline-none placeholder:text-slate-300"
                               data-testid={`sport-max-players-input-${config.type}`}
                             />
                           </div>
                           <div>
                             <label className="block text-xs text-slate-500 mb-0.5">Výchozí cena (Kč)</label>
                             <input
-                              type="number"
-                              min="0"
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              placeholder="0"
                               value={tempDefaultCost}
-                              onChange={e => setTempDefaultCost(Number(e.target.value))}
-                              className="w-full px-2 py-1 border border-blue-300 rounded text-sm focus:ring-1 focus:ring-blue-200 outline-none"
+                              onChange={e => setTempDefaultCost(e.target.value.replace(/\D/g, ''))}
+                              className="w-full px-2 py-1 border border-blue-300 rounded text-sm focus:ring-1 focus:ring-blue-200 outline-none placeholder:text-slate-300"
                               data-testid={`sport-default-cost-input-${config.type}`}
                             />
                           </div>
@@ -571,8 +577,8 @@ export const BankAccountSettingsModal: React.FC<BankAccountSettingsModalProps> =
                         <button
                           onClick={() => {
                             setEditingSport(config.type);
-                            setTempMaxPlayers(config.maxPlayers);
-                            setTempDefaultCost(config.defaultCost);
+                            setTempMaxPlayers(String(config.maxPlayers));
+                            setTempDefaultCost(String(config.defaultCost));
                           }}
                           className="text-slate-400 hover:text-blue-600 p-1 rounded transition-colors"
                           data-testid={`sport-edit-btn-${config.type}`}

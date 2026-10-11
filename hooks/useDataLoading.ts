@@ -12,20 +12,21 @@ const REFRESH_THROTTLE_MS = 30_000; // 30 seconds
 export function useDataLoading({ currentUser }: UseDataLoadingProps) {
   const [events, setEvents] = useState<SportEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [unpaidDebts, setUnpaidDebts] = useState<DebtItem[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [sportConfigs, setSportConfigs] = useState<SportConfig[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const lastFetchedAt = useRef<number>(0);
 
-  const loadEvents = useCallback(async () => {
-    setIsLoading(true);
+  const loadEvents = useCallback(async (isBackground = false) => {
+    if (!isBackground) setIsLoading(true);
     try {
       setEvents((await storage.getEvents()) ?? []);
     } catch (error) {
       console.error("Failed to load events", error);
     } finally {
-      setIsLoading(false);
+      if (!isBackground) setIsLoading(false);
     }
   }, []);
 
@@ -53,15 +54,26 @@ export function useDataLoading({ currentUser }: UseDataLoadingProps) {
     }
   }, []);
 
-  const refreshAll = useCallback(async () => {
+  const refreshAll = useCallback(async (isBackground: boolean | unknown = false) => {
+    const isBg = isBackground === true;
     lastFetchedAt.current = Date.now();
-    await Promise.all([loadEvents(), loadUsers(), loadBankAccounts(), loadSportConfigs()]);
+    if (isBg) setIsRefreshing(true);
+    try {
+      await Promise.all([
+        loadEvents(isBg),
+        loadUsers(),
+        loadBankAccounts(),
+        loadSportConfigs(),
+      ]);
+    } finally {
+      if (isBg) setIsRefreshing(false);
+    }
   }, [loadEvents, loadUsers, loadBankAccounts, loadSportConfigs]);
 
   // Initial load on login
   useEffect(() => {
     if (!currentUser) return;
-    refreshAll();
+    refreshAll(false);
   }, [currentUser, refreshAll]);
 
   // Refetch when tab becomes visible again (throttled)
@@ -72,7 +84,7 @@ export function useDataLoading({ currentUser }: UseDataLoadingProps) {
       if (document.visibilityState === 'visible') {
         const elapsed = Date.now() - lastFetchedAt.current;
         if (elapsed >= REFRESH_THROTTLE_MS) {
-          refreshAll();
+          refreshAll(true);
         }
       }
     };
@@ -124,6 +136,7 @@ export function useDataLoading({ currentUser }: UseDataLoadingProps) {
   return {
     events,
     isLoading,
+    isRefreshing,
     unpaidDebts,
     bankAccounts,
     setBankAccounts,

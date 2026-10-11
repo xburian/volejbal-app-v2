@@ -190,47 +190,16 @@ async function handleCreateTeam(req: ApiRequest, res: ApiResponse) {
 async function ensureDefaultTeam() {
   try {
     const exists = await redis.get(`team:${DEFAULT_TEAM_ID}`);
-    if (!exists) {
+    const parsed = exists ? (typeof exists === 'string' ? JSON.parse(exists) : exists) : null;
+    if (!parsed || !parsed.passwordHash) {
       const defaultTeam = {
         id: DEFAULT_TEAM_ID,
         name: DEFAULT_TEAM_NAME,
         passwordHash: hashPassword(DEFAULT_TEAM_INITIAL_PASSWORD),
-        createdAt: new Date().toISOString(),
+        createdAt: parsed?.createdAt || new Date().toISOString(),
       };
       await redis.set(`team:${DEFAULT_TEAM_ID}`, JSON.stringify(defaultTeam));
       await redis.sadd('teams:all', DEFAULT_TEAM_ID);
-    }
-
-    // Safely mirror legacy users if needed
-    try {
-      const userCount = await redis.scard(`team:${DEFAULT_TEAM_ID}:users`);
-      if (userCount === 0) {
-        const legacyUserIds = await redis.smembers('users:all');
-        if (legacyUserIds && legacyUserIds.length > 0) {
-          for (let i = 0; i < legacyUserIds.length; i += 50) {
-            const chunk = legacyUserIds.slice(i, i + 50);
-            await redis.sadd(`team:${DEFAULT_TEAM_ID}:users`, chunk[0], ...chunk.slice(1));
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('Lazy migration user mirroring warning:', e);
-    }
-
-    // Safely mirror legacy events if needed
-    try {
-      const eventCount = await redis.scard(`team:${DEFAULT_TEAM_ID}:events`);
-      if (eventCount === 0) {
-        const legacyEventIds = await redis.smembers('events:all');
-        if (legacyEventIds && legacyEventIds.length > 0) {
-          for (let i = 0; i < legacyEventIds.length; i += 50) {
-            const chunk = legacyEventIds.slice(i, i + 50);
-            await redis.sadd(`team:${DEFAULT_TEAM_ID}:events`, chunk[0], ...chunk.slice(1));
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('Lazy migration event mirroring warning:', e);
     }
   } catch (error) {
     console.error('ensureDefaultTeam error:', error);
@@ -240,7 +209,8 @@ async function ensureDefaultTeam() {
 // POST /api/auth { action: 'login', teamId, password }
 async function handleLogin(req: ApiRequest, res: ApiResponse) {
   const body = getParsedBody(req);
-  const { teamId, password } = body;
+  const { password } = body;
+  let teamId = body.teamId;
   const ip = getClientIp(req);
 
   const allowed = await checkRateLimit(redis, ip, 10, 60);
@@ -248,16 +218,43 @@ async function handleLogin(req: ApiRequest, res: ApiResponse) {
     return res.status(429).json({ error: 'Příliš mnoho pokusů o přihlášení. Zkuste to za minutu.' });
   }
 
+  // Support login using teamName or name if teamId not provided
+  if (!teamId && (body.teamName || body.name)) {
+    teamId = body.teamName || body.name;
+  }
+
   if (!teamId || !password) {
     return res.status(400).json({ error: 'Vyberte tým a zadejte heslo.' });
   }
 
-  // Ensure default team exists if user is logging into it
-  if (teamId === DEFAULT_TEAM_ID) {
+  // Normalize default team identifier
+  if (teamId === 'nahravame-si' || teamId === DEFAULT_TEAM_ID) {
+    teamId = DEFAULT_TEAM_ID;
     await ensureDefaultTeam();
   }
 
-  const rawTeam: any = await redis.get(`team:${teamId}`);
+  let rawTeam: any = await redis.get(`team:${teamId}`);
+
+  // If not found by direct teamId key, try finding by name (case-insensitive)
+  if (!rawTeam) {
+    const allTeamIds = await redis.smembers('teams:all');
+    if (allTeamIds && allTeamIds.length > 0) {
+      const pipe = redis.pipeline();
+      for (const id of allTeamIds) {
+        pipe.get(`team:${id}`);
+      }
+      const teams = await pipe.exec();
+      for (const t of teams) {
+        if (t) {
+          const parsed = typeof t === 'string' ? JSON.parse(t) : t;
+          if (parsed.name && parsed.name.toLowerCase() === String(teamId).trim().toLowerCase()) {
+            rawTeam = parsed;
+            break;
+          }
+        }
+      }
+    }
+  }
   if (!rawTeam) {
     return res.status(401).json({ error: 'Tým nebyl nalezen nebo heslo není správné.' });
   }

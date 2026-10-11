@@ -3,6 +3,8 @@ import crypto from 'node:crypto';
 function getSecret(): string {
   return (
     process.env.AUTH_SECRET ||
+    process.env.JWT_SECRET ||
+    process.env.VOLEJBAL_KV_REST_API_TOKEN ||
     process.env.volejbal_KV_REST_API_TOKEN ||
     process.env.KV_REST_API_TOKEN ||
     process.env.UPSTASH_REDIS_REST_TOKEN ||

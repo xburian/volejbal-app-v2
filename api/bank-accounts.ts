@@ -2,8 +2,6 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { getAuthTeam } from './_utils/auth.js';
 import { redis } from './_utils/redis.js';
 
-const DEFAULT_TEAM_ID = 'team-nahravame-si';
-
 interface ApiRequest extends IncomingMessage {
   body: any;
   query: Record<string, string | string[]>;
@@ -39,10 +37,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
 // GET /api/bank-accounts — list bank accounts belonging to this team's members
 async function handleGet(res: ApiResponse, teamId: string) {
-  let teamUserIds = await redis.smembers(`team:${teamId}:users`);
-  if ((!teamUserIds || teamUserIds.length === 0) && teamId === DEFAULT_TEAM_ID) {
-    teamUserIds = await redis.smembers('users:all');
-  }
+  const teamUserIds = await redis.smembers(`team:${teamId}:users`);
 
   if (!teamUserIds || teamUserIds.length === 0) {
     return res.status(200).json([]);
@@ -93,7 +88,7 @@ async function handlePost(req: ApiRequest, res: ApiResponse, teamId: string) {
 
   // Verify user belongs to this team
   const isMember = await redis.sismember(`team:${teamId}:users`, userId);
-  if (!isMember && teamId !== DEFAULT_TEAM_ID) {
+  if (!isMember) {
     return res.status(403).json({ error: 'Uživatel nepatří do vašeho týmu.' });
   }
 

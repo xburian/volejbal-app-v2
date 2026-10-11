@@ -215,6 +215,38 @@ describe('API /api/auth handler', () => {
       expect(session.teamId).toBe('team-nahravame-si');
     });
 
+    it('logs in successfully with teamId alias nahravame-si and teamName', async () => {
+      // 1. Using teamId: 'nahravame-si'
+      const { req: req1, res: res1 } = createReqRes({
+        body: { action: 'login', teamId: 'nahravame-si', password: '1234' },
+      });
+      await handler(req1, res1);
+      expect(res1.getStatus()).toBe(200);
+      expect(res1.getJson().team.id).toBe('team-nahravame-si');
+
+      // 2. Using teamName: 'nahravame-si'
+      const { req: req2, res: res2 } = createReqRes({
+        body: { action: 'login', teamName: 'nahravame-si', password: '1234' },
+      });
+      await handler(req2, res2);
+      expect(res2.getStatus()).toBe(200);
+      expect(res2.getJson().team.id).toBe('team-nahravame-si');
+    });
+
+    it('auto-seeds default team if not already in Redis on login', async () => {
+      // Clear Redis completely
+      mockRedisInstance.data.clear();
+      mockRedisInstance.sets.clear();
+
+      const { req, res } = createReqRes({
+        body: { action: 'login', teamId: 'nahravame-si', password: '1234' },
+      });
+      await handler(req, res);
+      expect(res.getStatus()).toBe(200);
+      expect(res.getJson().team.id).toBe('team-nahravame-si');
+      expect(res.getJson().team.name).toBe('nahravame-si');
+    });
+
     it('enforces rate limit after exceeding max attempts', async () => {
       for (let i = 0; i < 10; i++) {
         const { req, res } = createReqRes({

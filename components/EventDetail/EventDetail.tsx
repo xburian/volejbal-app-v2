@@ -36,15 +36,23 @@ export const EventDetail: React.FC<EventDetailProps> = ({
   onUpdate,
   onDelete,
 }) => {
-  // ── Cost editing state (small enough to stay inline) ──
+  // ── Cost, location & time editing state (small enough to stay inline) ──
   const [isEditingCost, setIsEditingCost] = useState(false);
   const [tempTotalCost, setTempTotalCost] = useState(String(event.totalCost));
+  const [isEditingLocation, setIsEditingLocation] = useState(false);
+  const [tempLocation, setTempLocation] = useState(event.location);
+  const [isEditingTime, setIsEditingTime] = useState(false);
+  const [tempTime, setTempTime] = useState(event.time);
   const [isCopied, setIsCopied] = useState(false);
 
   useEffect(() => {
     setTempTotalCost(String(event.totalCost));
     setIsEditingCost(false);
-  }, [event.id, event.totalCost]);
+    setTempLocation(event.location);
+    setIsEditingLocation(false);
+    setTempTime(event.time);
+    setIsEditingTime(false);
+  }, [event.id, event.totalCost, event.location, event.time]);
 
   // ── Resolve sport config ──
   const sportConfig = useMemo(() => {
@@ -115,6 +123,34 @@ export const EventDetail: React.FC<EventDetailProps> = ({
     setIsEditingCost(false);
   };
 
+  // ── Location handlers ──
+  const handleSaveLocation = () => {
+    const trimmed = tempLocation.trim();
+    if (trimmed) {
+      onUpdate({ ...event, location: trimmed });
+    }
+    setIsEditingLocation(false);
+  };
+
+  const handleCancelLocationEdit = () => {
+    setTempLocation(event.location);
+    setIsEditingLocation(false);
+  };
+
+  // ── Time handlers ──
+  const handleSaveTime = () => {
+    const trimmed = tempTime.trim();
+    if (trimmed && trimmed !== event.time) {
+      onUpdate({ ...event, time: trimmed });
+    }
+    setIsEditingTime(false);
+  };
+
+  const handleCancelTimeEdit = () => {
+    setTempTime(event.time);
+    setIsEditingTime(false);
+  };
+
   const handleBankAccountChange = (value: string) => {
     const selected = bankAccounts.find(a => a.id === value);
     if (selected) {
@@ -164,6 +200,18 @@ export const EventDetail: React.FC<EventDetailProps> = ({
           onStartEditCost={() => setIsEditingCost(true)}
           onSaveCost={handleSaveCost}
           onCancelCostEdit={handleCancelCostEdit}
+          isEditingTime={isEditingTime}
+          tempTime={tempTime}
+          onTempTimeChange={setTempTime}
+          onStartEditTime={() => setIsEditingTime(true)}
+          onSaveTime={handleSaveTime}
+          onCancelTimeEdit={handleCancelTimeEdit}
+          isEditingLocation={isEditingLocation}
+          tempLocation={tempLocation}
+          onTempLocationChange={setTempLocation}
+          onStartEditLocation={() => setIsEditingLocation(true)}
+          onSaveLocation={handleSaveLocation}
+          onCancelLocationEdit={handleCancelLocationEdit}
           onDelete={onDelete}
         />
       </ErrorBoundary>
