@@ -12,7 +12,8 @@ export class MockRedis {
   private saveDebounceTimer: NodeJS.Timeout | null = null;
 
   constructor(options?: { persistPath?: string }) {
-    if (options?.persistPath) {
+    const isServerless = typeof process !== 'undefined' && Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+    if (options?.persistPath && !isServerless) {
       this.persistPath = options.persistPath;
       this.loadFromFile();
     }
