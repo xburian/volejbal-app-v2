@@ -1,13 +1,14 @@
 import React, { useState, useRef } from 'react';
-import { BankAccount, User, SportConfig, SportType, VALID_SPORT_TYPES, SPORT_EMOJI, maskAccountNumber } from '../types';
+import { BankAccount, User, SportConfig, SportType, VALID_SPORT_TYPES, SPORT_EMOJI, maskAccountNumber, Team } from '../types';
 import * as storage from '../services/storage';
-import { X, Landmark, UserCircle, Loader2, AlertTriangle, Sparkles, Camera, Pencil, Check, Trash2, Settings as Settings2Icon, Dumbbell, Ticket, Zap } from 'lucide-react';
+import { X, Landmark, UserCircle, Loader2, AlertTriangle, Sparkles, Camera, Pencil, Check, Trash2, Settings as Settings2Icon, Dumbbell, Ticket, Zap, ShieldCheck } from 'lucide-react';
 
 interface BankAccountSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentUser: User;
   bankAccounts: BankAccount[];
+  currentTeam?: Team | null;
   onBankAccountsChange: (accounts: BankAccount[]) => void;
   onUserUpdate: (user: User) => void;
   onShowChangelog?: () => void;
@@ -21,6 +22,7 @@ export const BankAccountSettingsModal: React.FC<BankAccountSettingsModalProps> =
   onClose,
   currentUser,
   bankAccounts,
+  currentTeam,
   onBankAccountsChange,
   onUserUpdate,
   onShowChangelog,
@@ -46,6 +48,48 @@ export const BankAccountSettingsModal: React.FC<BankAccountSettingsModalProps> =
   const [editingSport, setEditingSport] = useState<string | null>(null);
   const [tempMaxPlayers, setTempMaxPlayers] = useState(0);
   const [tempDefaultCost, setTempDefaultCost] = useState(0);
+
+  // Team password change
+  const [isChangingTeamPassword, setIsChangingTeamPassword] = useState(false);
+  const [currentTeamPassword, setCurrentTeamPassword] = useState('');
+  const [newTeamPassword, setNewTeamPassword] = useState('');
+  const [confirmTeamPassword, setConfirmTeamPassword] = useState('');
+  const [teamPasswordError, setTeamPasswordError] = useState<string | null>(null);
+  const [teamPasswordSuccess, setTeamPasswordSuccess] = useState<string | null>(null);
+  const [isSavingTeamPassword, setIsSavingTeamPassword] = useState(false);
+
+  const handleChangeTeamPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTeamPasswordError(null);
+    setTeamPasswordSuccess(null);
+
+    if (!currentTeamPassword) {
+      setTeamPasswordError('Zadejte stávající heslo týmu.');
+      return;
+    }
+    if (newTeamPassword.length < 3) {
+      setTeamPasswordError('Nové heslo musí mít alespoň 3 znaky.');
+      return;
+    }
+    if (newTeamPassword !== confirmTeamPassword) {
+      setTeamPasswordError('Nová hesla se neshodují.');
+      return;
+    }
+
+    setIsSavingTeamPassword(true);
+    try {
+      await storage.changeTeamPassword(currentTeamPassword, newTeamPassword);
+      setTeamPasswordSuccess('Heslo týmu bylo úspěšně změněno.');
+      setCurrentTeamPassword('');
+      setNewTeamPassword('');
+      setConfirmTeamPassword('');
+      setIsChangingTeamPassword(false);
+    } catch (err: any) {
+      setTeamPasswordError(err.message || 'Chyba při změně hesla.');
+    } finally {
+      setIsSavingTeamPassword(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -539,6 +583,107 @@ export const BankAccountSettingsModal: React.FC<BankAccountSettingsModalProps> =
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Team Security Section */}
+          {currentTeam && (
+            <div className="border-t border-slate-100 pt-6">
+              <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                <ShieldCheck size={18} className="text-blue-600" />
+                Zabezpečení týmu
+              </h3>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <span className="text-xs text-slate-500 font-medium">Aktivní tým:</span>
+                    <p className="font-bold text-slate-800 text-sm">🏐 {currentTeam.name}</p>
+                  </div>
+                  {!isChangingTeamPassword && (
+                    <button
+                      type="button"
+                      onClick={() => { setIsChangingTeamPassword(true); setTeamPasswordError(null); setTeamPasswordSuccess(null); }}
+                      className="text-xs text-blue-600 hover:text-blue-700 font-semibold px-3 py-1.5 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors"
+                    >
+                      Změnit heslo týmu
+                    </button>
+                  )}
+                </div>
+
+                {teamPasswordSuccess && (
+                  <div className="mb-3 p-2.5 bg-green-50 border border-green-200 rounded-lg text-green-700 text-xs flex items-center gap-2">
+                    <Check size={14} className="text-green-600 shrink-0" />
+                    <span>{teamPasswordSuccess}</span>
+                  </div>
+                )}
+
+                {teamPasswordError && (
+                  <div className="mb-3 p-2.5 bg-red-50 border border-red-200 rounded-lg text-red-700 text-xs flex items-center gap-2">
+                    <AlertTriangle size={14} className="text-red-500 shrink-0" />
+                    <span>{teamPasswordError}</span>
+                  </div>
+                )}
+
+                {isChangingTeamPassword && (
+                  <form onSubmit={handleChangeTeamPassword} className="space-y-3 pt-2 border-t border-slate-200">
+                    <div>
+                      <label className="block text-xs text-slate-600 mb-1">Stávající heslo týmu</label>
+                      <input
+                        type="password"
+                        value={currentTeamPassword}
+                        onChange={e => setCurrentTeamPassword(e.target.value)}
+                        placeholder="Zadejte stávající heslo..."
+                        className="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        autoFocus
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-600 mb-1">Nové heslo týmu (min. 3 znaky)</label>
+                      <input
+                        type="password"
+                        value={newTeamPassword}
+                        onChange={e => setNewTeamPassword(e.target.value)}
+                        placeholder="Nové heslo..."
+                        className="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-600 mb-1">Potvrzení nového hesla</label>
+                      <input
+                        type="password"
+                        value={confirmTeamPassword}
+                        onChange={e => setConfirmTeamPassword(e.target.value)}
+                        placeholder="Znovu nové heslo..."
+                        className="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        type="submit"
+                        disabled={isSavingTeamPassword}
+                        className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                      >
+                        {isSavingTeamPassword ? (
+                          <>
+                            <Loader2 size={14} className="animate-spin" />
+                            Ukládám...
+                          </>
+                        ) : (
+                          'Uložit nové heslo'
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setIsChangingTeamPassword(false); setTeamPasswordError(null); }}
+                        className="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-medium rounded-lg transition-colors"
+                      >
+                        Zrušit
+                      </button>
+                    </div>
+                  </form>
+                )}
               </div>
             </div>
           )}

@@ -12,6 +12,7 @@ dist
 dist-api
 dist-ssr
 *.local
+.mock-db.json
 
 # Editor directories and files
 .vscode/*

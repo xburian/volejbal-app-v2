@@ -1,8 +1,9 @@
 {
   "framework": "vite",
   "rewrites": [
+    { "source": "/api/teams", "destination": "/api/auth" },
+    { "source": "/api/events-batch", "destination": "/api/events" },
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
-

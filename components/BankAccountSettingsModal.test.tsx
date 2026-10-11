@@ -12,6 +12,7 @@ vi.mock('../services/storage', () => ({
   deleteUserPhoto: vi.fn(),
   getBankAccounts: vi.fn().mockResolvedValue([]),
   createBankAccount: vi.fn(),
+  changeTeamPassword: vi.fn(),
 }));
 
 import * as storage from '../services/storage';
@@ -285,6 +286,90 @@ describe('BankAccountSettingsModal — Auto-attend Section', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Server error')).toBeInTheDocument();
+    });
+  });
+});
+
+describe('BankAccountSettingsModal — Team Security Section', () => {
+  const mockTeam = { id: 'team-nahravame-si', name: 'nahravame-si', createdAt: '2026-01-01' };
+
+  it('renders team security section when currentTeam is provided', () => {
+    render(<BankAccountSettingsModal {...defaultProps} currentTeam={mockTeam} />);
+    expect(screen.getByText('Zabezpečení týmu')).toBeInTheDocument();
+    expect(screen.getByText(/nahravame-si/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Změnit heslo týmu/i })).toBeInTheDocument();
+  });
+
+  it('opens password change form and validates fields', async () => {
+    const user = userEvent.setup();
+    render(<BankAccountSettingsModal {...defaultProps} currentTeam={mockTeam} />);
+
+    await user.click(screen.getByRole('button', { name: /Změnit heslo týmu/i }));
+
+    expect(screen.getByPlaceholderText('Zadejte stávající heslo...')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Nové heslo...')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Znovu nové heslo...')).toBeInTheDocument();
+
+    // Try submit with short password
+    await user.type(screen.getByPlaceholderText('Zadejte stávající heslo...'), '1234');
+    await user.type(screen.getByPlaceholderText('Nové heslo...'), 'ab');
+    await user.type(screen.getByPlaceholderText('Znovu nové heslo...'), 'ab');
+
+    await user.click(screen.getByRole('button', { name: /Uložit nové heslo/i }));
+    expect(screen.getByText(/Nové heslo musí mít alespoň 3 znaky/i)).toBeInTheDocument();
+  });
+
+  it('validates password mismatch', async () => {
+    const user = userEvent.setup();
+    render(<BankAccountSettingsModal {...defaultProps} currentTeam={mockTeam} />);
+
+    await user.click(screen.getByRole('button', { name: /Změnit heslo týmu/i }));
+
+    await user.type(screen.getByPlaceholderText('Zadejte stávající heslo...'), '1234');
+    await user.type(screen.getByPlaceholderText('Nové heslo...'), 'pass1');
+    await user.type(screen.getByPlaceholderText('Znovu nové heslo...'), 'pass2');
+
+    await user.click(screen.getByRole('button', { name: /Uložit nové heslo/i }));
+    expect(screen.getByText(/Nová hesla se neshodují/i)).toBeInTheDocument();
+    expect(storage.changeTeamPassword).not.toHaveBeenCalled();
+  });
+
+  it('submits valid password change and displays success message', async () => {
+    const user = userEvent.setup();
+    vi.mocked(storage.changeTeamPassword).mockResolvedValue(undefined as any);
+
+    render(<BankAccountSettingsModal {...defaultProps} currentTeam={mockTeam} />);
+
+    await user.click(screen.getByRole('button', { name: /Změnit heslo týmu/i }));
+
+    await user.type(screen.getByPlaceholderText('Zadejte stávající heslo...'), '1234');
+    await user.type(screen.getByPlaceholderText('Nové heslo...'), 'newsecret');
+    await user.type(screen.getByPlaceholderText('Znovu nové heslo...'), 'newsecret');
+
+    await user.click(screen.getByRole('button', { name: /Uložit nové heslo/i }));
+
+    await waitFor(() => {
+      expect(storage.changeTeamPassword).toHaveBeenCalledWith('1234', 'newsecret');
+      expect(screen.getByText(/Heslo týmu bylo úspěšně změněno/i)).toBeInTheDocument();
+    });
+  });
+
+  it('displays error message when changeTeamPassword fails', async () => {
+    const user = userEvent.setup();
+    vi.mocked(storage.changeTeamPassword).mockRejectedValue(new Error('Stávající heslo není správné.'));
+
+    render(<BankAccountSettingsModal {...defaultProps} currentTeam={mockTeam} />);
+
+    await user.click(screen.getByRole('button', { name: /Změnit heslo týmu/i }));
+
+    await user.type(screen.getByPlaceholderText('Zadejte stávající heslo...'), 'wrong');
+    await user.type(screen.getByPlaceholderText('Nové heslo...'), 'newsecret');
+    await user.type(screen.getByPlaceholderText('Znovu nové heslo...'), 'newsecret');
+
+    await user.click(screen.getByRole('button', { name: /Uložit nové heslo/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Stávající heslo není správné.')).toBeInTheDocument();
     });
   });
 });

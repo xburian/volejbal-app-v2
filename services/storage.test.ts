@@ -420,6 +420,52 @@ describe('Storage Service (localStorage)', () => {
     });
   });
 
+  // ---- Teams & Auth Session ----
+
+  describe('Teams & Auth Session', () => {
+    it('sets session and retrieves tokens and current team', () => {
+      const mockTeam = { id: 'team-abc', name: 'ABC Team', createdAt: '2026-01-01' };
+      storage.setSession('test-access', 'test-refresh', mockTeam);
+
+      expect(storage.getAccessToken()).toBe('test-access');
+      expect(storage.getRefreshToken()).toBe('test-refresh');
+      expect(storage.getCurrentTeam()).toEqual(mockTeam);
+    });
+
+    it('clears session and tokens', () => {
+      const mockTeam = { id: 'team-abc', name: 'ABC Team', createdAt: '2026-01-01' };
+      storage.setSession('test-access', 'test-refresh', mockTeam);
+      storage.clearTeamSession();
+
+      expect(storage.getAccessToken()).toBeNull();
+      expect(storage.getRefreshToken()).toBeNull();
+      expect(storage.getCurrentTeam()).toBeNull();
+    });
+
+    it('getTeams returns default team in local/test mode', async () => {
+      const teams = await storage.getTeams();
+      expect(teams.length).toBeGreaterThanOrEqual(1);
+      expect(teams[0].name).toBe('nahravame-si');
+    });
+
+    it('loginTeam logs in and persists session in local/test mode', async () => {
+      const res = await storage.loginTeam('team-nahravame-si', '1234');
+      expect(res.accessToken).toBeDefined();
+      expect(res.refreshToken).toBeDefined();
+      expect(res.team.id).toBe('team-nahravame-si');
+      expect(storage.getCurrentTeam()?.id).toBe('team-nahravame-si');
+    });
+
+    it('createTeam creates and persists a new team in local/test mode', async () => {
+      const res = await storage.createTeam('Nový Tým Brno', 'heslo123');
+      expect(res.team.name).toBe('Nový Tým Brno');
+      expect(storage.getCurrentTeam()?.name).toBe('Nový Tým Brno');
+
+      const allTeams = await storage.getTeams();
+      expect(allTeams.some(t => t.name === 'Nový Tým Brno')).toBe(true);
+    });
+  });
+
   // ---- Backward Compat ----
 
   describe('Backward compatibility', () => {

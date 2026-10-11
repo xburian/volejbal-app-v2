@@ -140,5 +140,37 @@ describe('LoginScreen - Photo Upload Feature', () => {
       expect(screen.queryByText('Petr')).not.toBeInTheDocument();
     });
   });
+
+  it('displays current team name badge when currentTeam is provided', async () => {
+    const mockTeam = { id: 'team-nahravame-si', name: 'nahravame-si', createdAt: '2026-01-01' };
+    render(<LoginScreen onLogin={mockOnLogin} currentTeam={mockTeam} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Tým: nahravame-si/i)).toBeInTheDocument();
+    });
+  });
+
+  it('calls onLogoutTeam when Změnit tým button is clicked', async () => {
+    const mockTeam = { id: 'team-nahravame-si', name: 'nahravame-si', createdAt: '2026-01-01' };
+    const mockOnLogoutTeam = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <LoginScreen
+        onLogin={mockOnLogin}
+        currentTeam={mockTeam}
+        onLogoutTeam={mockOnLogoutTeam}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Změnit tým/i })).toBeInTheDocument();
+    });
+
+    const changeTeamBtn = screen.getByRole('button', { name: /Změnit tým/i });
+    await user.click(changeTeamBtn);
+
+    expect(mockOnLogoutTeam).toHaveBeenCalled();
+  });
 });
 

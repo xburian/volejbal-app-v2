@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { User } from '../types';
+import { User, Team } from '../types';
 import * as storage from '../services/storage';
-import { UserPlus, Trophy, Trash2, Loader2, Search } from 'lucide-react';
+import { UserPlus, Trophy, Trash2, Loader2, Search, LogOut } from 'lucide-react';
 import { ConfirmModal } from './ConfirmModal';
 
 interface LoginScreenProps {
   onLogin: (user: User) => void;
+  currentTeam?: Team | null;
+  onLogoutTeam?: () => void;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
+export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, currentTeam, onLogoutTeam }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [newName, setNewName] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +35,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
 
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [currentTeam?.id]);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -111,14 +113,34 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
           </div>
         )}
 
-        <div className="bg-blue-600 px-6 py-4 text-center text-white flex items-center justify-center gap-3">
-          <div className="p-2 bg-white/20 rounded-full shrink-0">
-            <Trophy size={24} />
+        <div className="bg-blue-600 px-6 py-4 text-white flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/20 rounded-full shrink-0">
+              <Trophy size={24} />
+            </div>
+            <div className="text-left">
+              <h1 className="text-xl font-bold leading-tight">Vítejte v Sport Plánovači</h1>
+              {currentTeam ? (
+                <div className="flex items-center gap-1.5 text-blue-100 text-xs mt-0.5">
+                  <span className="font-semibold bg-blue-700/90 px-2 py-0.5 rounded-md border border-white/20">
+                    Tým: {currentTeam.name}
+                  </span>
+                </div>
+              ) : (
+                <p className="text-blue-100 text-sm">Kdo dnes přišel?</p>
+              )}
+            </div>
           </div>
-          <div className="text-left">
-            <h1 className="text-xl font-bold leading-tight">Vítejte v Sport Plánovači</h1>
-            <p className="text-blue-100 text-sm">Kdo dnes přišel?</p>
-          </div>
+          {onLogoutTeam && (
+            <button
+              onClick={onLogoutTeam}
+              className="text-xs bg-white/15 hover:bg-white/25 active:bg-white/30 text-white font-medium px-3 py-1.5 rounded-lg border border-white/20 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
+              title="Změnit nebo odhlásit tým"
+            >
+              <LogOut size={14} />
+              <span>Změnit tým</span>
+            </button>
+          )}
         </div>
 
         <div className="p-6 md:p-8">

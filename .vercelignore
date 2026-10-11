@@ -1,0 +1,11 @@
+# Ignore test files from Vercel deployments
+**/*.test.ts
+**/*.test.tsx
+tests/
+__tests__/
+
+# Ignore build & maintenance scripts
+scripts/
+
+# Ignore private api helpers (prefixed with _)
+api/_*

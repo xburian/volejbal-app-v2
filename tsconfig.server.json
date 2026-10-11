@@ -12,6 +12,6 @@
     "declaration": true,
     "composite": true
   },
-  "include": ["api/**/*.ts", "scripts/**/*.ts"]
+  "include": ["api/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts"]
 }
 

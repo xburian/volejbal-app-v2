@@ -8,6 +8,7 @@ import { CreateEventModal } from './components/CreateEventModal';
 import { ConfirmModal } from './components/ConfirmModal';
 import { UnpaidBanner } from './components/UnpaidBanner';
 import { LoginScreen } from './components/LoginScreen';
+import { TeamLoginScreen } from './components/TeamLoginScreen';
 import { BankAccountSettingsModal } from './components/BankAccountSettingsModal';
 import { StatsPage } from './components/StatsPage';
 import { ReleaseNotesPage } from './components/ReleaseNotesPage';
@@ -15,15 +16,16 @@ import { IssueDrawer } from './components/IssueDrawer';
 import { MobileBottomNav, MobileView } from './components/MobileBottomNav';
 import { MobileHeader } from './components/MobileHeader';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { DevTestingToolbar } from './components/DevTestingToolbar';
 import { usePersistedAuth } from './hooks/usePersistedAuth';
 import { useUrlState } from './hooks/useUrlState';
 import { useDataLoading } from './hooks/useDataLoading';
-import { Calendar as CalendarIcon, Trophy, LogOut, Loader2, Settings, BarChart3, Info, Download, MessageSquarePlus, RefreshCw } from 'lucide-react';
+import { Calendar as CalendarIcon, Trophy, LogOut, Loader2, Settings, BarChart3, Info, Download, MessageSquarePlus, RefreshCw, Users } from 'lucide-react';
 import { isSameDay, startOfDay } from 'date-fns';
 import { downloadICS } from './utils/icalExport';
 
 const App: React.FC = () => {
-  const { currentUser, login, logout, updateUser } = usePersistedAuth();
+  const { currentTeam, currentUser, loginTeam, logoutTeam, login, logout, updateUser } = usePersistedAuth();
   const { selectedEventId, setSelectedEventId, clearSelection, mobileView, setMobileView } = useUrlState();
   const {
     events, isLoading, unpaidDebts, bankAccounts, setBankAccounts,
@@ -51,6 +53,16 @@ const App: React.FC = () => {
   }, [currentUser, events, selectedEventId, setSelectedEventId]);
 
   // ── Handlers ──
+
+  const handleTeamLogin = (team: any, accessToken: string, refreshToken: string) => {
+    loginTeam(team, accessToken, refreshToken);
+  };
+
+  const handleLogoutTeam = () => {
+    logoutTeam();
+    clearSelection();
+    setMobileView('calendar');
+  };
 
   const handleLogin = (user: NonNullable<typeof currentUser>) => {
     login(user);
@@ -154,7 +166,8 @@ const App: React.FC = () => {
 
   // ── Derived state ──
 
-  if (!currentUser) return <LoginScreen onLogin={handleLogin} />;
+  if (!currentTeam) return <TeamLoginScreen onLoginTeam={handleTeamLogin} />;
+  if (!currentUser) return <LoginScreen onLogin={handleLogin} currentTeam={currentTeam} onLogoutTeam={handleLogoutTeam} />;
 
   const isUpcomingMode = selectedDate === null;
   const displayedEvents = isUpcomingMode
@@ -181,9 +194,11 @@ const App: React.FC = () => {
         <MobileHeader
           mobileView={mobileView}
           currentUser={currentUser}
+          currentTeam={currentTeam}
           selectedEvent={selectedEvent}
           onBack={handleMobileBack}
           onLogout={handleLogout}
+          onLogoutTeam={handleLogoutTeam}
           onRefresh={refreshAll}
         />
 
@@ -294,7 +309,14 @@ const App: React.FC = () => {
           <div className="px-6 pt-5 pb-3 flex items-center justify-between">
             <div className="flex items-center gap-3 font-bold text-xl text-slate-800">
               <div className="bg-blue-600 text-white p-2 rounded-lg"><Trophy size={20} /></div>
-              Sport Plánovač
+              <div>
+                <div className="leading-tight">Sport Plánovač</div>
+                {currentTeam && (
+                  <div className="text-xs font-normal text-slate-500">
+                    Tým: <span className="font-semibold text-blue-600">{currentTeam.name}</span>
+                  </div>
+                )}
+              </div>
             </div>
             <span className="text-sm font-medium text-slate-600">Ahoj, {currentUser.name}</span>
           </div>
@@ -317,8 +339,11 @@ const App: React.FC = () => {
             <button onClick={() => setShowIssueDrawer(true)} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all" title="Náměty a chyby">
               <MessageSquarePlus size={18} />
             </button>
-            <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Odhlásit">
+            <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Odhlásit hráče">
               <LogOut size={18} />
+            </button>
+            <button onClick={handleLogoutTeam} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Změnit tým">
+              <Users size={18} />
             </button>
           </div>
         </div>
@@ -388,6 +413,7 @@ const App: React.FC = () => {
           isOpen={isSettingsOpen}
           onClose={() => setIsSettingsOpen(false)}
           currentUser={currentUser}
+          currentTeam={currentTeam}
           bankAccounts={bankAccounts}
           onBankAccountsChange={setBankAccounts}
           onUserUpdate={handleUserUpdate}
@@ -402,6 +428,9 @@ const App: React.FC = () => {
         onClose={() => setShowIssueDrawer(false)}
         currentUser={currentUser}
       />
+      {import.meta.env.DEV && (
+        <DevTestingToolbar onTeamSwitch={handleTeamLogin} onDataRefresh={refreshAll} />
+      )}
     </div>
   );
 };

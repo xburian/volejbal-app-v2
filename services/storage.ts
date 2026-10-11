@@ -1,12 +1,112 @@
-import { SportEvent, User, AttendanceRecord, Participant, BankAccount, SportConfig, SportType, VALID_SPORT_TYPES, DEFAULT_SPORT_CONFIGS, Issue } from '../types';
+import { SportEvent, User, AttendanceRecord, Participant, BankAccount, SportConfig, SportType, VALID_SPORT_TYPES, DEFAULT_SPORT_CONFIGS, Issue, Team, TeamAuthResponse } from '../types';
 
 // Local Storage Keys (fallback for offline / test / dev:vite mode)
+const LS_TEAMS = 'volleyball_teams_db_v1';
 const LS_USERS = 'volleyball_users_db_v1';
 const LS_EVENTS = 'volleyball_events_db_v1';
 const LS_ATTENDANCE = 'volleyball_attendance_db_v1';
 const LS_BANK_ACCOUNTS = 'volleyball_bank_accounts_db_v1';
 const LS_SPORT_CONFIGS = 'sport_configs_db_v1';
 const LS_ISSUES = 'volleyball_issues_db_v1';
+
+// Auth session keys
+const STORAGE_ACCESS_TOKEN = 'team_access_token';
+const STORAGE_REFRESH_TOKEN = 'team_refresh_token';
+const STORAGE_CURRENT_TEAM = 'current_team';
+
+// In-memory token cache for fast access
+let inMemoryAccessToken: string | null = null;
+let inMemoryRefreshToken: string | null = null;
+
+export const getAccessToken = (): string | null => {
+  if (inMemoryAccessToken) return inMemoryAccessToken;
+  try {
+    return localStorage.getItem(STORAGE_ACCESS_TOKEN);
+  } catch {
+    return null;
+  }
+};
+
+export const getRefreshToken = (): string | null => {
+  if (inMemoryRefreshToken) return inMemoryRefreshToken;
+  try {
+    return localStorage.getItem(STORAGE_REFRESH_TOKEN);
+  } catch {
+    return null;
+  }
+};
+
+export const getCurrentTeam = (): Team | null => {
+  try {
+    const raw = localStorage.getItem(STORAGE_CURRENT_TEAM);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+export const setSession = (accessToken: string | null, refreshToken: string | null, team?: Team | null) => {
+  inMemoryAccessToken = accessToken;
+  inMemoryRefreshToken = refreshToken;
+  try {
+    if (accessToken) {
+      localStorage.setItem(STORAGE_ACCESS_TOKEN, accessToken);
+    } else {
+      localStorage.removeItem(STORAGE_ACCESS_TOKEN);
+    }
+
+    if (refreshToken) {
+      localStorage.setItem(STORAGE_REFRESH_TOKEN, refreshToken);
+    } else {
+      localStorage.removeItem(STORAGE_REFRESH_TOKEN);
+    }
+
+    if (team !== undefined) {
+      if (team) {
+        localStorage.setItem(STORAGE_CURRENT_TEAM, JSON.stringify(team));
+      } else {
+        localStorage.removeItem(STORAGE_CURRENT_TEAM);
+      }
+    }
+  } catch {
+    // Ignore localStorage availability / quota errors
+  }
+};
+
+// --- In-memory cache with TTL ---
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+const USERS_CACHE_TTL = 60_000;  // 60 seconds
+const EVENTS_CACHE_TTL = 30_000; // 30 seconds
+const BANK_ACCOUNTS_CACHE_TTL = 30_000; // 30 seconds
+
+let usersCache: CacheEntry<User[]> | null = null;
+let eventsCache: CacheEntry<SportEvent[]> | null = null;
+let bankAccountsCache: CacheEntry<BankAccount[]> | null = null;
+
+function getCached<T>(entry: CacheEntry<T> | null, ttl: number): T | null {
+  if (entry && Date.now() - entry.timestamp < ttl) {
+    return entry.data;
+  }
+  return null;
+}
+
+export const invalidateUsersCache = () => { usersCache = null; };
+export const invalidateEventsCache = () => { eventsCache = null; };
+export const invalidateBankAccountsCache = () => { bankAccountsCache = null; };
+export const invalidateAllCaches = () => {
+  usersCache = null;
+  eventsCache = null;
+  bankAccountsCache = null;
+};
+
+export const clearTeamSession = () => {
+  setSession(null, null, null);
+  invalidateAllCaches();
+};
 
 // Detect if API is available (running via `vercel dev` or deployed on Vercel)
 const API_BASE = '/api';
@@ -39,43 +139,74 @@ const setLS = (key: string, data: any[]) => {
   localStorage.setItem(key, JSON.stringify(data));
 };
 
-// --- Fetch helper ---
-async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+// --- Refresh Token Promise Mutex ---
+let refreshPromise: Promise<string | null> | null = null;
+
+async function doRefreshAccessToken(): Promise<string | null> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return null;
+
+  try {
+    const res = await fetch(`${API_BASE}/auth`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'refresh', refreshToken }),
+    });
+
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        // Refresh token revoked or expired
+        clearTeamSession();
+      }
+      return null;
+    }
+
+    const data: { accessToken: string; refreshToken?: string } = await res.json();
+    setSession(data.accessToken, data.refreshToken || refreshToken);
+    return data.accessToken;
+  } catch (error) {
+    // Network glitch: don't clear session, allow retry when back online
+    console.warn('Network issue during token refresh:', error);
+    return null;
+  }
+}
+
+async function refreshAccessToken(): Promise<string | null> {
+  if (!refreshPromise) {
+    refreshPromise = doRefreshAccessToken().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+}
+
+// --- Fetch helper with bearer auth & transparent 401 silent retry ---
+async function apiFetch<T>(path: string, options?: RequestInit, isRetry = false): Promise<T> {
+  const token = getAccessToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...((options?.headers as Record<string, string>) || {}),
+  };
+
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
     ...options,
+    headers,
   });
+
+  if (res.status === 401 && !isRetry && !path.startsWith('/auth')) {
+    const newToken = await refreshAccessToken();
+    if (newToken) {
+      return apiFetch<T>(path, options, true);
+    }
+  }
+
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error || `API error ${res.status}`);
   }
   return res.json();
 }
-
-// --- In-memory cache with TTL ---
-interface CacheEntry<T> {
-  data: T;
-  timestamp: number;
-}
-
-const USERS_CACHE_TTL = 60_000;  // 60 seconds
-const EVENTS_CACHE_TTL = 30_000; // 30 seconds
-const BANK_ACCOUNTS_CACHE_TTL = 30_000; // 30 seconds
-
-let usersCache: CacheEntry<User[]> | null = null;
-let eventsCache: CacheEntry<SportEvent[]> | null = null;
-let bankAccountsCache: CacheEntry<BankAccount[]> | null = null;
-
-function getCached<T>(entry: CacheEntry<T> | null, ttl: number): T | null {
-  if (entry && Date.now() - entry.timestamp < ttl) {
-    return entry.data;
-  }
-  return null;
-}
-
-export const invalidateUsersCache = () => { usersCache = null; };
-export const invalidateEventsCache = () => { eventsCache = null; };
-export const invalidateBankAccountsCache = () => { bankAccountsCache = null; };
 
 // --- Users ---
 
@@ -503,3 +634,100 @@ export const deleteIssue = async (id: string): Promise<void> => {
     method: 'DELETE',
   });
 };
+
+// --- Teams ---
+
+export const getTeams = async (): Promise<Team[]> => {
+  if (!useApi()) {
+    const stored = getLS<Team>(LS_TEAMS);
+    if (stored.length > 0) return stored;
+    return [{ id: 'team-nahravame-si', name: 'nahravame-si', createdAt: new Date().toISOString() }];
+  }
+
+  try {
+    return await apiFetch<Team[]>('/teams');
+  } catch (e) {
+    console.error('Failed to load teams from API', e);
+    return [{ id: 'team-nahravame-si', name: 'nahravame-si', createdAt: new Date().toISOString() }];
+  }
+};
+
+export const loginTeam = async (teamId: string, password: string): Promise<TeamAuthResponse> => {
+  if (!useApi()) {
+    const response: TeamAuthResponse = {
+      accessToken: 'test-access-token',
+      refreshToken: 'test-refresh-token',
+      team: { id: teamId, name: 'nahravame-si', createdAt: new Date().toISOString() },
+    };
+    setSession(response.accessToken, response.refreshToken, response.team);
+    invalidateAllCaches();
+    return response;
+  }
+
+  const response = await apiFetch<TeamAuthResponse>('/auth', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'login', teamId, password }),
+  });
+  setSession(response.accessToken, response.refreshToken, response.team);
+  invalidateAllCaches();
+  return response;
+};
+
+export const createTeam = async (name: string, password: string): Promise<TeamAuthResponse> => {
+  if (!useApi()) {
+    const newTeam: Team = {
+      id: `team_${Date.now()}`,
+      name: name.trim(),
+      createdAt: new Date().toISOString(),
+    };
+    const teams = getLS<Team>(LS_TEAMS);
+    teams.push(newTeam);
+    setLS(LS_TEAMS, teams);
+    const response: TeamAuthResponse = {
+      accessToken: 'test-access-token',
+      refreshToken: 'test-refresh-token',
+      team: newTeam,
+    };
+    setSession(response.accessToken, response.refreshToken, newTeam);
+    invalidateAllCaches();
+    return response;
+  }
+
+  const response = await apiFetch<TeamAuthResponse>('/teams', {
+    method: 'POST',
+    body: JSON.stringify({ name, password }),
+  });
+  setSession(response.accessToken, response.refreshToken, response.team);
+  invalidateAllCaches();
+  return response;
+};
+
+export const logoutTeamSession = async (): Promise<void> => {
+  const refreshToken = getRefreshToken();
+  if (useApi() && refreshToken) {
+    try {
+      await apiFetch<void>('/auth', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'logout', refreshToken }),
+      });
+    } catch (e) {
+      console.warn('Logout notification error:', e);
+    }
+  }
+  clearTeamSession();
+};
+
+export const changeTeamPassword = async (oldPassword: string, newPassword: string): Promise<void> => {
+  if (!useApi()) {
+    return;
+  }
+
+  const res = await apiFetch<{ success: boolean; accessToken: string; refreshToken: string }>('/auth', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'change-password', oldPassword, newPassword }),
+  });
+  if (res.accessToken && res.refreshToken) {
+    setSession(res.accessToken, res.refreshToken);
+  }
+};
+
