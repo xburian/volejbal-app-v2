@@ -1,6 +1,6 @@
 import React from 'react';
 import { SportEvent, SportConfig } from '@/types.ts';
-import { Trash2, Wallet, Edit2, Check, X, MapPin } from 'lucide-react';
+import { Trash2, Wallet, Edit2, Check, X, MapPin, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { useWeather } from '@/hooks/useWeather';
 import { WeatherBadge } from './WeatherBadge';
@@ -16,6 +16,12 @@ interface EventDetailHeaderProps {
   onStartEditCost: () => void;
   onSaveCost: () => void;
   onCancelCostEdit: () => void;
+  isEditingTime?: boolean;
+  tempTime?: string;
+  onTempTimeChange?: (value: string) => void;
+  onStartEditTime?: () => void;
+  onSaveTime?: () => void;
+  onCancelTimeEdit?: () => void;
   isEditingLocation?: boolean;
   tempLocation?: string;
   onTempLocationChange?: (value: string) => void;
@@ -36,6 +42,12 @@ export const EventDetailHeader: React.FC<EventDetailHeaderProps> = ({
   onStartEditCost,
   onSaveCost,
   onCancelCostEdit,
+  isEditingTime = false,
+  tempTime = '',
+  onTempTimeChange,
+  onStartEditTime,
+  onSaveTime,
+  onCancelTimeEdit,
   isEditingLocation = false,
   tempLocation = '',
   onTempLocationChange,
@@ -58,6 +70,57 @@ export const EventDetailHeader: React.FC<EventDetailHeaderProps> = ({
           </span>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-slate-500 mt-2 text-sm">
+          {/* Time with inline editing */}
+          <div className="flex items-center gap-1" data-testid="event-time-section">
+            <Clock size={16} />
+            {!isEditingTime ? (
+              <>
+                <span className="font-mono font-medium">{event.time}</span>
+                {onStartEditTime && (
+                  <button
+                    onClick={onStartEditTime}
+                    className="ml-1 text-slate-400 hover:text-blue-600 transition-colors p-0.5"
+                    title="Upravit čas"
+                    data-testid="edit-time-btn"
+                  >
+                    <Edit2 size={12} />
+                  </button>
+                )}
+              </>
+            ) : (
+              <div className="flex items-center gap-1">
+                <input
+                  type="time"
+                  value={tempTime}
+                  onChange={(e) => onTempTimeChange?.(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') onSaveTime?.();
+                    if (e.key === 'Escape') onCancelTimeEdit?.();
+                  }}
+                  className="px-1.5 py-0.5 text-sm border border-blue-300 rounded focus:ring-1 focus:ring-blue-200 outline-none w-24"
+                  autoFocus
+                  data-testid="edit-time-input"
+                />
+                <button
+                  onClick={onSaveTime}
+                  className="text-green-600 hover:bg-green-50 p-0.5 rounded transition-colors"
+                  title="Uložit čas"
+                  data-testid="save-time-btn"
+                >
+                  <Check size={14} />
+                </button>
+                <button
+                  onClick={onCancelTimeEdit}
+                  className="text-red-600 hover:bg-red-50 p-0.5 rounded transition-colors"
+                  title="Zrušit úpravu času"
+                  data-testid="cancel-time-btn"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+          </div>
+
           {/* Location with inline editing */}
           <div className="flex items-center gap-1">
             <MapPin size={16} />

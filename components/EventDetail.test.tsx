@@ -479,6 +479,99 @@ describe('EventDetail Component', () => {
     });
   });
 
+  describe('Time Editing', () => {
+    it('renders time display with edit button', () => {
+      render(
+        <EventDetail
+          event={mockEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      const editButton = screen.getByTitle('Upravit čas');
+      expect(editButton).toBeInTheDocument();
+      expect(screen.getByText(mockEvent.time)).toBeInTheDocument();
+    });
+
+    it('shows input field when edit time button is clicked', async () => {
+      const user = userEvent.setup();
+      render(
+        <EventDetail
+          event={mockEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      const editButton = screen.getByTitle('Upravit čas');
+      await user.click(editButton);
+
+      const input = screen.getByTestId('edit-time-input');
+      expect(input).toHaveValue(mockEvent.time);
+    });
+
+    it('updates time and calls onUpdate when save button is clicked', async () => {
+      const user = userEvent.setup();
+      render(
+        <EventDetail
+          event={mockEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      const editButton = screen.getByTitle('Upravit čas');
+      await user.click(editButton);
+
+      const input = screen.getByTestId('edit-time-input');
+      await user.clear(input);
+      await user.type(input, '20:30');
+
+      const saveButton = screen.getByTitle('Uložit čas');
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockOnUpdate).toHaveBeenCalledWith({
+          ...mockEvent,
+          time: '20:30',
+        });
+      });
+    });
+
+    it('cancels time editing without calling onUpdate', async () => {
+      const user = userEvent.setup();
+      render(
+        <EventDetail
+          event={mockEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      const editButton = screen.getByTitle('Upravit čas');
+      await user.click(editButton);
+
+      const input = screen.getByTestId('edit-time-input');
+      await user.clear(input);
+      await user.type(input, '21:00');
+
+      const cancelButton = screen.getByTitle('Zrušit úpravu času');
+      await user.click(cancelButton);
+
+      expect(mockOnUpdate).not.toHaveBeenCalled();
+      expect(screen.getByText(mockEvent.time)).toBeInTheDocument();
+    });
+  });
+
   describe('Integration: Cost Update affects all related elements', () => {
     it('updates all cost-related displays when total cost changes', async () => {
       const user = userEvent.setup();
