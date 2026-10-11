@@ -175,7 +175,9 @@ export interface DuoStats {
   setWinRate: number;
 }
 
-// ── v1.6 Statistics Types ──
+export type TimeFilter = 'last3months' | 'year' | 'all';
+
+export type PlayerActivityStatus = 'active' | 'lapsing' | 'inactive';
 
 export interface LeaderboardEntry {
   userId: string;
@@ -188,6 +190,9 @@ export interface LeaderboardEntry {
   gamesPlayed: number;
   attendanceRate: number;
   reliabilityScore: number;
+  activityStatus?: PlayerActivityStatus;
+  currentStreak?: number;
+  recentResults?: boolean[];
 }
 
 export interface PlayerFormTrend {
@@ -215,7 +220,7 @@ export interface ClutchData {
   clutchSetsPlayed: number;
 }
 
-export type BadgeType = 'ironman' | 'ghost' | 'maybeMaster' | 'quickPayer' | 'socialButterfly' | 'luckyPlayer' | 'comebackKing' | 'clutchPlayer' | 'consistent' | 'weekdayWarrior';
+export type BadgeType = 'ironman' | 'ghost' | 'maybeMaster' | 'quickPayer' | 'socialButterfly' | 'luckyPlayer' | 'comebackKing' | 'clutchPlayer' | 'consistent' | 'weekdayWarrior' | 'teamPillar' | 'mvpMonth';
 
 export interface Badge {
   type: BadgeType;

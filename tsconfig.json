@@ -13,7 +13,8 @@
     "types": [
       "node",
       "vitest/globals",
-      "vite/client"
+      "vite/client",
+      "@testing-library/jest-dom/vitest"
     ],
     "moduleResolution": "bundler",
     "isolatedModules": true,

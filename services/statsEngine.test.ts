@@ -563,3 +563,81 @@ describe('computeUserStats maybe streak reset', () => {
     expect(stats.longestStreak).toBe(2);
   });
 });
+
+// ── CPI & Inactivity Ranking Tests ──
+
+describe('computeLeaderboard Club Performance Index (CPI) with pastEvents', () => {
+  it('penalizes inactive players with missing events decay and flags them as lapsing or inactive', () => {
+    const events: SportEvent[] = Array.from({ length: 13 }, (_, i) => {
+      const participants: SportEvent['participants'] = [
+        { userId: 'b', name: 'Active B', status: 'joined', hasPaid: true },
+      ];
+      if (i < 5) {
+        participants.push({ userId: 'a', name: 'Inactive A', status: 'joined', hasPaid: true });
+      } else {
+        participants.push({ userId: 'c', name: 'Player C', status: 'joined', hasPaid: true });
+      }
+      return makeEvent(`e${i}`, `2025-01-${String(i + 1).padStart(2, '0')}`, participants, {
+        teams: i < 5 ? [[tm('a')], [tm('b')]] : [[tm('b')], [tm('c')]],
+        winningTeam: 0,
+      });
+    });
+
+    const statsMap = computeUserStats(events);
+    const eloMap = new Map([['a', 1100], ['b', 1050]]);
+    const lb = computeLeaderboard(statsMap, eloMap, events);
+
+    const entryA = lb.find(e => e.userId === 'a')!;
+    const entryB = lb.find(e => e.userId === 'b')!;
+
+    expect(entryB.rank).toBeLessThan(entryA.rank);
+    expect(entryB.compositeScore).toBeGreaterThan(entryA.compositeScore);
+    expect(entryA.activityStatus).toBe('inactive');
+    expect(entryB.activityStatus).toBe('active');
+  });
+
+  it('correctly calculates tenure-based attendance rate to solve ghost denominator', () => {
+    const events: SportEvent[] = Array.from({ length: 5 }, (_, i) => {
+      const participants: SportEvent['participants'] = [
+        { userId: 'b', name: 'B', status: 'joined', hasPaid: true },
+      ];
+      if (i === 0 || i === 1) {
+        participants.push({ userId: 'a', name: 'A', status: 'joined', hasPaid: true });
+      }
+      return makeEvent(`e${i}`, `2025-01-${String(i + 1).padStart(2, '0')}`, participants);
+    });
+
+    const statsMap = computeUserStats(events);
+    const statsA = statsMap.get('a')!;
+
+    expect(statsA.totalEvents).toBe(5);
+    expect(statsA.attendanceRate).toBeCloseTo(0.4);
+  });
+
+  it('luckyPlayer badge uses Bayesian win rate so 3/3 does not beat 25/30', () => {
+    const statsMap = new Map<string, any>([
+      ['fluke', { userId: 'fluke', name: 'Fluke', gamesPlayed: 3, gamesWon: 3, winRate: 1.0, eventsJoined: 3, eventsDeclined: 0, eventsMaybe: 0, paymentRate: 1, currentStreak: 1, longestStreak: 1 }],
+      ['pro', { userId: 'pro', name: 'Pro', gamesPlayed: 30, gamesWon: 25, winRate: 25 / 30, eventsJoined: 15, eventsDeclined: 0, eventsMaybe: 0, paymentRate: 1, currentStreak: 5, longestStreak: 10 }],
+    ]);
+
+    const badges = computeExtendedBadges(statsMap, []);
+    const lucky = badges.find(b => b.type === 'luckyPlayer');
+
+    expect(lucky).toBeDefined();
+    expect(lucky!.userId).toBe('pro');
+  });
+
+  it('awards teamPillar badge to player with high attendance and good payment rate', () => {
+    const statsMap = new Map<string, any>([
+      ['pillar', { userId: 'pillar', name: 'Pillar', gamesPlayed: 20, gamesWon: 10, winRate: 0.5, eventsJoined: 15, eventsDeclined: 0, eventsMaybe: 0, paymentRate: 1.0, currentStreak: 5, longestStreak: 5 }],
+      ['deadbeat', { userId: 'deadbeat', name: 'Deadbeat', gamesPlayed: 25, gamesWon: 15, winRate: 0.6, eventsJoined: 20, eventsDeclined: 0, eventsMaybe: 0, paymentRate: 0.5, currentStreak: 1, longestStreak: 1 }],
+    ]);
+
+    const badges = computeExtendedBadges(statsMap, []);
+    const pillarBadge = badges.find(b => b.type === 'teamPillar');
+
+    expect(pillarBadge).toBeDefined();
+    expect(pillarBadge!.userId).toBe('pillar');
+  });
+});
+

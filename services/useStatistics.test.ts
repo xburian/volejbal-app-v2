@@ -290,3 +290,33 @@ describe('useStatistics — consistency with teamBalancer', () => {
   });
 });
 
+describe('useStatistics — timeFilter & active/inactive split', () => {
+  it('splits leaderboard into activeLeaderboard and inactiveLeaderboard, and enriches recentResults', () => {
+    const events: SportEvent[] = Array.from({ length: 13 }, (_, i) => {
+      const participants: SportEvent['participants'] = [
+        { userId: 'activeUser', name: 'Active', status: 'joined', hasPaid: true },
+      ];
+      if (i < 5) {
+        participants.push({ userId: 'inactiveUser', name: 'Inactive', status: 'joined', hasPaid: true });
+      } else {
+        participants.push({ userId: 'dummy', name: 'Dummy', status: 'joined', hasPaid: true });
+      }
+      return makeEvent(`e${i}`, `2025-01-${String(i + 1).padStart(2, '0')}`, participants, {
+        teams: i < 5 ? [[tm('activeUser')], [tm('inactiveUser')]] : [[tm('activeUser')], [tm('dummy')]],
+        winningTeam: 0,
+      });
+    });
+
+    const { result } = renderHook(() => useStatistics(events, makeUser('activeUser'), false, [], 'all'));
+
+    expect(result.current.activeLeaderboard.length).toBeGreaterThan(0);
+    expect(result.current.activeLeaderboard.some(e => e.userId === 'activeUser')).toBe(true);
+    expect(result.current.inactiveLeaderboard.some(e => e.userId === 'inactiveUser')).toBe(true);
+
+    const activeEntry = result.current.activeLeaderboard.find(e => e.userId === 'activeUser')!;
+    expect(activeEntry.recentResults).toBeDefined();
+    expect(activeEntry.recentResults!.length).toBeGreaterThan(0);
+  });
+});
+
+
