@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { SportEvent, User, UserStats, Badge, DuoStats, SportConfig, SportType, SPORT_EMOJI, LeaderboardEntry, PlayerFormTrend, NemesisData, EventHealthMetrics, ClutchData, MonthlyTrend } from '../types';
+import { SportEvent, User, UserStats, Badge, DuoStats, SportConfig, SportType, SPORT_EMOJI, LeaderboardEntry, PlayerFormTrend, NemesisData, EventHealthMetrics, ClutchData, MonthlyTrend, TimeFilter } from '../types';
 import { useStatistics } from '../services/useStatistics';
 import {
   ArrowLeft, Loader2, Trophy, Flame, Ghost, HelpCircle, Wallet,
-  PartyPopper, TrendingUp, Calendar, Users, Target, BarChart3, Star, Swords, Zap, AlertCircle, CheckCircle
+  PartyPopper, TrendingUp, Calendar, Users, Target, BarChart3, Star, Swords, Zap, AlertCircle, CheckCircle, ChevronDown
 } from 'lucide-react';
 
 interface StatsPageProps {
@@ -38,6 +38,7 @@ const badgeColors: Record<string, string> = {
   clutchPlayer: 'bg-purple-50 border-purple-200 text-purple-600',
   consistent: 'bg-teal-50 border-teal-200 text-teal-600',
   weekdayWarrior: 'bg-indigo-50 border-indigo-200 text-indigo-600',
+  teamPillar: 'bg-emerald-50 border-emerald-200 text-emerald-600',
 };
 
 // ── Shared Components ──
@@ -104,48 +105,149 @@ function Sparkline({ results }: { results: boolean[] }) {
 // ── Section Cards ──
 
 function LeaderboardCard({ entries, currentUserId }: { entries: LeaderboardEntry[]; currentUserId: string }) {
+  const [showInactive, setShowInactive] = useState(false);
   if (entries.length === 0) return <InsufficientData message="Nedostatek dat pro žebříček (min. 3 události a 5 zápasů na hráče)" />;
+
+  const activeEntries = entries.filter(e => e.activityStatus !== 'inactive');
+  const inactiveEntries = entries.filter(e => e.activityStatus === 'inactive');
+
+  const renderTableRows = (list: LeaderboardEntry[], isInactiveGroup = false) => (
+    list.map(entry => (
+      <tr
+        key={entry.userId}
+        className={`border-b border-slate-50 transition-colors ${
+          entry.userId === currentUserId ? 'bg-blue-50/70' : isInactiveGroup ? 'hover:bg-slate-50/50' : 'hover:bg-slate-50'
+        }`}
+      >
+        <td className="py-2.5 pr-2 font-bold text-slate-400">
+          {!isInactiveGroup && entry.rank <= 3 ? ['🥇', '🥈', '🥉'][entry.rank - 1] : `${entry.rank}.`}
+        </td>
+        <td className="py-2.5">
+          <div className="flex items-center gap-2">
+            <Avatar name={entry.name} photoUrl={entry.photoUrl} size={26} />
+            <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+              <span className={`font-medium truncate max-w-[120px] ${entry.userId === currentUserId ? 'text-blue-700' : 'text-slate-700'}`}>
+                {entry.name}
+              </span>
+              {entry.currentStreak && entry.currentStreak >= 2 ? (
+                <span
+                  className="inline-flex items-center text-[10px] font-bold text-orange-600 bg-orange-100/80 px-1.5 py-0.5 rounded-full"
+                  title={`Aktuální série: ${entry.currentStreak} účastí v řadě`}
+                >
+                  🔥 {entry.currentStreak}
+                </span>
+              ) : null}
+              {entry.activityStatus === 'lapsing' && !isInactiveGroup && (
+                <span
+                  className="inline-flex items-center text-[10px] font-medium text-amber-700 bg-amber-100/70 px-1.5 py-0.5 rounded"
+                  title="Hráč vynechal několik posledních událostí"
+                >
+                  Pauza
+                </span>
+              )}
+            </div>
+          </div>
+        </td>
+        <td className="py-2.5 px-2 hidden sm:table-cell">
+          {entry.recentResults && entry.recentResults.length > 0 ? (
+            <div className="flex items-center gap-1" title="Poslední zápasy (od nejnovějšího)">
+              {entry.recentResults.map((won, i) => (
+                <span
+                  key={i}
+                  className={`w-2 h-2 rounded-full inline-block ${won ? 'bg-green-500' : 'bg-red-400'}`}
+                />
+              ))}
+            </div>
+          ) : (
+            <span className="text-slate-300 text-xs">—</span>
+          )}
+        </td>
+        <td className="text-right py-2.5 px-2 font-bold text-slate-700">
+          <span>{entry.compositeScore}</span>
+          <span className="text-xs font-normal text-slate-400 ml-1">({entry.eloRating})</span>
+        </td>
+        <td className="text-right py-2.5 px-2 text-slate-600 font-medium">
+          {Math.round(entry.winRate * 100)}%
+        </td>
+        <td className="text-right py-2.5 px-2 text-slate-500 hidden sm:table-cell">
+          {entry.gamesPlayed}
+        </td>
+        <td className="text-right py-2.5 pl-2 text-slate-500 hidden sm:table-cell">
+          {entry.reliabilityScore}%
+        </td>
+      </tr>
+    ))
+  );
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-      <h3 className="font-bold text-slate-800 mb-1 flex items-center gap-2">
-        <Trophy size={18} className="text-yellow-500" />
-        Žebříček
-      </h3>
-      <p className="text-xs text-slate-400 mb-4">Řazeno podle skóre (ELO × docházka, min. 5 zápasů)</p>
+      <div className="flex items-start justify-between gap-4 mb-3">
+        <div>
+          <h3 className="font-bold text-slate-800 flex items-center gap-2">
+            <Trophy size={18} className="text-yellow-500" />
+            Žebříček
+          </h3>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Klubový index výkonnosti (CPI) — zohledňuje herní sílu, pravidelnost a spolehlivost
+          </p>
+        </div>
+      </div>
+
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-xs text-slate-500 border-b border-slate-100">
               <th className="text-left py-2 pr-2">#</th>
               <th className="text-left py-2">Hráč</th>
-              <th className="text-right py-2 px-2" title="Kompozitní skóre = ELO × docházka. Zohledňuje herní sílu i pravidelnou účast.">Skóre</th>
+              <th className="text-left py-2 px-2 hidden sm:table-cell">Forma</th>
+              <th className="text-right py-2 px-2" title="Klubový index výkonnosti (CPI): ELO + win rate + docházka + spolehlivost.">CPI (ELO)</th>
               <th className="text-right py-2 px-2">Výhry</th>
               <th className="text-right py-2 px-2 hidden sm:table-cell">Zápasy</th>
               <th className="text-right py-2 pl-2 hidden sm:table-cell" title="Spolehlivost: 60% docházka + 40% platební morálka">Spolehl.</th>
             </tr>
           </thead>
           <tbody>
-            {entries.map(entry => (
-              <tr key={entry.userId} className={`border-b border-slate-50 ${entry.userId === currentUserId ? 'bg-blue-50' : ''}`}>
-                <td className="py-2 pr-2 font-bold text-slate-400">{entry.rank <= 3 ? ['🥇', '🥈', '🥉'][entry.rank - 1] : `${entry.rank}.`}</td>
-                <td className="py-2">
-                  <div className="flex items-center gap-2">
-                    <Avatar name={entry.name} photoUrl={entry.photoUrl} size={24} />
-                    <span className={`font-medium truncate max-w-[120px] ${entry.userId === currentUserId ? 'text-blue-700' : 'text-slate-700'}`}>{entry.name}</span>
-                  </div>
-                </td>
-                <td className="text-right py-2 px-2 font-bold text-slate-700">
-                  <span>{entry.compositeScore}</span>
-                  <span className="text-xs font-normal text-slate-400 ml-1">({entry.eloRating})</span>
-                </td>
-                <td className="text-right py-2 px-2 text-slate-600">{Math.round(entry.winRate * 100)}%</td>
-                <td className="text-right py-2 px-2 text-slate-500 hidden sm:table-cell">{entry.gamesPlayed}</td>
-                <td className="text-right py-2 pl-2 text-slate-500 hidden sm:table-cell">{entry.reliabilityScore}%</td>
-              </tr>
-            ))}
+            {renderTableRows(activeEntries)}
           </tbody>
         </table>
       </div>
+
+      {inactiveEntries.length > 0 && (
+        <div className="mt-4 pt-3 border-t border-slate-100">
+          <button
+            type="button"
+            onClick={() => setShowInactive(prev => !prev)}
+            className="w-full flex items-center justify-between py-2 px-3 text-xs font-medium text-slate-500 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors"
+          >
+            <span className="flex items-center gap-1.5">
+              <span>Neaktivní hráči ({inactiveEntries.length})</span>
+              <span className="text-[11px] text-slate-400 font-normal">• delší neúčast</span>
+            </span>
+            <ChevronDown size={15} className={`transform transition-transform ${showInactive ? 'rotate-180' : ''}`} />
+          </button>
+
+          {showInactive && (
+            <div className="mt-3 overflow-x-auto opacity-75">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-slate-400 border-b border-slate-100">
+                    <th className="text-left py-2 pr-2">#</th>
+                    <th className="text-left py-2">Hráč</th>
+                    <th className="text-left py-2 px-2 hidden sm:table-cell">Forma</th>
+                    <th className="text-right py-2 px-2">CPI (ELO)</th>
+                    <th className="text-right py-2 px-2">Výhry</th>
+                    <th className="text-right py-2 px-2 hidden sm:table-cell">Zápasy</th>
+                    <th className="text-right py-2 pl-2 hidden sm:table-cell">Spolehl.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {renderTableRows(inactiveEntries, true)}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -444,13 +546,14 @@ function MonthlyTrendsCard({ trends }: { trends: MonthlyTrend[] }) {
 
 export const StatsPage: React.FC<StatsPageProps> = ({ events, currentUser, isLoading, onClose, sportConfigs = [] }) => {
   const [sportFilter, setSportFilter] = useState<SportType | null>(null);
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('last3months');
 
   const filteredEvents = useMemo(
     () => sportFilter ? events.filter(e => (e.sportType ?? 'volejbal') === sportFilter) : events,
     [events, sportFilter]
   );
 
-  const { personalStats, monthlyTrends, badges, duoStats, leaderboard, formTrend, nemesis, eventHealth, clutchData, dayHeatmap } = useStatistics(filteredEvents, currentUser, false, sportConfigs);
+  const { personalStats, monthlyTrends, badges, duoStats, leaderboard, formTrend, nemesis, eventHealth, clutchData, dayHeatmap } = useStatistics(filteredEvents, currentUser, false, sportConfigs, timeFilter);
 
   const hasEnoughData = filteredEvents.length >= 3;
 
@@ -477,19 +580,71 @@ export const StatsPage: React.FC<StatsPageProps> = ({ events, currentUser, isLoa
         </h2>
       </div>
 
-      {activeSports.length > 1 && (
-        <div className="flex flex-wrap gap-1.5 mb-6" data-testid="stats-sport-filter">
-          <button onClick={() => setSportFilter(null)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${sportFilter === null ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'}`}>
-            Vše
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        {/* Time horizon filter */}
+        <div className="inline-flex p-1 bg-slate-100 rounded-xl gap-1" data-testid="stats-time-filter">
+          <button
+            onClick={() => setTimeFilter('last3months')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              timeFilter === 'last3months'
+                ? 'bg-white text-blue-600 shadow-sm font-semibold'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Poslední 3 měsíce
           </button>
-          {activeSports.map(config => (
-            <button key={config.type} onClick={() => setSportFilter(sportFilter === config.type ? null : config.type)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border flex items-center gap-1 ${sportFilter === config.type ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'}`}>
-              <span>{SPORT_EMOJI[config.type] ?? '🏅'}</span>
-              {config.label}
-            </button>
-          ))}
+          <button
+            onClick={() => setTimeFilter('year')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              timeFilter === 'year'
+                ? 'bg-white text-blue-600 shadow-sm font-semibold'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Tento rok
+          </button>
+          <button
+            onClick={() => setTimeFilter('all')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              timeFilter === 'all'
+                ? 'bg-white text-blue-600 shadow-sm font-semibold'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Celá historie
+          </button>
         </div>
-      )}
+
+        {/* Sport filters */}
+        {activeSports.length > 1 && (
+          <div className="flex flex-wrap gap-1.5" data-testid="stats-sport-filter">
+            <button
+              onClick={() => setSportFilter(null)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
+                sportFilter === null
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'
+              }`}
+            >
+              Všechny sporty
+            </button>
+            {activeSports.map(config => (
+              <button
+                key={config.type}
+                onClick={() => setSportFilter(sportFilter === config.type ? null : config.type)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border flex items-center gap-1 ${
+                  sportFilter === config.type
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'
+                }`}
+              >
+                <span>{SPORT_EMOJI[config.type] ?? '🏅'}</span>
+                {config.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {!hasEnoughData ? (
         <div className="text-center py-16 text-slate-400 border-2 border-dashed border-slate-200 rounded-2xl">

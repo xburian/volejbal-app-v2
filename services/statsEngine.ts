@@ -1,4 +1,4 @@
-import { SportEvent, UserStats, GameRound, MonthlyTrend, Badge, DuoStats, LeaderboardEntry, PlayerFormTrend, NemesisData, EventHealthMetrics, ClutchData, SportConfig, TeamMember } from '../types';
+import { SportEvent, UserStats, GameRound, MonthlyTrend, Badge, DuoStats, LeaderboardEntry, PlayerFormTrend, NemesisData, EventHealthMetrics, ClutchData, SportConfig, TeamMember, PlayerActivityStatus } from '../types';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
@@ -144,7 +144,12 @@ export function computeUserStats(events: SportEvent[]): Map<string, UserStats> {
 
   // Finalize rates
   for (const [userId, stats] of statsMap) {
-    stats.attendanceRate = stats.totalEvents > 0 ? stats.eventsJoined / stats.totalEvents : 0;
+    // True tenure events: all club events from user's first appearance to the latest event
+    const firstIdx = sortedEvents.findIndex(e => e.participants.some(p => p.userId === userId));
+    const tenureEvents = firstIdx >= 0 ? sortedEvents.length - firstIdx : stats.totalEvents;
+    const effectiveTotal = Math.max(stats.totalEvents, tenureEvents);
+    stats.totalEvents = effectiveTotal;
+    stats.attendanceRate = effectiveTotal > 0 ? stats.eventsJoined / effectiveTotal : 0;
     const paidCount = events.reduce((sum, e) => {
       const p = e.participants.find(p => p.userId === userId);
       return sum + (p && p.status === 'joined' && p.hasPaid ? 1 : 0);
@@ -215,7 +220,7 @@ export function computeEloRatings(events: SportEvent[]): Map<string, number> {
 
 // ── Form Curve ──
 
-function getChronologicalResults(events: SportEvent[], userId: string): boolean[] {
+export function getChronologicalResults(events: SportEvent[], userId: string): boolean[] {
   const sorted = [...events].sort((a, b) => a.date.localeCompare(b.date));
   const results: boolean[] = [];
 
@@ -345,21 +350,88 @@ export function computeReliabilityScore(stats: UserStats): number {
 
 // ── Leaderboard ──
 
-export function computeLeaderboard(statsMap: Map<string, UserStats>, eloMap: Map<string, number>): LeaderboardEntry[] {
+export function computeLeaderboard(
+  statsMap: Map<string, UserStats>,
+  eloMap: Map<string, number>,
+  allEvents?: SportEvent[]
+): LeaderboardEntry[] {
   const entries: LeaderboardEntry[] = [];
+  const pastEvents = allEvents && allEvents.length > 0
+    ? [...allEvents].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    : [];
+
+  const recentWindowSize = 8;
+  const recentEvents = pastEvents.slice(-recentWindowSize);
+  const recentCount = recentEvents.length;
+
   for (const [userId, stats] of statsMap) {
     if (stats.eventsJoined < THRESHOLDS.LEADERBOARD_MIN_EVENTS || stats.gamesPlayed < THRESHOLDS.ELO_MIN_GAMES) continue;
     const eloRating = Math.round(eloMap.get(userId) ?? ELO_INITIAL);
+
+    let compositeScore: number;
+    let activityStatus: PlayerActivityStatus = 'active';
+
+    if (pastEvents.length > 0) {
+      // 1. Skill Component (0 - 500)
+      const eloNorm = Math.max(0, Math.min(1, (eloRating - 800) / 400));
+      const bayesWinRate = (stats.gamesWon + 5) / (stats.gamesPlayed + 10);
+      const totalSets = stats.setsWon + stats.setsLost;
+      const bayesSetRate = totalSets > 0 ? (stats.setsWon + 10) / (totalSets + 20) : 0.5;
+      const skillScore = 500 * (0.65 * eloNorm + 0.35 * (0.6 * bayesWinRate + 0.4 * bayesSetRate));
+
+      // 2. Recent Attendance Component (0 - 300)
+      const recentAttended = recentEvents.filter(ev =>
+        ev.participants.some(p => p.userId === userId && p.status === 'joined')
+      ).length;
+      const recentAttRate = recentCount > 0 ? recentAttended / recentCount : stats.attendanceRate;
+      const attendanceScore = 300 * recentAttRate;
+
+      // 3. Volume Component (0 - 150)
+      const volumeScore = 150 * (1 - Math.exp(-stats.gamesPlayed / 15));
+
+      // 4. Reliability Component (0 - 50)
+      const reliabilityPoints = 50 * stats.paymentRate;
+
+      // 5. Inactivity Decay (Grace period: 3 events, then -8% per missed event, floor at 0.50)
+      let missedSinceLast = 0;
+      for (let i = pastEvents.length - 1; i >= 0; i--) {
+        const attended = pastEvents[i].participants.some(p => p.userId === userId && p.status === 'joined');
+        if (attended) break;
+        missedSinceLast++;
+      }
+
+      if (missedSinceLast >= recentWindowSize) {
+        activityStatus = 'inactive';
+      } else if (missedSinceLast > 3) {
+        activityStatus = 'lapsing';
+      }
+
+      const missedBeyondGrace = Math.max(0, missedSinceLast - 3);
+      const decayMultiplier = Math.max(0.50, 1.0 - (missedBeyondGrace * 0.08));
+
+      compositeScore = Math.round((skillScore + attendanceScore + volumeScore + reliabilityPoints) * decayMultiplier);
+    } else {
+      // Fallback for tests that only provide statsMap and eloMap
+      compositeScore = Math.round(eloRating * (0.5 + 0.5 * stats.attendanceRate));
+    }
+
     entries.push({
-      userId, name: stats.name, photoUrl: stats.photoUrl, rank: 0,
+      userId,
+      name: stats.name,
+      photoUrl: stats.photoUrl,
+      rank: 0,
       eloRating,
-      compositeScore: Math.round(eloRating * (0.5 + 0.5 * stats.attendanceRate)),
-      winRate: stats.winRate, gamesPlayed: stats.gamesPlayed,
+      compositeScore,
+      winRate: stats.winRate,
+      gamesPlayed: stats.gamesPlayed,
       attendanceRate: stats.attendanceRate,
       reliabilityScore: computeReliabilityScore(stats),
+      activityStatus,
+      currentStreak: stats.currentStreak,
     });
   }
-  entries.sort((a, b) => b.compositeScore - a.compositeScore);
+
+  entries.sort((a, b) => b.compositeScore - a.compositeScore || b.gamesPlayed - a.gamesPlayed);
   entries.forEach((e, i) => { e.rank = i + 1; });
   return entries;
 }
@@ -462,10 +534,13 @@ export function computeDuoStats(events: SportEvent[]): DuoStats[] {
   return Array.from(pairMap.values())
     .filter(p => p.played >= THRESHOLDS.DUO_MIN_GAMES)
     .sort((a, b) => {
-      const aS = (a.setsWon + a.setsLost) > 0 ? a.setsWon / (a.setsWon + a.setsLost) : 0.5;
-      const bS = (b.setsWon + b.setsLost) > 0 ? b.setsWon / (b.setsWon + b.setsLost) : 0.5;
-      const aW = a.played > 0 ? a.won / a.played : 0;
-      const bW = b.played > 0 ? b.won / b.played : 0;
+      // Bayesian smoothed win rates to reward volume and avoid 3/3 beating 25/30
+      const aW = (a.won + 2) / (a.played + 4);
+      const bW = (b.won + 2) / (b.played + 4);
+      const aSetsTotal = a.setsWon + a.setsLost;
+      const bSetsTotal = b.setsWon + b.setsLost;
+      const aS = aSetsTotal > 0 ? (a.setsWon + 2) / (aSetsTotal + 4) : 0.5;
+      const bS = bSetsTotal > 0 ? (b.setsWon + 2) / (bSetsTotal + 4) : 0.5;
       return (0.6 * bW + 0.4 * bS) - (0.6 * aW + 0.4 * aS) || b.won - a.won;
     })
     .slice(0, 5)
@@ -488,28 +563,78 @@ export function computeExtendedBadges(statsMap: Map<string, UserStats>, events: 
   if (allStats.length === 0) return [];
   const badges: Badge[] = [];
 
-  const ironMan = allStats.reduce((best, s) => s.longestStreak > best.longestStreak ? s : best);
-  if (ironMan.longestStreak > 0) badges.push({ type: 'ironman', label: 'Iron Man', description: 'Nejdelší série účastí v řadě', iconName: 'Flame', userId: ironMan.userId, userName: ironMan.name, photoUrl: ironMan.photoUrl, value: `${ironMan.longestStreak}× v řadě` });
+  // Iron Man: prioritize active current streak, with longest streak as tie-breaker
+  const activeStreakLeader = allStats.reduce((best, s) => {
+    if (s.currentStreak > best.currentStreak) return s;
+    if (s.currentStreak === best.currentStreak && s.longestStreak > best.longestStreak) return s;
+    return best;
+  });
+  const ironMan = activeStreakLeader.currentStreak > 0
+    ? activeStreakLeader
+    : allStats.reduce((best, s) => s.longestStreak > best.longestStreak ? s : best);
 
+  if (ironMan.longestStreak > 0) {
+    const valText = ironMan.currentStreak > 1
+      ? `${ironMan.currentStreak}× v řadě (aktuálně)`
+      : `${ironMan.longestStreak}× v řadě`;
+    badges.push({
+      type: 'ironman', label: 'Iron Man', description: 'Nejdelší série účastí v řadě',
+      iconName: 'Flame', userId: ironMan.userId, userName: ironMan.name, photoUrl: ironMan.photoUrl,
+      value: valText,
+    });
+  }
+
+  // Ghost & MaybeMaster
   const ghost = allStats.reduce((best, s) => s.eventsDeclined > best.eventsDeclined ? s : best);
   if (ghost.eventsDeclined > 0) badges.push({ type: 'ghost', label: 'Duch', description: 'Nejvíce odmítnutých událostí', iconName: 'Ghost', userId: ghost.userId, userName: ghost.name, photoUrl: ghost.photoUrl, value: `${ghost.eventsDeclined}× odmítnuto` });
 
   const maybeMaster = allStats.reduce((best, s) => s.eventsMaybe > best.eventsMaybe ? s : best);
   if (maybeMaster.eventsMaybe > 0) badges.push({ type: 'maybeMaster', label: 'Možná Mistr', description: 'Nejvíce odpovědí "možná"', iconName: 'HelpCircle', userId: maybeMaster.userId, userName: maybeMaster.name, photoUrl: maybeMaster.photoUrl, value: `${maybeMaster.eventsMaybe}× možná` });
 
+  // Quick Payer: prioritize 100% payment rate with highest volume of paid events
   const payers = allStats.filter(s => s.eventsJoined >= 3);
   if (payers.length > 0) {
-    const best = payers.reduce((b, s) => s.paymentRate > b.paymentRate ? s : b);
-    if (best.paymentRate > 0) badges.push({ type: 'quickPayer', label: 'Spolehlivý Platič', description: 'Nejlepší platební morálka (min. 3 události)', iconName: 'Wallet', userId: best.userId, userName: best.name, photoUrl: best.photoUrl, value: `${Math.round(best.paymentRate * 100)}% zaplaceno` });
+    const best = payers.reduce((b, s) => {
+      if (s.paymentRate > b.paymentRate) return s;
+      if (s.paymentRate === b.paymentRate && s.eventsJoined > b.eventsJoined) return s;
+      return b;
+    });
+    if (best.paymentRate > 0) badges.push({
+      type: 'quickPayer', label: 'Spolehlivý Platič', description: 'Nejlepší platební morálka (min. 3 události)',
+      iconName: 'Wallet', userId: best.userId, userName: best.name, photoUrl: best.photoUrl,
+      value: `${Math.round(best.paymentRate * 100)}% zaplaceno (${best.eventsJoined} akcí)`,
+    });
   }
 
+  // Social Butterfly
   const social = allStats.reduce((b, s) => s.eventsJoined > b.eventsJoined ? s : b);
   if (social.eventsJoined > 0) badges.push({ type: 'socialButterfly', label: 'Společenský Motýl', description: 'Zúčastnil se nejvíce událostí', iconName: 'PartyPopper', userId: social.userId, userName: social.name, photoUrl: social.photoUrl, value: `${social.eventsJoined} událostí` });
 
+  // Lucky Player: Bayesian smoothed win rate (min 3 games) so 3/3 doesn't block high-volume regulars
   const winners = allStats.filter(s => s.gamesPlayed >= 3);
   if (winners.length > 0) {
-    const best = winners.reduce((b, s) => s.winRate > b.winRate ? s : b);
-    if (best.winRate > 0) badges.push({ type: 'luckyPlayer', label: 'Šťastný Hráč', description: 'Nejvyšší procento výher (min. 3 zápasy)', iconName: 'Star', userId: best.userId, userName: best.name, photoUrl: best.photoUrl, value: `${Math.round(best.winRate * 100)}% výher` });
+    const bayesRate = (s: UserStats) => (s.gamesWon + 5) / (s.gamesPlayed + 10);
+    const best = winners.reduce((b, s) => {
+      const diff = bayesRate(s) - bayesRate(b);
+      if (Math.abs(diff) > 0.001) return diff > 0 ? s : b;
+      return s.gamesPlayed > b.gamesPlayed ? s : b;
+    });
+    if (best.winRate > 0) badges.push({
+      type: 'luckyPlayer', label: 'Šťastný Hráč', description: 'Nejvyšší procento výher (váženo odehranými zápasy)',
+      iconName: 'Star', userId: best.userId, userName: best.name, photoUrl: best.photoUrl,
+      value: `${Math.round(best.winRate * 100)}% výher (${best.gamesWon}/${best.gamesPlayed})`,
+    });
+  }
+
+  // Team Pillar: most events joined with >=80% payment rate
+  const pillars = allStats.filter(s => s.eventsJoined >= 3 && s.paymentRate >= 0.8);
+  if (pillars.length > 0) {
+    const bestPillar = pillars.reduce((b, s) => s.eventsJoined > b.eventsJoined ? s : b);
+    badges.push({
+      type: 'teamPillar', label: 'Týmový Pilíř', description: 'Nejspolehlivější opora týmu v docházce i platbách',
+      iconName: 'CheckCircle', userId: bestPillar.userId, userName: bestPillar.name, photoUrl: bestPillar.photoUrl,
+      value: `${bestPillar.eventsJoined} účastí`,
+    });
   }
 
   // Comeback King
@@ -563,12 +688,14 @@ export function computeExtendedBadges(statsMap: Map<string, UserStats>, events: 
     if (s) badges.push({ type: 'weekdayWarrior', label: 'Všední Válečník', description: 'Hraje v nejvíce různých dnech', iconName: 'Calendar', userId: s.userId, userName: s.name, photoUrl: s.photoUrl, value: `${bestDays} různých dnů` });
   }
 
-  // Consistent Player — lowest stddev of monthly attendance (min 5 events)
+  // Consistent Player — lowest stddev of monthly attendance across all active months (min 5 events)
   const consistentCandidates = allStats.filter(s => s.eventsJoined >= 5);
   if (consistentCandidates.length > 0) {
     const monthlyAttendance = new Map<string, Map<string, number>>();
+    const allMonthsSet = new Set<string>();
     for (const event of events) {
       const month = event.date.substring(0, 7);
+      allMonthsSet.add(month);
       for (const p of event.participants) {
         if (p.status !== 'joined') continue;
         if (!monthlyAttendance.has(p.userId)) monthlyAttendance.set(p.userId, new Map());
@@ -576,11 +703,20 @@ export function computeExtendedBadges(statsMap: Map<string, UserStats>, events: 
         userMonths.set(month, (userMonths.get(month) ?? 0) + 1);
       }
     }
+    const allMonths = Array.from(allMonthsSet).sort();
+
     let bestConsistentId = '', lowestStddev = Infinity;
     for (const s of consistentCandidates) {
       const userMonths = monthlyAttendance.get(s.userId);
-      if (!userMonths || userMonths.size < 2) continue;
-      const counts = Array.from(userMonths.values());
+      if (!userMonths || allMonths.length < 2) continue;
+
+      const firstMonth = Array.from(userMonths.keys()).sort()[0];
+      const startIdx = allMonths.indexOf(firstMonth);
+      const tenureMonths = startIdx >= 0 ? allMonths.slice(startIdx) : allMonths;
+      if (tenureMonths.length < 2) continue;
+
+      // Fill 0 for months where user did not attend
+      const counts = tenureMonths.map(m => userMonths.get(m) ?? 0);
       const mean = counts.reduce((a, b) => a + b, 0) / counts.length;
       const variance = counts.reduce((sum, c) => sum + (c - mean) ** 2, 0) / counts.length;
       const stddev = Math.sqrt(variance);
