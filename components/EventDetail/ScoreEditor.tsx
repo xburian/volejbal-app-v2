@@ -60,20 +60,24 @@ export const ScoreEditor: React.FC<ScoreEditorProps> = ({
           <div key={idx} className="grid grid-cols-[auto_1fr_auto_1fr_auto] gap-2 items-center" data-testid={`score-set-${idx}`}>
             <span className="text-xs font-bold text-slate-400 w-12">Set {idx + 1}</span>
             <input
-              type="number"
-              min="0"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              placeholder="0"
               value={s0}
-              onChange={e => scoreTracking.handleSetScoreChange(idx, 0, Math.max(0, Number(e.target.value)))}
-              className="w-full px-2 py-1.5 text-sm text-center border border-slate-300 rounded focus:ring-1 focus:ring-blue-300 outline-none"
+              onChange={e => scoreTracking.handleSetScoreChange(idx, 0, e.target.value)}
+              className="w-full px-2 py-1.5 text-sm text-center border border-slate-300 rounded focus:ring-1 focus:ring-blue-300 outline-none placeholder:text-slate-300"
               data-testid={`score-set-${idx}-team-0`}
             />
             <span className="text-xs text-slate-300 font-bold">:</span>
             <input
-              type="number"
-              min="0"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              placeholder="0"
               value={s1}
-              onChange={e => scoreTracking.handleSetScoreChange(idx, 1, Math.max(0, Number(e.target.value)))}
-              className="w-full px-2 py-1.5 text-sm text-center border border-slate-300 rounded focus:ring-1 focus:ring-blue-300 outline-none"
+              onChange={e => scoreTracking.handleSetScoreChange(idx, 1, e.target.value)}
+              className="w-full px-2 py-1.5 text-sm text-center border border-slate-300 rounded focus:ring-1 focus:ring-blue-300 outline-none placeholder:text-slate-300"
               data-testid={`score-set-${idx}-team-1`}
             />
             <button
