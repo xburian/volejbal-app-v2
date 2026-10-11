@@ -6,6 +6,4 @@ __tests__/
 
 # Ignore build & maintenance scripts
 scripts/
-
-# Ignore private api helpers (prefixed with _)
-api/_*
+.mock-db.json
