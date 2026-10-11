@@ -71,6 +71,22 @@ All domain types in `types.ts`: `User`, `BankAccount`, `Participant`, `Volleybal
 
 ## Release Notes
 
+### v1.12.0 — Event Time Editing, Non-blocking Refresh & Score Input Ergonomics (2026-10-11)
+
+#### ⏰ Event Time Inline Editing (`components/EventDetail/`)
+- **Header time display**: Event detail header now shows the event time prominently with a `Clock` icon next to location.
+- **Inline editing**: Added inline editing for event time (with Enter/Save and Escape/Cancel), calling `onUpdate({ ...event, time })`.
+- **Tests**: 4 new tests in `components/EventDetail.test.tsx` verifying time render, edit input, save callback, and cancel.
+
+#### 🔄 Non-blocking Background Refresh (`hooks/useDataLoading.ts`, `App.tsx`)
+- **Non-blocking refresh**: Background data refreshes (on tab visibility return) no longer display a full-screen blocking overlay.
+- **Corner refresh indicator**: Subtle non-blocking status pill displayed in the bottom-right corner during background reload.
+- **Initial load overlay**: Full-screen loader only shown on initial cold start when no events are cached yet.
+
+#### 🏆 Score & Numeric Input Ergonomics (`ScoreEditor.tsx`, `useScoreTracking.ts`, `BankAccountSettingsModal.tsx`)
+- **Empty input handling**: Set scores editing state converted from numbers to strings with numeric input mode, allowing users to clear and type digits naturally without a stuck `0`.
+- **Sport config inputs**: Max players and default cost inputs converted to numeric text inputs with clean placeholders.
+
 ### v1.11.0 — Auto-Attend & Stats Ranking Fix (2026-08-12)
 
 #### ⚡ Auto-Attend Setting (`components/BankAccountSettingsModal.tsx`)

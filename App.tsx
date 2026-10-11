@@ -340,7 +340,7 @@ const App: React.FC = () => {
             <button onClick={() => downloadICS(events)} className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all" title="Export do kalendáře">
               <Download size={18} />
             </button>
-            <button onClick={refreshAll} className="p-2 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-all" title="Obnovit data">
+            <button onClick={() => refreshAll()} className="p-2 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-all" title="Obnovit data">
               <RefreshCw size={18} />
             </button>
             <button onClick={() => setIsSettingsOpen(true)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Nastavení">

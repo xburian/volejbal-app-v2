@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Zap, CheckCircle2, Smartphone, Layout, FlaskConical, CreditCard, ArrowLeft, Trophy, BookOpen, UserCircle, BarChart3, Target, Puzzle, RefreshCw, Repeat2, Link, PawPrint, Swords, Download, Ticket, Bug, MessageSquarePlus, Eye } from 'lucide-react';
+import { Sparkles, Zap, CheckCircle2, Smartphone, Layout, FlaskConical, CreditCard, ArrowLeft, Trophy, BookOpen, UserCircle, BarChart3, Target, Puzzle, RefreshCw, Repeat2, Link, PawPrint, Swords, Download, Ticket, Bug, MessageSquarePlus, Eye, Clock } from 'lucide-react';
 
 interface ReleaseNotesPageProps {
   onClose: () => void;
@@ -12,6 +12,40 @@ interface ChangeEntry {
 }
 
 const versions: { version: string; date: string; title: string; changes: ChangeEntry[] }[] = [
+  {
+    version: '1.12.0',
+    date: '11. 10. 2026',
+    title: 'Čas události, neblokující obnova & ergonomie skóre',
+    changes: [
+      {
+        icon: <Clock size={16} />,
+        title: 'Zobrazení a inline úprava času události',
+        items: [
+          'V hlavičce detailu události je nyní zřetelně zobrazen čas konání s ikonou hodin',
+          'Rychlá možnost inline úpravy času přímo v detailu události bez nutnosti otevírat modální okno',
+          'Podpora uložení (Enter / ikona potvrzení) i zrušení (Escape / ikona křížku)',
+        ],
+      },
+      {
+        icon: <RefreshCw size={16} />,
+        title: 'Neblokující obnova dat na pozadí',
+        items: [
+          'Intervalové a pozadní načítání dat již nezamyká celou obrazovku bílým překryvem',
+          'Během aktualizace dat na pozadí se zobrazuje decentní indikátor v rohu obrazovky',
+          'Plnohodnotný překryv se zobrazí pouze při prvním načtení aplikace bez existujících dat',
+        ],
+      },
+      {
+        icon: <Trophy size={16} />,
+        title: 'Ergonomie zadávání skóre a číselných hodnot',
+        items: [
+          'Při editaci skóre setů již v polích nevisí nucená nula — vstupy umožňují přirozené mazání a psaní',
+          'Při vytváření nového setu se zobrazují čisté placeholder nuly namísto pevných hodnot',
+          'Vylepšena editace maximálního počtu hráčů a výchozí ceny v nastavení sportů',
+        ],
+      },
+    ],
+  },
   {
     version: '1.11.0',
     date: '12. 8. 2026',

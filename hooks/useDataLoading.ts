@@ -54,18 +54,19 @@ export function useDataLoading({ currentUser }: UseDataLoadingProps) {
     }
   }, []);
 
-  const refreshAll = useCallback(async (isBackground = false) => {
+  const refreshAll = useCallback(async (isBackground: boolean | unknown = false) => {
+    const isBg = isBackground === true;
     lastFetchedAt.current = Date.now();
-    if (isBackground) setIsRefreshing(true);
+    if (isBg) setIsRefreshing(true);
     try {
       await Promise.all([
-        loadEvents(isBackground),
+        loadEvents(isBg),
         loadUsers(),
         loadBankAccounts(),
         loadSportConfigs(),
       ]);
     } finally {
-      if (isBackground) setIsRefreshing(false);
+      if (isBg) setIsRefreshing(false);
     }
   }, [loadEvents, loadUsers, loadBankAccounts, loadSportConfigs]);
 
