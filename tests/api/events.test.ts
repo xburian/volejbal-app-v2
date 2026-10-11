@@ -270,5 +270,45 @@ describe('API /api/events handler', () => {
       expect(teamEvents).toContain(data.ids[1]);
     });
   });
+
+  describe('Lazy TeamId Migration', () => {
+    it('lazily migrates legacy events without teamId on GET', async () => {
+      // Simulate legacy event in Redis without teamId
+      const legacyEvent = {
+        id: 'evt-legacy-1',
+        title: 'Starý trénink',
+        date: '2026-04-01',
+        time: '18:00',
+        location: 'Stará hala',
+        totalCost: 1000,
+        accountNumber: '123/0100',
+        sportType: 'volejbal',
+      };
+      await mockRedisInstance.set('event:evt-legacy-1', JSON.stringify(legacyEvent));
+      await mockRedisInstance.sadd('events:all', 'evt-legacy-1');
+
+      // Default team token
+      const defaultTeamToken = createAccessToken({ teamId: 'team-nahravame-si', teamName: 'nahravame-si' });
+
+      // GET /api/events
+      const { req, res } = createReqRes({ method: 'GET', token: defaultTeamToken });
+      await handler(req, res);
+      expect(res.getStatus()).toBe(200);
+
+      const events = res.getJson();
+      const migrated = events.find((e: any) => e.id === 'evt-legacy-1');
+      expect(migrated).toBeDefined();
+      expect(migrated.teamId).toBe('team-nahravame-si');
+
+      // Verify Redis has persisted the teamId on the event
+      const raw = await mockRedisInstance.get('event:evt-legacy-1');
+      const stored = JSON.parse(raw);
+      expect(stored.teamId).toBe('team-nahravame-si');
+
+      // Verify added to team:team-nahravame-si:events
+      const inSet = await mockRedisInstance.sismember('team:team-nahravame-si:events', 'evt-legacy-1');
+      expect(inSet).toBe(1);
+    });
+  });
 });
 

@@ -67,6 +67,24 @@ async function handleGet(res: ApiResponse, teamId: string) {
   }
   const rawEvents = (await eventPipeline.exec()).filter(Boolean).map(parseJson);
 
+  // Lazy migration: assign teamId to legacy events if not already set
+  const migrationPipeline = redis.pipeline();
+  let hasMigrations = false;
+
+  for (const event of rawEvents) {
+    if (!event.teamId) {
+      event.teamId = teamId;
+      const { participants: _p, ...eventToSave } = event;
+      migrationPipeline.set(`event:${event.id}`, JSON.stringify(eventToSave));
+      migrationPipeline.sadd(`team:${teamId}:events`, event.id);
+      hasMigrations = true;
+    }
+  }
+
+  if (hasMigrations) {
+    await migrationPipeline.exec();
+  }
+
   // Fetch users of this team for name resolution
   let userIds = await redis.smembers(`team:${teamId}:users`);
   if ((!userIds || userIds.length === 0) && teamId === DEFAULT_TEAM_ID) {

@@ -242,4 +242,33 @@ describe('API /api/users handler', () => {
     const teamUsers = await mockRedisInstance.smembers('team:team-1:users');
     expect(teamUsers).not.toContain(user.id);
   });
+
+  it('lazily migrates legacy users without teamId on GET', async () => {
+    // Simulate legacy user in Redis without teamId
+    const legacyUser = { id: 'usr-legacy-1', name: 'Legacy Petr' };
+    await mockRedisInstance.set('user:usr-legacy-1', JSON.stringify(legacyUser));
+    await mockRedisInstance.sadd('users:all', 'usr-legacy-1');
+
+    // Default team token
+    const defaultTeamToken = createAccessToken({ teamId: 'team-nahravame-si', teamName: 'nahravame-si' });
+
+    // GET /api/users
+    const { req, res } = createReqRes({ method: 'GET', token: defaultTeamToken });
+    await handler(req, res);
+    expect(res.getStatus()).toBe(200);
+
+    const users = res.getJson();
+    const migrated = users.find((u: any) => u.id === 'usr-legacy-1');
+    expect(migrated).toBeDefined();
+    expect(migrated.teamId).toBe('team-nahravame-si');
+
+    // Verify Redis has persisted the teamId
+    const raw = await mockRedisInstance.get('user:usr-legacy-1');
+    const stored = JSON.parse(raw);
+    expect(stored.teamId).toBe('team-nahravame-si');
+
+    // Verify added to team:team-nahravame-si:users
+    const inSet = await mockRedisInstance.sismember('team:team-nahravame-si:users', 'usr-legacy-1');
+    expect(inSet).toBe(1);
+  });
 });

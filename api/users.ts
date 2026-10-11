@@ -65,14 +65,28 @@ async function handleGet(req: ApiRequest, res: ApiResponse, teamId: string) {
 
   const users = results.filter(Boolean).map((r: any) => parseJson(r));
 
-  // Lazy migration: extract any remaining base64 photos into separate keys
+  // Lazy migration: extract any remaining base64 photos AND assign teamId if missing
   const migrationPipeline = redis.pipeline();
   let hasMigrations = false;
 
   for (const user of users) {
+    let modified = false;
+
+    // 1. Photo migration
     if (user.photoUrl && user.photoUrl.startsWith('data:')) {
       migrationPipeline.set(`photo:${user.id}`, user.photoUrl);
       user.photoUrl = `/api/photos?id=${user.id}&v=${Date.now()}`;
+      modified = true;
+    }
+
+    // 2. Team migration: assign teamId only if not already set
+    if (!user.teamId) {
+      user.teamId = teamId;
+      migrationPipeline.sadd(`team:${teamId}:users`, user.id);
+      modified = true;
+    }
+
+    if (modified) {
       migrationPipeline.set(`user:${user.id}`, JSON.stringify(user));
       hasMigrations = true;
     }

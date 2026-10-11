@@ -386,6 +386,99 @@ describe('EventDetail Component', () => {
     });
   });
 
+  describe('Location Editing', () => {
+    it('renders location edit button', () => {
+      render(
+        <EventDetail
+          event={mockEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      const editButton = screen.getByTitle('Upravit polohu / místo');
+      expect(editButton).toBeInTheDocument();
+      expect(screen.getByText('Test Hall')).toBeInTheDocument();
+    });
+
+    it('shows input field when edit location button is clicked', async () => {
+      const user = userEvent.setup();
+      render(
+        <EventDetail
+          event={mockEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      const editButton = screen.getByTitle('Upravit polohu / místo');
+      await user.click(editButton);
+
+      const input = screen.getByPlaceholderText('Místo konání');
+      expect(input).toHaveValue('Test Hall');
+    });
+
+    it('updates location and calls onUpdate when save button is clicked', async () => {
+      const user = userEvent.setup();
+      render(
+        <EventDetail
+          event={mockEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      const editButton = screen.getByTitle('Upravit polohu / místo');
+      await user.click(editButton);
+
+      const input = screen.getByPlaceholderText('Místo konání');
+      await user.clear(input);
+      await user.type(input, 'Hala Krč');
+
+      const saveButton = screen.getByTitle('Uložit polohu');
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockOnUpdate).toHaveBeenCalledWith({
+          ...mockEvent,
+          location: 'Hala Krč',
+        });
+      });
+    });
+
+    it('cancels location editing without calling onUpdate', async () => {
+      const user = userEvent.setup();
+      render(
+        <EventDetail
+          event={mockEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]} sportConfigs={DEFAULT_SPORT_CONFIGS} allEvents={[]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      const editButton = screen.getByTitle('Upravit polohu / místo');
+      await user.click(editButton);
+
+      const input = screen.getByPlaceholderText('Místo konání');
+      await user.clear(input);
+      await user.type(input, 'New Place');
+
+      const cancelButton = screen.getByTitle('Zrušit úpravu polohy');
+      await user.click(cancelButton);
+
+      expect(mockOnUpdate).not.toHaveBeenCalled();
+      expect(screen.getByText('Test Hall')).toBeInTheDocument();
+    });
+  });
+
   describe('Integration: Cost Update affects all related elements', () => {
     it('updates all cost-related displays when total cost changes', async () => {
       const user = userEvent.setup();

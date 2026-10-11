@@ -1,6 +1,6 @@
 import React from 'react';
 import { SportEvent, SportConfig } from '@/types.ts';
-import { Users, Trash2, Wallet, Edit2, Check, X } from 'lucide-react';
+import { Trash2, Wallet, Edit2, Check, X, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 import { useWeather } from '@/hooks/useWeather';
 import { WeatherBadge } from './WeatherBadge';
@@ -16,6 +16,12 @@ interface EventDetailHeaderProps {
   onStartEditCost: () => void;
   onSaveCost: () => void;
   onCancelCostEdit: () => void;
+  isEditingLocation?: boolean;
+  tempLocation?: string;
+  onTempLocationChange?: (value: string) => void;
+  onStartEditLocation?: () => void;
+  onSaveLocation?: () => void;
+  onCancelLocationEdit?: () => void;
   onDelete: (id: string) => void;
 }
 
@@ -30,6 +36,12 @@ export const EventDetailHeader: React.FC<EventDetailHeaderProps> = ({
   onStartEditCost,
   onSaveCost,
   onCancelCostEdit,
+  isEditingLocation = false,
+  tempLocation = '',
+  onTempLocationChange,
+  onStartEditLocation,
+  onSaveLocation,
+  onCancelLocationEdit,
   onDelete,
 }) => {
   const { weather, isLoading: weatherLoading } = useWeather(event.date);
@@ -46,7 +58,53 @@ export const EventDetailHeader: React.FC<EventDetailHeaderProps> = ({
           </span>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-slate-500 mt-2 text-sm">
-          <span className="flex items-center gap-1"><Users size={16} /> {event.location}</span>
+          {/* Location with inline editing */}
+          <div className="flex items-center gap-1">
+            <MapPin size={16} />
+            {!isEditingLocation ? (
+              <>
+                <span>{event.location}</span>
+                {onStartEditLocation && (
+                  <button
+                    onClick={onStartEditLocation}
+                    className="ml-1 text-slate-400 hover:text-blue-600 transition-colors p-0.5"
+                    title="Upravit polohu / místo"
+                  >
+                    <Edit2 size={12} />
+                  </button>
+                )}
+              </>
+            ) : (
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  value={tempLocation}
+                  onChange={(e) => onTempLocationChange?.(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') onSaveLocation?.();
+                    if (e.key === 'Escape') onCancelLocationEdit?.();
+                  }}
+                  className="px-1.5 py-0.5 text-sm border border-blue-300 rounded focus:ring-1 focus:ring-blue-200 outline-none w-36 sm:w-48"
+                  placeholder="Místo konání"
+                  autoFocus
+                />
+                <button
+                  onClick={onSaveLocation}
+                  className="text-green-600 hover:bg-green-50 p-0.5 rounded transition-colors"
+                  title="Uložit polohu"
+                >
+                  <Check size={14} />
+                </button>
+                <button
+                  onClick={onCancelLocationEdit}
+                  className="text-red-600 hover:bg-red-50 p-0.5 rounded transition-colors"
+                  title="Zrušit úpravu polohy"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-1">
             <Wallet size={16} />
             {!isEditingCost ? (
