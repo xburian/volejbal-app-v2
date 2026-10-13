@@ -237,39 +237,35 @@ const App: React.FC = () => {
 
         {/* Mobile: Calendar View */}
         {mobileView === 'calendar' && (
-          <div className="flex-1 overflow-y-auto px-4 pt-3 pb-24 overscroll-contain custom-scrollbar animate-fade-in-up">
-            <section className="mb-4">
-              <CalendarView
-                currentDate={viewDate}
-                selectedDate={selectedDate}
-                onDateChange={handleDateSelect}
-                onMonthChange={setViewDate}
-                events={events}
-                initialMode="week"
-              />
-            </section>
-            <section>
-              <EventList
-                events={displayedEvents}
-                selectedEventId={selectedEventId}
-                selectedDate={selectedDate}
-                onSelectEvent={handleMobileEventSelect}
-                onDeleteEvent={handleRequestDelete}
-                onShowUpcoming={handleShowUpcoming}
-                onCreateEvent={() => setIsModalOpen(true)}
-                showChevron
-                showAddButton={false}
-                sportConfigs={sportConfigs}
-                sportFilter={sportFilter}
-                onSportFilterChange={setSportFilter}
-              />
-            </section>
+          <div className="flex-1 overflow-y-auto pb-24 overscroll-contain custom-scrollbar animate-fade-in-up bg-slate-50">
+            <CalendarView
+              currentDate={viewDate}
+              selectedDate={selectedDate}
+              onDateChange={handleDateSelect}
+              onMonthChange={setViewDate}
+              events={events}
+              initialMode="week"
+            />
+            <EventList
+              events={displayedEvents}
+              selectedEventId={selectedEventId}
+              selectedDate={selectedDate}
+              onSelectEvent={handleMobileEventSelect}
+              onDeleteEvent={handleRequestDelete}
+              onShowUpcoming={handleShowUpcoming}
+              onCreateEvent={() => setIsModalOpen(true)}
+              showChevron
+              showAddButton={false}
+              sportConfigs={sportConfigs}
+              sportFilter={sportFilter}
+              onSportFilterChange={setSportFilter}
+            />
           </div>
         )}
 
         {/* Mobile: Event Detail View */}
         {mobileView === 'detail' && (
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden animate-slide-in-right">
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden animate-slide-in-right bg-white">
             {selectedEvent ? (
               <ErrorBoundary fallbackMessage="Chyba při zobrazení detailu události">
                 <EventDetail
@@ -294,7 +290,7 @@ const App: React.FC = () => {
 
         {/* Mobile: Stats View */}
         {mobileView === 'stats' && (
-          <div className="flex-1 overflow-y-auto px-4 pt-3 pb-24 overscroll-contain custom-scrollbar animate-slide-in-right">
+          <div className="flex-1 overflow-y-auto px-4 py-4 pb-28 overscroll-contain custom-scrollbar animate-slide-in-right bg-slate-50">
             <StatsPage
               events={events}
               currentUser={currentUser}
@@ -307,7 +303,7 @@ const App: React.FC = () => {
 
         {/* Mobile: Changelog View */}
         {mobileView === 'changelog' && (
-          <div className="flex-1 overflow-y-auto px-4 pt-3 pb-24 overscroll-contain custom-scrollbar animate-slide-in-right">
+          <div className="flex-1 overflow-y-auto px-4 py-4 pb-28 overscroll-contain custom-scrollbar animate-slide-in-right bg-slate-50">
             <ReleaseNotesPage onClose={handleMobileBack} />
           </div>
         )}

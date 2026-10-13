@@ -105,58 +105,56 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, currentTeam, 
     });
 
   return (
-    <div className="min-h-screen bg-slate-900 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 flex flex-col justify-center items-center p-0 md:p-6 relative overflow-hidden">
-      {/* Decorative background glow spheres */}
-      <div className="absolute -top-32 -left-32 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-[100dvh] w-full flex flex-col bg-white md:bg-slate-900 md:bg-gradient-to-br md:from-slate-950 md:via-slate-900 md:to-indigo-950 md:items-center md:justify-center md:p-6 relative overflow-x-hidden">
+      {/* Decorative background glow spheres (desktop only) */}
+      <div className="hidden md:block absolute -top-32 -left-32 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="hidden md:block absolute -bottom-32 -right-32 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="bg-white/95 backdrop-blur-xl md:rounded-3xl shadow-2xl border border-white/20 w-full md:max-w-2xl overflow-hidden relative min-h-screen md:min-h-0 flex flex-col animate-fade-in z-10">
+      <div className="w-full flex-1 flex flex-col bg-white md:flex-initial md:max-w-2xl md:rounded-3xl md:shadow-2xl md:border md:border-white/20 md:bg-white/95 md:backdrop-blur-xl md:overflow-hidden relative z-10 animate-fade-in">
         {isLoading && (
           <div className="absolute inset-0 bg-white/70 backdrop-blur-sm z-50 flex items-center justify-center animate-fade-in">
              <Loader2 className="animate-spin text-blue-600" size={36} />
           </div>
         )}
 
-        {/* Hero Header with Athletic Lifestyle Vibe */}
-        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 px-6 py-6 text-white flex items-center justify-between gap-4 relative shadow-md">
-          <div className="flex items-center gap-3.5">
-            <div className="p-3 bg-white/15 backdrop-blur-md rounded-2xl shrink-0 shadow-inner border border-white/20 flex items-center justify-center">
-              <Trophy size={26} className="text-amber-300 drop-shadow-sm" />
+        {/* Hero Header with Athletic Lifestyle Vibe - Flat & edge-to-edge on mobile */}
+        <div className="bg-blue-600 md:bg-gradient-to-r md:from-blue-700 md:via-indigo-700 md:to-blue-800 px-4 py-4 md:px-6 md:py-6 text-white flex items-center justify-between gap-3 relative shadow-none md:shadow-md shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2.5 md:p-3 bg-white/15 backdrop-blur-sm rounded-xl md:rounded-2xl shrink-0 border border-white/20 flex items-center justify-center">
+              <Trophy size={22} className="text-amber-300 md:w-[26px] md:h-[26px] drop-shadow-sm" />
             </div>
-            <div className="text-left">
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl md:text-2xl font-black tracking-tight leading-tight">
-                  Vítejte v Sport Plánovači
-                </h1>
-              </div>
+            <div className="text-left min-w-0">
+              <h1 className="text-lg md:text-2xl font-black tracking-tight leading-tight truncate">
+                Vítejte v Sport Plánovači
+              </h1>
               {currentTeam ? (
-                <div className="flex items-center gap-1.5 text-blue-100 text-xs mt-1">
-                  <span className="font-semibold bg-white/15 backdrop-blur-sm px-2.5 py-0.5 rounded-full border border-white/25 shadow-sm">
+                <div className="flex items-center gap-1.5 text-blue-100 text-xs mt-0.5">
+                  <span className="font-semibold bg-white/15 px-2.5 py-0.5 rounded-full border border-white/20 truncate">
                     Tým: {currentTeam.name}
                   </span>
                 </div>
               ) : (
-                <p className="text-blue-100 text-sm mt-0.5">Kdo dnes přišel?</p>
+                <p className="text-blue-100 text-xs md:text-sm mt-0.5">Kdo dnes přišel?</p>
               )}
             </div>
           </div>
           {onLogoutTeam && (
             <button
               onClick={onLogoutTeam}
-              className="text-xs bg-white/15 hover:bg-white/25 active:scale-95 text-white font-medium px-3.5 py-2 rounded-xl border border-white/20 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer shadow-sm hover:shadow"
+              className="text-xs bg-white/15 hover:bg-white/25 active:scale-95 text-white font-medium px-3 py-2 rounded-xl border border-white/20 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer shadow-none md:shadow-sm"
               title="Změnit nebo odhlásit tým"
             >
               <LogOut size={14} />
-              <span>Změnit tým</span>
+              <span className="inline">Změnit tým</span>
             </button>
           )}
         </div>
 
-        <div className="p-6 md:p-8 flex-1 flex flex-col justify-between">
+        <div className="p-4 md:p-8 flex-1 flex flex-col justify-between overflow-y-auto">
           <div>
             {/* User List Header & Filter */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-3">
+            <div className="mb-4 md:mb-6">
+              <div className="flex items-center justify-between mb-2.5 md:mb-3">
                 <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
                   <span>Vyberte svůj profil</span>
                   {users.length > 0 && (
@@ -167,15 +165,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, currentTeam, 
                 </h2>
               </div>
 
-              {/* Modern Search Bar with Clear Button */}
-              <div className="relative mb-4">
+              {/* Modern Flat Search Bar with Clear Button */}
+              <div className="relative mb-3 md:mb-4">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={17} />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Hledat hráče..."
-                  className="w-full pl-10 pr-9 py-2.5 bg-slate-50/80 hover:bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm font-medium text-slate-800 placeholder:text-slate-400 transition-all"
+                  className="w-full pl-10 pr-9 py-2.5 bg-slate-100 md:bg-slate-50/80 hover:bg-slate-50 border-0 md:border md:border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm font-medium text-slate-800 placeholder:text-slate-400 transition-all"
                 />
                 {searchQuery && (
                   <button
@@ -188,26 +186,26 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, currentTeam, 
                 )}
               </div>
 
-              {/* Player Cards Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-[48vh] md:max-h-72 overflow-y-auto custom-scrollbar p-0.5">
+              {/* Player Cards Grid - Flat styling on mobile */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 md:gap-3 max-h-[45vh] md:max-h-72 overflow-y-auto custom-scrollbar p-0.5">
                 {filteredUsers.map(user => (
                   <div key={user.id} className="relative group">
                     <button
                       onClick={() => onLogin(user)}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-200/90 bg-white hover:border-blue-500 hover:bg-blue-50/50 hover:shadow-md hover:-translate-y-0.5 active:scale-95 transition-all text-left pr-10 shadow-sm cursor-pointer"
+                      className="w-full flex items-center gap-2.5 md:gap-3 p-2.5 md:p-3 rounded-xl border border-slate-100 md:border-slate-200/90 bg-slate-50 md:bg-white hover:border-blue-500 hover:bg-blue-50/50 hover:shadow-xs active:scale-95 transition-all text-left pr-9 md:pr-10 shadow-none md:shadow-sm cursor-pointer"
                     >
                       {user.photoUrl ? (
                         <img
                           src={user.photoUrl}
                           alt={user.name}
-                          className="w-9 h-9 md:w-10 md:h-10 rounded-full object-cover shrink-0 ring-2 ring-blue-500/20 shadow-sm"
+                          className="w-9 h-9 md:w-10 md:h-10 rounded-full object-cover shrink-0 ring-1 ring-slate-200 md:ring-2 md:ring-blue-500/20 shadow-none md:shadow-sm"
                         />
                       ) : (
-                        <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
+                        <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-blue-600 md:bg-gradient-to-br md:from-blue-600 md:to-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-none md:shadow-sm shrink-0">
                           {user.name.charAt(0).toUpperCase()}
                         </div>
                       )}
-                      <span className="font-semibold text-slate-700 group-hover:text-blue-900 truncate text-sm">
+                      <span className="font-semibold text-slate-800 group-hover:text-blue-900 truncate text-xs sm:text-sm">
                         {user.name}
                       </span>
                     </button>
@@ -217,7 +215,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, currentTeam, 
                         e.stopPropagation();
                         setUserToDelete(user);
                       }}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg opacity-70 md:opacity-0 group-hover:opacity-100 transition-all"
                       title="Smazat uživatele"
                     >
                       <Trash2 size={15} />
@@ -240,7 +238,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, currentTeam, 
             </div>
 
             {/* Subtle Divider */}
-            <div className="relative my-4">
+            <div className="relative my-3 md:my-4">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-slate-200"></div>
               </div>
@@ -249,9 +247,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, currentTeam, 
               </div>
             </div>
 
-            {/* Create User Section */}
-            <form onSubmit={handleCreateUser} className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 transition-all focus-within:border-blue-400 focus-within:bg-white shadow-sm">
-              <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            {/* Create User Section - Flat on mobile */}
+            <form onSubmit={handleCreateUser} className="bg-slate-50/90 border border-slate-200/80 rounded-2xl p-3.5 md:p-4 transition-all focus-within:border-blue-400 focus-within:bg-white shadow-none md:shadow-sm">
+              <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5 md:mb-3 flex items-center gap-1.5">
                 <Sparkles size={14} className="text-blue-600" />
                 Nový hráč
               </h2>

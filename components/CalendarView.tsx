@@ -80,7 +80,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   const weekDays = ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'];
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-3.5 sm:p-4 transition-all" data-testid="calendar-view">
+    <div className="bg-white border-b border-slate-200/70 shadow-xs md:rounded-2xl md:border md:border-slate-200/90 md:shadow-sm px-4 py-3.5 transition-all w-full" data-testid="calendar-view">
       {/* Calendar Header with Title, Toggle and Navigation */}
       <div className="flex items-center justify-between gap-1.5 mb-2.5 flex-wrap sm:flex-nowrap">
         <div className="min-w-0">

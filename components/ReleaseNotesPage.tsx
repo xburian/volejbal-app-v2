@@ -31,7 +31,9 @@ const versions: { version: string; date: string; title: string; changes: ChangeE
         icon: <Sparkles size={16} />,
         title: 'Moderní sportovní Login obrazovky',
         items: [
-          'Nový design přihlašovací obrazovky s atletickou vizuální identitou, gradientním pozadím a ambientními světelnými efekty',
+          'Nový design přihlašovací obrazovky s atletickou vizuální identitou, gradientním pozadím a ambientními světelnými efekty na desktopu',
+          'Mobilní verze bez kompromisů: plné roztažení do všech rohů obrazovky (edge-to-edge 100dvh) bez okrajových mezer či plovoucích karet',
+          'Čistý flat design na mobilu s rychlým výběrem hráčů, zjednodušenými vstupy a okamžitým vytvořením nového profilu i týmu',
           'Interaktivní karty hráčů s mikroanimacemi při najetí myší a stylovými barevnými avatary',
           'Rychlé vyhledávání hráčů bez ohledu na diakritiku a tlačítkem pro okamžité vymazání hledání',
           'Sjednocený vizuální styl i pro přihlašovací obrazovku týmu (TeamLoginScreen)',

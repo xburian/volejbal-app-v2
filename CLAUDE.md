@@ -83,10 +83,11 @@ All domain types in `types.ts`: `User`, `BankAccount`, `Participant`, `Volleybal
 - **Vertical space savings**: Compact weekly strip reduces height from ~300px to ~70px, saving ~220px to display upcoming match cards immediately above the fold.
 
 #### 👟 Athletic Lifestyle Login Screens (`components/LoginScreen.tsx`, `components/TeamLoginScreen.tsx`)
-- **Modern sports aesthetic**: Deep gradient mesh backdrop (`slate-950` to `indigo-950`), frosted glass cards (`backdrop-blur-xl`), and ambient glowing orbs.
+- **Desktop aesthetic**: Deep gradient mesh backdrop (`slate-950` to `indigo-950`), frosted glass cards (`backdrop-blur-xl`), and ambient glowing orbs.
+- **Mobile edge-to-edge flat redesign**: Full bleed to all screen edges (`100dvh`, zero outer padding/borders on mobile), modern flat athletic layout with clean inputs (`bg-slate-100 border-0 md:border md:bg-slate-50`), flat buttons, and zero clutter.
 - **Interactive player cards**: Gradient letter avatars, micro-interactions (`hover:-translate-y-0.5`, `hover:shadow-md`, `active:scale-95`).
 - **Ergonomic search**: Diacritic-insensitive search with inline clear button (`✕`).
-- **Cohesive TeamLoginScreen**: Styled to match with frosted tabs and toggleable password fields.
+- **Cohesive TeamLoginScreen**: Styled to match with full-bleed flat mobile layout, frosted tabs, and toggleable password fields.
 
 #### 🔄 Data Reload Micro-Interactions & Toast (`components/ReloadToast.tsx`, `App.tsx`)
 - **ReloadToast**: Non-blocking floating status pill in bottom-right corner. Features `loading` (spinner + "Aktualizace dat…") and `success` (emerald checkmark badge + "Data byla aktualizována") states.
