@@ -22,7 +22,7 @@ import { DevTestingToolbar } from './components/DevTestingToolbar';
 import { usePersistedAuth } from './hooks/usePersistedAuth';
 import { useUrlState } from './hooks/useUrlState';
 import { useDataLoading } from './hooks/useDataLoading';
-import { Calendar as CalendarIcon, Trophy, Loader2, Settings, BarChart3, Download, RefreshCw, Menu } from 'lucide-react';
+import { Calendar as CalendarIcon, Trophy, Loader2, Settings, BarChart3, RefreshCw, Menu } from 'lucide-react';
 import { isSameDay, startOfDay } from 'date-fns';
 import { downloadICS } from './utils/icalExport';
 
@@ -219,7 +219,7 @@ const App: React.FC = () => {
       {/* ═══════════════════════════════════════════ */}
       {/*  MOBILE LAYOUT (md:hidden)                 */}
       {/* ═══════════════════════════════════════════ */}
-      <div className="md:hidden flex flex-col min-h-screen pb-16">
+      <div className="md:hidden flex flex-col h-[100dvh] max-h-[100dvh] overflow-hidden bg-slate-100 relative">
         <MobileHeader
           mobileView={mobileView}
           currentUser={currentUser}
@@ -237,27 +237,18 @@ const App: React.FC = () => {
 
         {/* Mobile: Calendar View */}
         {mobileView === 'calendar' && (
-          <div className="flex-1 overflow-y-auto p-4 animate-fade-in-up">
-            <section className="mb-6">
+          <div className="flex-1 overflow-y-auto px-4 pt-3 pb-24 overscroll-contain custom-scrollbar animate-fade-in-up">
+            <section className="mb-4">
               <CalendarView
                 currentDate={viewDate}
                 selectedDate={selectedDate}
                 onDateChange={handleDateSelect}
                 onMonthChange={setViewDate}
                 events={events}
+                initialMode="week"
               />
             </section>
             <section>
-              <div className="flex justify-end mb-2 px-2">
-                <button
-                  onClick={() => downloadICS(events)}
-                  className="text-xs text-slate-500 hover:text-green-600 flex items-center gap-1 font-medium transition-colors bg-slate-50 px-2.5 py-1.5 rounded-lg hover:bg-green-50 border border-slate-200"
-                  title="Export do kalendáře"
-                >
-                  <Download size={14} />
-                  Export .ics
-                </button>
-              </div>
               <EventList
                 events={displayedEvents}
                 selectedEventId={selectedEventId}
@@ -278,7 +269,7 @@ const App: React.FC = () => {
 
         {/* Mobile: Event Detail View */}
         {mobileView === 'detail' && (
-          <div className="flex-1 overflow-y-auto animate-slide-in-right">
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden animate-slide-in-right">
             {selectedEvent ? (
               <ErrorBoundary fallbackMessage="Chyba při zobrazení detailu události">
                 <EventDetail
@@ -303,7 +294,7 @@ const App: React.FC = () => {
 
         {/* Mobile: Stats View */}
         {mobileView === 'stats' && (
-          <div className="flex-1 overflow-y-auto p-4 animate-slide-in-right">
+          <div className="flex-1 overflow-y-auto px-4 pt-3 pb-24 overscroll-contain custom-scrollbar animate-slide-in-right">
             <StatsPage
               events={events}
               currentUser={currentUser}
@@ -316,7 +307,7 @@ const App: React.FC = () => {
 
         {/* Mobile: Changelog View */}
         {mobileView === 'changelog' && (
-          <div className="flex-1 overflow-y-auto p-4 animate-slide-in-right">
+          <div className="flex-1 overflow-y-auto px-4 pt-3 pb-24 overscroll-contain custom-scrollbar animate-slide-in-right">
             <ReleaseNotesPage onClose={handleMobileBack} />
           </div>
         )}

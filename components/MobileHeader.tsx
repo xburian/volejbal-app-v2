@@ -29,79 +29,105 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   isRefreshing = false,
 }) => {
   return (
-    <div className="flex flex-col shadow-md z-20 relative bg-blue-700 text-white">
-      <div className="p-4 flex items-center justify-between">
+    <header className="sticky top-0 z-30 shrink-0 bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 text-white shadow-md border-b border-white/10">
+      <div className="px-4 py-2.5 flex items-center justify-between gap-2 min-h-[56px]">
         {mobileView === 'detail' && selectedEvent ? (
           <>
             <button
               data-testid="mobile-back"
               onClick={onBack}
-              className="flex items-center gap-1.5 text-white/90 hover:text-white transition-colors"
+              className="flex items-center gap-1.5 text-white/90 hover:text-white px-2 py-1.5 rounded-xl hover:bg-white/10 active:scale-95 transition-all shrink-0 cursor-pointer"
             >
-              <ArrowLeft size={20} />
-              <span className="text-sm font-medium">Zpět</span>
+              <ArrowLeft size={18} />
+              <span className="text-sm font-semibold">Zpět</span>
             </button>
-            <span data-testid="mobile-title" className="font-bold text-base truncate max-w-[200px]">
+            <span data-testid="mobile-title" className="font-bold text-sm sm:text-base truncate flex-1 text-center px-2">
               {selectedEvent.title}
             </span>
-            <div className="w-16" />
+            <div className="w-16 shrink-0 flex justify-end">
+              {onRefresh && (
+                <button
+                  data-testid="mobile-refresh-detail"
+                  onClick={onRefresh}
+                  className="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 transition-all flex items-center justify-center text-white border border-white/15 cursor-pointer"
+                  title="Obnovit data"
+                >
+                  <RefreshCw size={15} className={isRefreshing ? 'animate-spin text-cyan-200' : ''} />
+                </button>
+              )}
+            </div>
           </>
         ) : mobileView === 'stats' ? (
           <>
             <button
               data-testid="mobile-back"
               onClick={onBack}
-              className="flex items-center gap-1.5 text-white/90 hover:text-white transition-colors"
+              className="flex items-center gap-1.5 text-white/90 hover:text-white px-2 py-1.5 rounded-xl hover:bg-white/10 active:scale-95 transition-all shrink-0 cursor-pointer"
             >
-              <ArrowLeft size={20} />
-              <span className="text-sm font-medium">Zpět</span>
+              <ArrowLeft size={18} />
+              <span className="text-sm font-semibold">Zpět</span>
             </button>
-            <span data-testid="mobile-title" className="font-bold text-base">Statistiky</span>
-            <div className="w-16" />
+            <span data-testid="mobile-title" className="font-bold text-sm sm:text-base flex-1 text-center px-2">
+              Statistiky
+            </span>
+            <div className="w-16 shrink-0" />
           </>
         ) : mobileView === 'changelog' ? (
           <>
             <button
               data-testid="mobile-back"
               onClick={onBack}
-              className="flex items-center gap-1.5 text-white/90 hover:text-white transition-colors"
+              className="flex items-center gap-1.5 text-white/90 hover:text-white px-2 py-1.5 rounded-xl hover:bg-white/10 active:scale-95 transition-all shrink-0 cursor-pointer"
             >
-              <ArrowLeft size={20} />
-              <span className="text-sm font-medium">Zpět</span>
+              <ArrowLeft size={18} />
+              <span className="text-sm font-semibold">Zpět</span>
             </button>
-            <span data-testid="mobile-title" className="font-bold text-base">Seznam změn</span>
-            <div className="w-16" />
+            <span data-testid="mobile-title" className="font-bold text-sm sm:text-base flex-1 text-center px-2">
+              Seznam změn
+            </span>
+            <div className="w-16 shrink-0" />
           </>
         ) : (
           <>
-            <div className="flex items-center gap-2">
-              <Trophy size={24} className="shrink-0" />
-              <div>
-                <div className="font-bold text-base leading-tight">Sport Plánovač</div>
-                {currentTeam && (
-                  <div className="text-[11px] font-medium text-blue-200 truncate max-w-[130px]">
-                    Tým: {currentTeam.name}
+            {/* Calendar View Header: Team/App info */}
+            <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
+              <div className="p-1.5 bg-white/15 backdrop-blur-sm rounded-xl shrink-0 border border-white/20 flex items-center justify-center shadow-inner">
+                <Trophy size={20} className="text-amber-300 drop-shadow-sm shrink-0" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="font-extrabold text-sm sm:text-base leading-tight truncate">
+                  Sport Plánovač
+                </div>
+                {currentTeam ? (
+                  <div className="text-[11px] font-semibold text-blue-100/90 truncate flex items-center gap-1 mt-0.5">
+                    <span className="bg-white/15 px-1.5 py-0.2 rounded border border-white/20">
+                      Tým: {currentTeam.name}
+                    </span>
                   </div>
+                ) : (
+                  <div className="text-[11px] text-blue-200 truncate">Vítejte</div>
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-1.5">
+
+            {/* Calendar View Actions */}
+            <div className="flex items-center gap-1.5 shrink-0">
               {onOpenMenu ? (
                 <button
                   type="button"
                   data-testid="mobile-user-menu"
                   onClick={onOpenMenu}
-                  className="rounded-full hover:ring-2 hover:ring-white/50 transition-all focus:outline-none"
+                  className="rounded-full ring-2 ring-white/30 hover:ring-white/70 active:scale-95 transition-all focus:outline-none shrink-0 cursor-pointer"
                   title="Menu profilu a týmu"
                 >
                   {currentUser.photoUrl ? (
                     <img
                       src={currentUser.photoUrl}
                       alt={currentUser.name}
-                      className="w-8 h-8 rounded-full object-cover border-2 border-white/40"
+                      className="w-8 h-8 rounded-full object-cover shadow-sm"
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-white/20 text-white font-bold text-xs flex items-center justify-center border-2 border-white/40">
+                    <div className="w-8 h-8 rounded-full bg-white/20 text-white font-bold text-xs flex items-center justify-center border border-white/40">
                       {currentUser.name.charAt(0).toUpperCase()}
                     </div>
                   )}
@@ -111,42 +137,45 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                   <img
                     src={currentUser.photoUrl}
                     alt={currentUser.name}
-                    className="w-8 h-8 rounded-full object-cover border-2 border-white/30"
+                    className="w-8 h-8 rounded-full object-cover ring-2 ring-white/30 shrink-0"
                   />
                 )
               )}
+
               {onRefresh && (
                 <button
                   data-testid="mobile-refresh"
                   onClick={onRefresh}
-                  className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
+                  className="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 transition-all flex items-center justify-center text-white border border-white/15 shrink-0 cursor-pointer shadow-sm"
                   title="Obnovit data"
                 >
-                  <RefreshCw size={18} className={isRefreshing ? 'animate-spin text-cyan-200' : ''} />
+                  <RefreshCw size={15} className={`transition-transform ${isRefreshing ? 'animate-spin text-cyan-200' : ''}`} />
                 </button>
               )}
+
               {onLogoutTeam && (
                 <button
                   data-testid="mobile-logout-team"
                   onClick={onLogoutTeam}
-                  className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
+                  className="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 transition-all flex items-center justify-center text-white border border-white/15 shrink-0 cursor-pointer shadow-sm"
                   title="Změnit tým"
                 >
-                  <Users size={18} />
+                  <Users size={15} />
                 </button>
               )}
+
               <button
                 data-testid="mobile-logout"
                 onClick={onLogout}
-                className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
+                className="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 transition-all flex items-center justify-center text-white border border-white/15 shrink-0 cursor-pointer shadow-sm"
                 title="Odhlásit hráče"
               >
-                <LogOut size={18} />
+                <LogOut size={15} />
               </button>
             </div>
           </>
         )}
       </div>
-    </div>
+    </header>
   );
 };

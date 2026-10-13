@@ -87,12 +87,12 @@ export const EventList: React.FC<EventListProps> = ({
 
       {/* Sport Filter Pills */}
       {sportConfigs.length > 0 && onSportFilterChange && (
-        <div className="flex flex-wrap gap-1.5 mb-3 px-2" data-testid="sport-filter">
+        <div className="flex items-center gap-1.5 mb-3 px-1 overflow-x-auto custom-scrollbar py-0.5" data-testid="sport-filter">
           <button
             onClick={() => onSportFilterChange(null)}
-            className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all border ${
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shrink-0 cursor-pointer ${
               sportFilter === null
-                ? 'bg-blue-600 text-white border-blue-600'
+                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                 : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'
             }`}
           >
@@ -103,20 +103,20 @@ export const EventList: React.FC<EventListProps> = ({
               key={config.type}
               onClick={() => onSportFilterChange(sportFilter === config.type ? null : config.type)}
               data-testid={`sport-filter-${config.type}`}
-              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all border flex items-center gap-1 ${
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border flex items-center gap-1.5 shrink-0 cursor-pointer ${
                 sportFilter === config.type
-                  ? 'bg-blue-600 text-white border-blue-600'
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                   : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'
               }`}
             >
               <span>{SPORT_EMOJI[config.type] ?? '🏅'}</span>
-              {config.label}
+              <span>{config.label}</span>
             </button>
           ))}
         </div>
       )}
 
-      <div className="space-y-3 pb-8">
+      <div className="space-y-3 pb-24 sm:pb-8">
         {filteredEvents.length === 0 ? (
           <div className="text-center py-12 text-slate-400 border-2 border-dashed border-slate-100 rounded-xl">
             <p className="text-sm">
