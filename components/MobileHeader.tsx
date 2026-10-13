@@ -12,6 +12,7 @@ interface MobileHeaderProps {
   onLogout: () => void;
   onLogoutTeam?: () => void;
   onRefresh?: () => void;
+  onOpenMenu?: () => void;
 }
 
 export const MobileHeader: React.FC<MobileHeaderProps> = ({
@@ -23,6 +24,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   onLogout,
   onLogoutTeam,
   onRefresh,
+  onOpenMenu,
 }) => {
   return (
     <div className="flex flex-col shadow-md z-20 relative bg-blue-700 text-white">
@@ -82,12 +84,34 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
               </div>
             </div>
             <div className="flex items-center gap-1.5">
-              {currentUser.photoUrl && (
-                <img
-                  src={currentUser.photoUrl}
-                  alt={currentUser.name}
-                  className="w-8 h-8 rounded-full object-cover border-2 border-white/30"
-                />
+              {onOpenMenu ? (
+                <button
+                  type="button"
+                  data-testid="mobile-user-menu"
+                  onClick={onOpenMenu}
+                  className="rounded-full hover:ring-2 hover:ring-white/50 transition-all focus:outline-none"
+                  title="Menu profilu a týmu"
+                >
+                  {currentUser.photoUrl ? (
+                    <img
+                      src={currentUser.photoUrl}
+                      alt={currentUser.name}
+                      className="w-8 h-8 rounded-full object-cover border-2 border-white/40"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-white/20 text-white font-bold text-xs flex items-center justify-center border-2 border-white/40">
+                      {currentUser.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </button>
+              ) : (
+                currentUser.photoUrl && (
+                  <img
+                    src={currentUser.photoUrl}
+                    alt={currentUser.name}
+                    className="w-8 h-8 rounded-full object-cover border-2 border-white/30"
+                  />
+                )
               )}
               {onRefresh && (
                 <button

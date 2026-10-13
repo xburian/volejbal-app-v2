@@ -508,3 +508,83 @@ describe('Auto-attend on event creation', () => {
     expect(storage.updateAttendance).not.toHaveBeenCalled();
   });
 });
+
+describe('Desktop Navigation & Drawers', () => {
+  beforeEach(() => {
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('selectedEventId');
+    localStorage.removeItem('mobileView');
+    vi.resetAllMocks();
+    vi.mocked(storage.getUsers).mockResolvedValue([{ id: 'u1', name: 'Jan' }]);
+    vi.mocked(storage.getEvents).mockResolvedValue([]);
+    vi.mocked(storage.getBankAccounts).mockResolvedValue([]);
+    vi.mocked(storage.getSportConfigs).mockResolvedValue([]);
+  });
+
+  it('opens AppMenuDrawer when clicking desktop user menu button', async () => {
+    await act(async () => { render(<App />); });
+    await waitFor(() => { expect(screen.getByText('Jan')).toBeInTheDocument(); });
+    await act(async () => { fireEvent.click(screen.getByText('Jan')); });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('desktop-user-menu')).toBeInTheDocument();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('desktop-user-menu'));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('app-menu-drawer')).toBeInTheDocument();
+      expect(screen.getByTestId('menu-item-settings')).toBeInTheDocument();
+    });
+  });
+
+  it('opens SettingsDrawer when clicking desktop settings button', async () => {
+    await act(async () => { render(<App />); });
+    await waitFor(() => { expect(screen.getByText('Jan')).toBeInTheDocument(); });
+    await act(async () => { fireEvent.click(screen.getByText('Jan')); });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('desktop-settings')).toBeInTheDocument();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('desktop-settings'));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('settings-drawer')).toBeInTheDocument();
+      expect(screen.getByTestId('tab-profile')).toBeInTheDocument();
+    });
+  });
+
+  it('switches between Zápasy and Statistiky desktop tabs', async () => {
+    await act(async () => { render(<App />); });
+    await waitFor(() => { expect(screen.getByText('Jan')).toBeInTheDocument(); });
+    await act(async () => { fireEvent.click(screen.getByText('Jan')); });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('desktop-tab-stats')).toBeInTheDocument();
+    });
+
+    // Click Statistiky tab
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('desktop-tab-stats'));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('desktop-tab-stats').className).toContain('text-blue-600');
+    });
+
+    // Click Zápasy tab to return
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('desktop-tab-events'));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('desktop-tab-events').className).toContain('text-blue-600');
+    });
+  });
+});
+

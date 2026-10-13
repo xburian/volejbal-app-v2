@@ -150,5 +150,23 @@ describe('MobileHeader', () => {
     await user.click(screen.getByTestId('mobile-logout-team'));
     expect(onLogoutTeam).toHaveBeenCalled();
   });
+
+  it('calls onOpenMenu when user avatar is clicked on calendar view', async () => {
+    const onOpenMenu = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <MobileHeader
+        mobileView="calendar"
+        currentUser={mockUser}
+        selectedEvent={undefined}
+        onBack={vi.fn()}
+        onLogout={vi.fn()}
+        onOpenMenu={onOpenMenu}
+      />
+    );
+    await user.click(screen.getByTestId('mobile-user-menu'));
+    expect(onOpenMenu).toHaveBeenCalled();
+  });
 });
+
 
