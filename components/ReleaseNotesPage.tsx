@@ -13,6 +13,41 @@ interface ChangeEntry {
 
 const versions: { version: string; date: string; title: string; changes: ChangeEntry[] }[] = [
   {
+    version: '1.13.0',
+    date: '13. 10. 2026',
+    title: 'UX Architektura, boční panely & moderní přihlašování',
+    changes: [
+      {
+        icon: <Layout size={16} />,
+        title: 'Nová architektura rozhraní & Drawery',
+        items: [
+          'Nastavení přesunuto z nepřehledného modálu do pravého vysouvacího panelu (SettingsDrawer) s rozdělením do 4 záložek: Profil, Účty, Sporty a Tým',
+          'Nové uživatelské menu (AppMenuDrawer) sjednocuje správu, nástroje, exporty i odhlašování a odstraňuje shluk 8 ikon v záhlaví',
+          'Rychlé přepínání hlavních obrazovek (Zápasy vs. Statistiky) pomocí moderních segmentovaných záložek',
+          'Kompaktní týdenní zobrazení kalendáře (přepínač Týden / Měsíc) šetří přes 200 px vertikálního prostoru na výšku pro okamžitý přehled zápasů',
+        ],
+      },
+      {
+        icon: <Sparkles size={16} />,
+        title: 'Moderní sportovní Login obrazovky',
+        items: [
+          'Nový design přihlašovací obrazovky s atletickou vizuální identitou, gradientním pozadím a ambientními světelnými efekty',
+          'Interaktivní karty hráčů s mikroanimacemi při najetí myší a stylovými barevnými avatary',
+          'Rychlé vyhledávání hráčů bez ohledu na diakritiku a tlačítkem pro okamžité vymazání hledání',
+          'Sjednocený vizuální styl i pro přihlašovací obrazovku týmu (TeamLoginScreen)',
+        ],
+      },
+      {
+        icon: <RefreshCw size={16} />,
+        title: 'Plovoucí toast & animace obnovy dat',
+        items: [
+          'Plovoucí notifikační toast (ReloadToast) v pravém dolním rohu informuje o průběhu i úspěšném dokončení synchronizace dat',
+          'Plynulá rotace ikony obnovy na desktopu, v mobilní hlavičce i v uživatelském menu s garancí zřetelné vizuální odezvy',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.12.0',
     date: '11. 10. 2026',
     title: 'Čas události, neblokující obnova & ergonomie skóre',
