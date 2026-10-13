@@ -92,6 +92,13 @@ All domain types in `types.ts`: `User`, `BankAccount`, `Participant`, `Volleybal
 - **ReloadToast**: Non-blocking floating status pill in bottom-right corner. Features `loading` (spinner + "Aktualizace dat…") and `success` (emerald checkmark badge + "Data byla aktualizována") states.
 - **Spinning button feedback**: Guarantees at least 600ms of smooth `animate-spin` on manual refresh trigger across desktop, mobile, and drawer buttons.
 
+#### 📱 Mobile Layout Architecture & Ergonomics (`MobileHeader.tsx`, `MobileBottomNav.tsx`, `App.tsx`)
+- **Fixed Viewport Shell**: Switched to `h-[100dvh] max-h-[100dvh] overflow-hidden` container preventing document jumpiness and double scroll momentum conflicts on mobile browsers.
+- **Sticky Gradient Header**: `MobileHeader` remains pinned at top with sleek athletic gradient (`blue-700` to `blue-800`), responsive button cluster, and balanced detail view headers.
+- **Elevated FAB Bottom Nav**: Modern frosted glass bottom bar with elevated center circular action button (`Plus`) for rapid event creation.
+- **Native Single-Layer Scrolling**: Removed nested scroll containers from `EventDetail` and eliminated duplicate back buttons in `StatsPage`.
+- **Default Week Strip on Mobile**: Mobile defaults to compact week strip, displaying upcoming matches immediately above the fold without scrolling.
+
 #### ✅ Tests (36 new, 469 total across 32 files)
 - `components/SettingsDrawer.test.tsx` — 12 tests: tabs, bank accounts, sports config, password update.
 - `components/AppMenuDrawer.test.tsx` — 10 tests: backdrop, close, actions routing.
