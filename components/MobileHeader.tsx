@@ -13,6 +13,7 @@ interface MobileHeaderProps {
   onLogoutTeam?: () => void;
   onRefresh?: () => void;
   onOpenMenu?: () => void;
+  isRefreshing?: boolean;
 }
 
 export const MobileHeader: React.FC<MobileHeaderProps> = ({
@@ -25,6 +26,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   onLogoutTeam,
   onRefresh,
   onOpenMenu,
+  isRefreshing = false,
 }) => {
   return (
     <div className="flex flex-col shadow-md z-20 relative bg-blue-700 text-white">
@@ -120,7 +122,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                   className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
                   title="Obnovit data"
                 >
-                  <RefreshCw size={18} />
+                  <RefreshCw size={18} className={isRefreshing ? 'animate-spin text-cyan-200' : ''} />
                 </button>
               )}
               {onLogoutTeam && (

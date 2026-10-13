@@ -16,6 +16,7 @@ import { ReleaseNotesPage } from './components/ReleaseNotesPage';
 import { IssueDrawer } from './components/IssueDrawer';
 import { MobileBottomNav, MobileView } from './components/MobileBottomNav';
 import { MobileHeader } from './components/MobileHeader';
+import { ReloadToast, ReloadToastStatus } from './components/ReloadToast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { DevTestingToolbar } from './components/DevTestingToolbar';
 import { usePersistedAuth } from './hooks/usePersistedAuth';
@@ -43,6 +44,7 @@ const App: React.FC = () => {
   const [showIssueDrawer, setShowIssueDrawer] = useState(false);
   const [isAppMenuOpen, setIsAppMenuOpen] = useState(false);
   const [sportFilter, setSportFilter] = useState<SportType | null>(null);
+  const [manualRefreshStatus, setManualRefreshStatus] = useState<ReloadToastStatus>('idle');
 
   // Auto-select first upcoming event
   useEffect(() => {
@@ -83,6 +85,28 @@ const App: React.FC = () => {
     updateUser(updatedUser);
     loadEvents();
   };
+
+  const handleManualRefresh = async () => {
+    setManualRefreshStatus('loading');
+    const minSpin = new Promise(resolve => setTimeout(resolve, 600));
+    try {
+      await Promise.all([refreshAll(true), minSpin]);
+      setManualRefreshStatus('success');
+      setTimeout(() => {
+        setManualRefreshStatus('idle');
+      }, 2200);
+    } catch {
+      setManualRefreshStatus('idle');
+    }
+  };
+
+  const activeRefreshStatus: ReloadToastStatus = manualRefreshStatus !== 'idle'
+    ? manualRefreshStatus
+    : isRefreshing
+      ? 'loading'
+      : 'idle';
+
+  const isRefreshSpinning = manualRefreshStatus === 'loading' || isRefreshing;
 
   const handleCreateEvent = async (newEventOrBatch: SportEvent | SportEvent[]) => {
     try {
@@ -189,18 +213,8 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Non-blocking background refresh indicator */}
-      {isRefreshing && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="fixed bottom-20 md:bottom-6 right-6 z-40 flex items-center gap-2 bg-slate-900/90 text-white text-xs px-3.5 py-2 rounded-full shadow-lg backdrop-blur-sm border border-slate-700/50 pointer-events-none animate-fade-in"
-          data-testid="background-refresh-indicator"
-        >
-          <Loader2 className="animate-spin text-blue-400" size={14} />
-          <span>Aktualizace dat…</span>
-        </div>
-      )}
+      {/* Non-blocking background / manual refresh indicator toast */}
+      <ReloadToast status={activeRefreshStatus} />
 
       {/* ═══════════════════════════════════════════ */}
       {/*  MOBILE LAYOUT (md:hidden)                 */}
@@ -214,7 +228,8 @@ const App: React.FC = () => {
           onBack={handleMobileBack}
           onLogout={handleLogout}
           onLogoutTeam={handleLogoutTeam}
-          onRefresh={refreshAll}
+          onRefresh={handleManualRefresh}
+          isRefreshing={isRefreshSpinning}
           onOpenMenu={() => setIsAppMenuOpen(true)}
         />
 
@@ -391,12 +406,13 @@ const App: React.FC = () => {
 
             <div className="flex items-center gap-1">
               <button 
-                onClick={() => refreshAll()} 
-                className="p-2 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-all" 
+                onClick={handleManualRefresh} 
+                disabled={isRefreshSpinning}
+                className="p-2 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-all disabled:opacity-60" 
                 title="Obnovit data"
                 data-testid="desktop-refresh"
               >
-                <RefreshCw size={17} />
+                <RefreshCw size={17} className={`transition-transform duration-500 ${isRefreshSpinning ? 'animate-spin text-cyan-600' : ''}`} />
               </button>
               <button 
                 onClick={() => setIsSettingsOpen(true)} 
@@ -500,7 +516,8 @@ const App: React.FC = () => {
           onOpenIssues={() => setShowIssueDrawer(true)}
           onOpenChangelog={() => { setShowChangelog(true); setShowStats(false); setMobileView('changelog'); }}
           onExportICS={() => downloadICS(events)}
-          onRefreshData={refreshAll}
+          onRefreshData={handleManualRefresh}
+          isRefreshing={isRefreshSpinning}
           onLogoutTeam={handleLogoutTeam}
           onLogoutUser={handleLogout}
         />

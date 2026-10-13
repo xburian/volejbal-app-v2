@@ -15,6 +15,7 @@ export interface AppMenuDrawerProps {
   onOpenChangelog: () => void;
   onExportICS: () => void;
   onRefreshData?: () => void;
+  isRefreshing?: boolean;
   onLogoutTeam?: () => void;
   onLogoutUser: () => void;
 }
@@ -29,6 +30,7 @@ export const AppMenuDrawer: React.FC<AppMenuDrawerProps> = ({
   onOpenChangelog,
   onExportICS,
   onRefreshData,
+  isRefreshing = false,
   onLogoutTeam,
   onLogoutUser,
 }) => {
@@ -182,7 +184,7 @@ export const AppMenuDrawer: React.FC<AppMenuDrawerProps> = ({
                 >
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-cyan-50 text-cyan-600 group-hover:bg-cyan-100 transition-colors">
-                      <RefreshCw size={18} />
+                      <RefreshCw size={18} className={`transition-transform ${isRefreshing ? 'animate-spin' : ''}`} />
                     </div>
                     <div>
                       <div className="font-semibold text-slate-800 text-sm">Obnovit data</div>

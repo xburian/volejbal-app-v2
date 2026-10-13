@@ -99,25 +99,29 @@ export const TeamLoginScreen: React.FC<TeamLoginScreenProps> = ({ onLoginTeam })
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col justify-center items-center p-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-fade-in">
+    <div className="min-h-screen bg-slate-900 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 flex flex-col justify-center items-center p-4 relative overflow-hidden">
+      {/* Decorative background glow spheres */}
+      <div className="absolute -top-32 -left-32 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="max-w-md w-full bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden animate-fade-in relative z-10">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-600 p-8 text-center text-white relative">
-          <div className="inline-flex p-3 bg-white/10 backdrop-blur-md rounded-2xl mb-3 shadow-inner">
-            <Trophy size={40} className="text-yellow-300" />
+        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 p-8 text-center text-white relative shadow-md">
+          <div className="inline-flex p-3 bg-white/15 backdrop-blur-md rounded-2xl mb-3 shadow-inner border border-white/20">
+            <Trophy size={36} className="text-amber-300 drop-shadow-sm" />
           </div>
           <h1 className="text-2xl font-black tracking-tight">Sport Plánovač</h1>
-          <p className="text-blue-100 text-sm mt-1">Zabezpečený přístup k týmu</p>
+          <p className="text-blue-100 text-sm mt-1 font-medium">Zabezpečený přístup k týmu</p>
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex border-b border-slate-200 bg-slate-50 text-sm font-semibold">
+        <div className="flex border-b border-slate-200/80 bg-slate-50/70 text-sm font-semibold">
           <button
             type="button"
             onClick={() => { setIsCreatingNew(false); setError(null); }}
-            className={`flex-1 py-3 text-center transition-colors flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-3 text-center transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               !isCreatingNew
-                ? 'bg-white text-blue-600 border-b-2 border-blue-600'
+                ? 'bg-white text-blue-600 border-b-2 border-blue-600 font-bold'
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
@@ -127,9 +131,9 @@ export const TeamLoginScreen: React.FC<TeamLoginScreenProps> = ({ onLoginTeam })
           <button
             type="button"
             onClick={() => { setIsCreatingNew(true); setError(null); }}
-            className={`flex-1 py-3 text-center transition-colors flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-3 text-center transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               isCreatingNew
-                ? 'bg-white text-blue-600 border-b-2 border-blue-600'
+                ? 'bg-white text-blue-600 border-b-2 border-blue-600 font-bold'
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
@@ -164,7 +168,7 @@ export const TeamLoginScreen: React.FC<TeamLoginScreenProps> = ({ onLoginTeam })
                     <select
                       value={selectedTeamId}
                       onChange={e => setSelectedTeamId(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all appearance-none cursor-pointer"
+                      className="w-full bg-slate-50 hover:bg-slate-50/80 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all appearance-none cursor-pointer text-sm"
                     >
                       {teams.map(t => (
                         <option key={t.id} value={t.id}>
@@ -172,7 +176,7 @@ export const TeamLoginScreen: React.FC<TeamLoginScreenProps> = ({ onLoginTeam })
                         </option>
                       ))}
                     </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
                       ▼
                     </div>
                   </div>
@@ -192,13 +196,13 @@ export const TeamLoginScreen: React.FC<TeamLoginScreenProps> = ({ onLoginTeam })
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     placeholder="Zadejte heslo..."
-                    className="w-full pl-10 pr-11 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                    className="w-full pl-10 pr-11 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all text-sm font-medium"
                     autoFocus
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -209,7 +213,7 @@ export const TeamLoginScreen: React.FC<TeamLoginScreenProps> = ({ onLoginTeam })
                 type="submit"
                 data-testid="team-submit-btn"
                 disabled={isLoading || isFetchingTeams}
-                className="w-full mt-2 py-3.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full mt-2 py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer text-sm"
               >
                 {isLoading ? (
                   <>
@@ -236,7 +240,7 @@ export const TeamLoginScreen: React.FC<TeamLoginScreenProps> = ({ onLoginTeam })
                   value={newTeamName}
                   onChange={e => setNewTeamName(e.target.value)}
                   placeholder="např. Volejbal Brno, Tenisti..."
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all text-sm font-medium"
                   autoFocus
                 />
               </div>
@@ -251,12 +255,12 @@ export const TeamLoginScreen: React.FC<TeamLoginScreenProps> = ({ onLoginTeam })
                     value={newPassword}
                     onChange={e => setNewPassword(e.target.value)}
                     placeholder="Minimálně 3 znaky..."
-                    className="w-full px-4 pr-11 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                    className="w-full px-4 pr-11 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all text-sm font-medium"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -272,14 +276,14 @@ export const TeamLoginScreen: React.FC<TeamLoginScreenProps> = ({ onLoginTeam })
                   value={confirmPassword}
                   onChange={e => setConfirmPassword(e.target.value)}
                   placeholder="Zadejte heslo znovu..."
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all text-sm font-medium"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full mt-2 py-3.5 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full mt-2 py-3.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer text-sm"
               >
                 {isLoading ? (
                   <>
