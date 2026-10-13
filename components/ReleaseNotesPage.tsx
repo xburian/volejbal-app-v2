@@ -31,7 +31,9 @@ const versions: { version: string; date: string; title: string; changes: ChangeE
         icon: <Sparkles size={16} />,
         title: 'Moderní sportovní Login obrazovky',
         items: [
-          'Nový design přihlašovací obrazovky s atletickou vizuální identitou, gradientním pozadím a ambientními světelnými efekty',
+          'Nový design přihlašovací obrazovky s atletickou vizuální identitou, gradientním pozadím a ambientními světelnými efekty na desktopu',
+          'Mobilní verze bez kompromisů: plné roztažení do všech rohů obrazovky (edge-to-edge 100dvh) bez okrajových mezer či plovoucích karet',
+          'Čistý flat design na mobilu s rychlým výběrem hráčů, zjednodušenými vstupy a okamžitým vytvořením nového profilu i týmu',
           'Interaktivní karty hráčů s mikroanimacemi při najetí myší a stylovými barevnými avatary',
           'Rychlé vyhledávání hráčů bez ohledu na diakritiku a tlačítkem pro okamžité vymazání hledání',
           'Sjednocený vizuální styl i pro přihlašovací obrazovku týmu (TeamLoginScreen)',
@@ -43,6 +45,17 @@ const versions: { version: string; date: string; title: string; changes: ChangeE
         items: [
           'Plovoucí notifikační toast (ReloadToast) v pravém dolním rohu informuje o průběhu i úspěšném dokončení synchronizace dat',
           'Plynulá rotace ikony obnovy na desktopu, v mobilní hlavičce i v uživatelském menu s garancí zřetelné vizuální odezvy',
+        ],
+      },
+      {
+        icon: <Smartphone size={16} />,
+        title: 'Kompletní přepracování mobilního rozložení',
+        items: [
+          'Fixní výška viewportu (100dvh) a nativní scroll bez poskakování systémových lišt',
+          'Vždy viditelná sticky hlavička (MobileHeader) s elegantním atletickým gradientem',
+          'Zvýšené akční tlačítko (elevated FAB) pro přidání nové události ve spodní navigaci',
+          'Odstranění duplicitních tlačítek zpět a dvojitých scrollbarů v detailu události',
+          'Týdenní páska kalendáře jako výchozí zobrazení na mobilu pro okamžitý přehled zápasů',
         ],
       },
     ],

@@ -181,7 +181,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({
   }, [joinedParticipants, allUsers]);
 
   return (
-    <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden flex flex-col h-full relative">
+    <div className="bg-white md:rounded-2xl shadow-none md:shadow-lg border-0 md:border md:border-slate-200 overflow-hidden flex flex-col h-full relative">
       {participants.isLoading && (
         <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-50 flex items-center justify-center">
           <Loader2 className="animate-spin text-blue-600" />
@@ -216,7 +216,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({
         />
       </ErrorBoundary>
 
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 grid lg:grid-cols-2 gap-6 lg:gap-8">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 sm:pb-6 grid lg:grid-cols-2 gap-6 lg:gap-8 overscroll-contain custom-scrollbar">
         {/* Left Column: Participants & Teams */}
         <div className="space-y-6">
           <ErrorBoundary fallbackMessage="Chyba v seznamu účastníků">

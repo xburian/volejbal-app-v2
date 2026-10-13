@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, BarChart3, Settings, PlusCircle } from 'lucide-react';
+import { Calendar, BarChart3, Settings, Plus } from 'lucide-react';
 
 export type MobileView = 'calendar' | 'detail' | 'stats' | 'changelog';
 
@@ -19,54 +19,56 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   return (
     <nav
       data-testid="mobile-bottom-nav"
-      className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 shadow-[0_-2px_10px_rgba(0,0,0,0.06)]"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]"
     >
-      <div className="grid grid-cols-4 h-16 max-w-md mx-auto relative">
+      <div className="grid grid-cols-4 h-16 max-w-md mx-auto relative px-2">
         {/* Calendar Tab */}
         <button
           data-testid="nav-calendar"
           onClick={() => onNavigate('calendar')}
-          className={`flex flex-col items-center justify-center gap-0.5 transition-colors duration-200 ${
-            activeView === 'calendar' ? 'text-blue-600' : 'text-slate-400 active:text-slate-600'
+          className={`flex flex-col items-center justify-center gap-1 transition-all duration-200 cursor-pointer ${
+            activeView === 'calendar' ? 'text-blue-600 font-bold' : 'text-slate-400 hover:text-slate-600 active:scale-95'
           }`}
         >
-          <Calendar size={22} />
-          <span className="text-[10px] font-medium">Kalendář</span>
+          <Calendar size={20} className={activeView === 'calendar' ? 'stroke-[2.5]' : ''} />
+          <span className="text-[10px] font-medium leading-none">Kalendář</span>
         </button>
 
-        {/* Add Event Tab */}
+        {/* Elevated FAB: Add Event Tab */}
         <button
           data-testid="nav-create"
           onClick={onCreateEvent}
-          className="flex flex-col items-center justify-center gap-0.5 transition-colors duration-200 text-slate-400 active:text-blue-600"
+          className="flex flex-col items-center justify-center -mt-3.5 group active:scale-95 transition-transform cursor-pointer"
+          title="Nová událost"
         >
-          <PlusCircle size={22} />
-          <span className="text-[10px] font-medium">Přidat</span>
+          <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/35 border-2 border-white group-active:scale-90 transition-transform">
+            <Plus size={22} className="stroke-[2.5]" />
+          </div>
+          <span className="text-[10px] font-medium text-slate-500 mt-1 leading-none">Přidat</span>
         </button>
 
         {/* Stats Tab */}
         <button
           data-testid="nav-stats"
           onClick={() => onNavigate('stats')}
-          className={`flex flex-col items-center justify-center gap-0.5 transition-colors duration-200 ${
-            activeView === 'stats' ? 'text-blue-600' : 'text-slate-400 active:text-slate-600'
+          className={`flex flex-col items-center justify-center gap-1 transition-all duration-200 cursor-pointer ${
+            activeView === 'stats' ? 'text-blue-600 font-bold' : 'text-slate-400 hover:text-slate-600 active:scale-95'
           }`}
         >
-          <BarChart3 size={22} />
-          <span className="text-[10px] font-medium">Statistiky</span>
+          <BarChart3 size={20} className={activeView === 'stats' ? 'stroke-[2.5]' : ''} />
+          <span className="text-[10px] font-medium leading-none">Statistiky</span>
         </button>
 
         {/* Settings Tab */}
         <button
           data-testid="nav-settings"
           onClick={onOpenSettings}
-          className="flex flex-col items-center justify-center gap-0.5 transition-colors duration-200 text-slate-400 active:text-slate-600"
+          className="flex flex-col items-center justify-center gap-1 transition-all duration-200 text-slate-400 hover:text-slate-600 active:scale-95 cursor-pointer"
         >
-          <Settings size={22} />
-          <span className="text-[10px] font-medium">Nastavení</span>
+          <Settings size={20} />
+          <span className="text-[10px] font-medium leading-none">Nastavení</span>
         </button>
       </div>
     </nav>
   );
 };
-

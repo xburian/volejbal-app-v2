@@ -570,8 +570,8 @@ export const StatsPage: React.FC<StatsPageProps> = ({ events, currentUser, isLoa
         </div>
       )}
 
-      <div className="flex items-center gap-3 mb-6">
-        <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition-colors">
+      <div className="hidden md:flex items-center gap-3 mb-6">
+        <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition-colors" title="Zpět">
           <ArrowLeft size={20} />
         </button>
         <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">

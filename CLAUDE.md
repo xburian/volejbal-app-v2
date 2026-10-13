@@ -83,14 +83,22 @@ All domain types in `types.ts`: `User`, `BankAccount`, `Participant`, `Volleybal
 - **Vertical space savings**: Compact weekly strip reduces height from ~300px to ~70px, saving ~220px to display upcoming match cards immediately above the fold.
 
 #### 👟 Athletic Lifestyle Login Screens (`components/LoginScreen.tsx`, `components/TeamLoginScreen.tsx`)
-- **Modern sports aesthetic**: Deep gradient mesh backdrop (`slate-950` to `indigo-950`), frosted glass cards (`backdrop-blur-xl`), and ambient glowing orbs.
+- **Desktop aesthetic**: Deep gradient mesh backdrop (`slate-950` to `indigo-950`), frosted glass cards (`backdrop-blur-xl`), and ambient glowing orbs.
+- **Mobile edge-to-edge flat redesign**: Full bleed to all screen edges (`100dvh`, zero outer padding/borders on mobile), modern flat athletic layout with clean inputs (`bg-slate-100 border-0 md:border md:bg-slate-50`), flat buttons, and zero clutter.
 - **Interactive player cards**: Gradient letter avatars, micro-interactions (`hover:-translate-y-0.5`, `hover:shadow-md`, `active:scale-95`).
 - **Ergonomic search**: Diacritic-insensitive search with inline clear button (`✕`).
-- **Cohesive TeamLoginScreen**: Styled to match with frosted tabs and toggleable password fields.
+- **Cohesive TeamLoginScreen**: Styled to match with full-bleed flat mobile layout, frosted tabs, and toggleable password fields.
 
 #### 🔄 Data Reload Micro-Interactions & Toast (`components/ReloadToast.tsx`, `App.tsx`)
 - **ReloadToast**: Non-blocking floating status pill in bottom-right corner. Features `loading` (spinner + "Aktualizace dat…") and `success` (emerald checkmark badge + "Data byla aktualizována") states.
 - **Spinning button feedback**: Guarantees at least 600ms of smooth `animate-spin` on manual refresh trigger across desktop, mobile, and drawer buttons.
+
+#### 📱 Mobile Layout Architecture & Ergonomics (`MobileHeader.tsx`, `MobileBottomNav.tsx`, `App.tsx`)
+- **Fixed Viewport Shell**: Switched to `h-[100dvh] max-h-[100dvh] overflow-hidden` container preventing document jumpiness and double scroll momentum conflicts on mobile browsers.
+- **Sticky Gradient Header**: `MobileHeader` remains pinned at top with sleek athletic gradient (`blue-700` to `blue-800`), responsive button cluster, and balanced detail view headers.
+- **Elevated FAB Bottom Nav**: Modern frosted glass bottom bar with elevated center circular action button (`Plus`) for rapid event creation.
+- **Native Single-Layer Scrolling**: Removed nested scroll containers from `EventDetail` and eliminated duplicate back buttons in `StatsPage`.
+- **Default Week Strip on Mobile**: Mobile defaults to compact week strip, displaying upcoming matches immediately above the fold without scrolling.
 
 #### ✅ Tests (36 new, 469 total across 32 files)
 - `components/SettingsDrawer.test.tsx` — 12 tests: tabs, bank accounts, sports config, password update.

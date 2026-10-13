@@ -80,11 +80,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   const weekDays = ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'];
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 transition-all" data-testid="calendar-view">
+    <div className="bg-white border-b border-slate-200/70 shadow-xs md:rounded-2xl md:border md:border-slate-200/90 md:shadow-sm px-4 py-3.5 transition-all w-full" data-testid="calendar-view">
       {/* Calendar Header with Title, Toggle and Navigation */}
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <h2 className="text-base sm:text-lg font-bold text-slate-800 capitalize leading-tight" data-testid="calendar-title">
+      <div className="flex items-center justify-between gap-1.5 mb-2.5 flex-wrap sm:flex-nowrap">
+        <div className="min-w-0">
+          <h2 className="text-sm sm:text-base font-bold text-slate-800 capitalize leading-tight truncate" data-testid="calendar-title">
             {isWeekMode ? (
               <span>{format(startDate, 'd. M.', { locale: cs })} – {format(endDate, 'd. M. yyyy', { locale: cs })}</span>
             ) : (
@@ -93,7 +93,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           </h2>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 shrink-0">
           {/* Mode switch pill */}
           <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200/60" data-testid="calendar-mode-toggle">
             <button
