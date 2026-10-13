@@ -9,18 +9,20 @@ import { ConfirmModal } from './components/ConfirmModal';
 import { UnpaidBanner } from './components/UnpaidBanner';
 import { LoginScreen } from './components/LoginScreen';
 import { TeamLoginScreen } from './components/TeamLoginScreen';
-import { BankAccountSettingsModal } from './components/BankAccountSettingsModal';
+import { SettingsDrawer } from './components/SettingsDrawer';
+import { AppMenuDrawer } from './components/AppMenuDrawer';
 import { StatsPage } from './components/StatsPage';
 import { ReleaseNotesPage } from './components/ReleaseNotesPage';
 import { IssueDrawer } from './components/IssueDrawer';
 import { MobileBottomNav, MobileView } from './components/MobileBottomNav';
 import { MobileHeader } from './components/MobileHeader';
+import { ReloadToast, ReloadToastStatus } from './components/ReloadToast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { DevTestingToolbar } from './components/DevTestingToolbar';
 import { usePersistedAuth } from './hooks/usePersistedAuth';
 import { useUrlState } from './hooks/useUrlState';
 import { useDataLoading } from './hooks/useDataLoading';
-import { Calendar as CalendarIcon, Trophy, LogOut, Loader2, Settings, BarChart3, Info, Download, MessageSquarePlus, RefreshCw, Users } from 'lucide-react';
+import { Calendar as CalendarIcon, Trophy, Loader2, Settings, BarChart3, Download, RefreshCw, Menu } from 'lucide-react';
 import { isSameDay, startOfDay } from 'date-fns';
 import { downloadICS } from './utils/icalExport';
 
@@ -40,7 +42,9 @@ const App: React.FC = () => {
   const [showStats, setShowStats] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
   const [showIssueDrawer, setShowIssueDrawer] = useState(false);
+  const [isAppMenuOpen, setIsAppMenuOpen] = useState(false);
   const [sportFilter, setSportFilter] = useState<SportType | null>(null);
+  const [manualRefreshStatus, setManualRefreshStatus] = useState<ReloadToastStatus>('idle');
 
   // Auto-select first upcoming event
   useEffect(() => {
@@ -81,6 +85,28 @@ const App: React.FC = () => {
     updateUser(updatedUser);
     loadEvents();
   };
+
+  const handleManualRefresh = async () => {
+    setManualRefreshStatus('loading');
+    const minSpin = new Promise(resolve => setTimeout(resolve, 600));
+    try {
+      await Promise.all([refreshAll(true), minSpin]);
+      setManualRefreshStatus('success');
+      setTimeout(() => {
+        setManualRefreshStatus('idle');
+      }, 2200);
+    } catch {
+      setManualRefreshStatus('idle');
+    }
+  };
+
+  const activeRefreshStatus: ReloadToastStatus = manualRefreshStatus !== 'idle'
+    ? manualRefreshStatus
+    : isRefreshing
+      ? 'loading'
+      : 'idle';
+
+  const isRefreshSpinning = manualRefreshStatus === 'loading' || isRefreshing;
 
   const handleCreateEvent = async (newEventOrBatch: SportEvent | SportEvent[]) => {
     try {
@@ -187,18 +213,8 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Non-blocking background refresh indicator */}
-      {isRefreshing && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="fixed bottom-20 md:bottom-6 right-6 z-40 flex items-center gap-2 bg-slate-900/90 text-white text-xs px-3.5 py-2 rounded-full shadow-lg backdrop-blur-sm border border-slate-700/50 pointer-events-none animate-fade-in"
-          data-testid="background-refresh-indicator"
-        >
-          <Loader2 className="animate-spin text-blue-400" size={14} />
-          <span>Aktualizace dat…</span>
-        </div>
-      )}
+      {/* Non-blocking background / manual refresh indicator toast */}
+      <ReloadToast status={activeRefreshStatus} />
 
       {/* ═══════════════════════════════════════════ */}
       {/*  MOBILE LAYOUT (md:hidden)                 */}
@@ -212,7 +228,9 @@ const App: React.FC = () => {
           onBack={handleMobileBack}
           onLogout={handleLogout}
           onLogoutTeam={handleLogoutTeam}
-          onRefresh={refreshAll}
+          onRefresh={handleManualRefresh}
+          isRefreshing={isRefreshSpinning}
+          onOpenMenu={() => setIsAppMenuOpen(true)}
         />
 
         {mobileView === 'calendar' && <UnpaidBanner debts={unpaidDebts} />}
@@ -321,7 +339,7 @@ const App: React.FC = () => {
         <div className="border-b border-slate-100 bg-slate-50">
           <div className="px-6 pt-5 pb-3 flex items-center justify-between">
             <div className="flex items-center gap-3 font-bold text-xl text-slate-800">
-              <div className="bg-blue-600 text-white p-2 rounded-lg"><Trophy size={20} /></div>
+              <div className="bg-blue-600 text-white p-2 rounded-lg shadow-sm"><Trophy size={20} /></div>
               <div>
                 <div className="leading-tight">Sport Plánovač</div>
                 {currentTeam && (
@@ -331,33 +349,80 @@ const App: React.FC = () => {
                 )}
               </div>
             </div>
-            <span className="text-sm font-medium text-slate-600">Ahoj, {currentUser.name}</span>
+
+            {/* User Greeting & Menu Trigger */}
+            <button
+              onClick={() => setIsAppMenuOpen(true)}
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-slate-200/60 transition-colors text-slate-700 group border border-transparent hover:border-slate-300/60"
+              title="Menu profilu a týmu"
+              data-testid="desktop-user-menu"
+            >
+              {currentUser.photoUrl ? (
+                <img
+                  src={currentUser.photoUrl}
+                  alt={currentUser.name}
+                  className="w-7 h-7 rounded-full object-cover border border-slate-300"
+                />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center border border-blue-200">
+                  {currentUser.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <span className="text-sm font-medium text-slate-600 group-hover:text-slate-900">
+                Ahoj, {currentUser.name}
+              </span>
+              <Menu size={16} className="text-slate-400 group-hover:text-slate-600 shrink-0" />
+            </button>
           </div>
-          <div className="px-6 pb-4 flex items-center justify-center gap-1">
-            <button onClick={() => setShowStats(true)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Statistiky">
-              <BarChart3 size={18} />
-            </button>
-            <button onClick={() => downloadICS(events)} className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all" title="Export do kalendáře">
-              <Download size={18} />
-            </button>
-            <button onClick={() => refreshAll()} className="p-2 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-all" title="Obnovit data">
-              <RefreshCw size={18} />
-            </button>
-            <button onClick={() => setIsSettingsOpen(true)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Nastavení">
-              <Settings size={18} />
-            </button>
-            <button onClick={() => { setShowChangelog(true); setShowStats(false); }} className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Seznam změn">
-              <Info size={18} />
-            </button>
-            <button onClick={() => setShowIssueDrawer(true)} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all" title="Náměty a chyby">
-              <MessageSquarePlus size={18} />
-            </button>
-            <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Odhlásit hráče">
-              <LogOut size={18} />
-            </button>
-            <button onClick={handleLogoutTeam} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Změnit tým">
-              <Users size={18} />
-            </button>
+
+          {/* Segmented View Navigation + Quick Action Buttons */}
+          <div className="px-6 pb-3.5 flex items-center justify-between gap-2">
+            <div className="flex items-center bg-slate-200/70 p-1 rounded-xl gap-1">
+              <button
+                onClick={() => { setShowStats(false); setShowChangelog(false); }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                  !showStats && !showChangelog
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                data-testid="desktop-tab-events"
+              >
+                <CalendarIcon size={14} />
+                Zápasy
+              </button>
+              <button
+                onClick={() => { setShowStats(true); setShowChangelog(false); }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                  showStats
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                data-testid="desktop-tab-stats"
+              >
+                <BarChart3 size={14} />
+                Statistiky
+              </button>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={handleManualRefresh} 
+                disabled={isRefreshSpinning}
+                className="p-2 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-all disabled:opacity-60" 
+                title="Obnovit data"
+                data-testid="desktop-refresh"
+              >
+                <RefreshCw size={17} className={`transition-transform duration-500 ${isRefreshSpinning ? 'animate-spin text-cyan-600' : ''}`} />
+              </button>
+              <button 
+                onClick={() => setIsSettingsOpen(true)} 
+                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" 
+                title="Nastavení"
+                data-testid="desktop-settings"
+              >
+                <Settings size={17} />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -422,7 +487,7 @@ const App: React.FC = () => {
         onCancel={() => setEventToDelete(null)}
       />
       {currentUser && (
-        <BankAccountSettingsModal
+        <SettingsDrawer
           isOpen={isSettingsOpen}
           onClose={() => setIsSettingsOpen(false)}
           currentUser={currentUser}
@@ -441,6 +506,22 @@ const App: React.FC = () => {
         onClose={() => setShowIssueDrawer(false)}
         currentUser={currentUser}
       />
+      {currentUser && (
+        <AppMenuDrawer
+          isOpen={isAppMenuOpen}
+          onClose={() => setIsAppMenuOpen(false)}
+          currentUser={currentUser}
+          currentTeam={currentTeam}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onOpenIssues={() => setShowIssueDrawer(true)}
+          onOpenChangelog={() => { setShowChangelog(true); setShowStats(false); setMobileView('changelog'); }}
+          onExportICS={() => downloadICS(events)}
+          onRefreshData={handleManualRefresh}
+          isRefreshing={isRefreshSpinning}
+          onLogoutTeam={handleLogoutTeam}
+          onLogoutUser={handleLogout}
+        />
+      )}
       {import.meta.env.DEV && (
         <DevTestingToolbar onTeamSwitch={handleTeamLogin} onDataRefresh={refreshAll} />
       )}

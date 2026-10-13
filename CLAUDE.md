@@ -71,6 +71,34 @@ All domain types in `types.ts`: `User`, `BankAccount`, `Participant`, `Volleybal
 
 ## Release Notes
 
+### v1.13.0 — UX Architecture, Slide-Over Drawers, Athletic Login & Reload Toast (2026-10-13)
+
+#### 🗄️ Slide-Over Drawers (`components/SettingsDrawer.tsx`, `components/AppMenuDrawer.tsx`)
+- **SettingsDrawer**: Replaces monolithic modal with a responsive right-side slide-over drawer (500–540px desktop, full-width mobile). Organized into 4 segmented tabs: Profil (user profile & multisport), Účty (bank accounts), Sporty (sport rules & limits), and Tým (team security & password changes).
+- **AppMenuDrawer**: Replaces 8-icon clutter in the desktop header with a unified user profile menu drawer. Groups tools into clean categories: Správa & Nástroje, Data & Export, and Účet & Tým.
+- **Backward Compatibility**: `BankAccountSettingsModal.tsx` re-exports `SettingsDrawer` maintaining full backward compatibility.
+
+#### 📅 Compact Calendar View (`components/CalendarView.tsx`)
+- **[Týden | Měsíc] toggle**: Switch between 7-day strip view and full monthly grid.
+- **Vertical space savings**: Compact weekly strip reduces height from ~300px to ~70px, saving ~220px to display upcoming match cards immediately above the fold.
+
+#### 👟 Athletic Lifestyle Login Screens (`components/LoginScreen.tsx`, `components/TeamLoginScreen.tsx`)
+- **Modern sports aesthetic**: Deep gradient mesh backdrop (`slate-950` to `indigo-950`), frosted glass cards (`backdrop-blur-xl`), and ambient glowing orbs.
+- **Interactive player cards**: Gradient letter avatars, micro-interactions (`hover:-translate-y-0.5`, `hover:shadow-md`, `active:scale-95`).
+- **Ergonomic search**: Diacritic-insensitive search with inline clear button (`✕`).
+- **Cohesive TeamLoginScreen**: Styled to match with frosted tabs and toggleable password fields.
+
+#### 🔄 Data Reload Micro-Interactions & Toast (`components/ReloadToast.tsx`, `App.tsx`)
+- **ReloadToast**: Non-blocking floating status pill in bottom-right corner. Features `loading` (spinner + "Aktualizace dat…") and `success` (emerald checkmark badge + "Data byla aktualizována") states.
+- **Spinning button feedback**: Guarantees at least 600ms of smooth `animate-spin` on manual refresh trigger across desktop, mobile, and drawer buttons.
+
+#### ✅ Tests (36 new, 469 total across 32 files)
+- `components/SettingsDrawer.test.tsx` — 12 tests: tabs, bank accounts, sports config, password update.
+- `components/AppMenuDrawer.test.tsx` — 10 tests: backdrop, close, actions routing.
+- `components/CalendarView.test.tsx` — 6 tests: week/month toggles, date selection.
+- `components/ReloadToast.test.tsx` — 4 tests: idle, loading, success states, test IDs.
+- `components/MobileHeader.test.tsx` — 4 new tests: refresh trigger and spinning animation.
+
 ### v1.12.0 — Event Time Editing, Non-blocking Refresh & Score Input Ergonomics (2026-10-11)
 
 #### ⏰ Event Time Inline Editing (`components/EventDetail/`)
