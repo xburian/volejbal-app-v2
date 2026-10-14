@@ -485,4 +485,33 @@ describe('Storage Service (localStorage)', () => {
       expect(events[0].sportType).toBe('volejbal');
     });
   });
+
+  // ---- Compacted Statistics ----
+
+  describe('Compacted Statistics', () => {
+    it('computes compacted stats locally when API is disabled', async () => {
+      const user = await storage.createUser('Stat Player');
+      await storage.createEvent({
+        id: 'evt-stat-1',
+        title: 'Past Game',
+        date: '2024-01-01',
+        time: '18:00',
+        location: 'Hala',
+        totalCost: 300,
+        accountNumber: '',
+        participants: [],
+      });
+      await storage.updateAttendance('evt-stat-1', user.id, 'joined');
+
+      const stats = await storage.getCompactedStats();
+      expect(stats.version).toBe(1);
+      expect(stats.pastEventsCount).toBe(1);
+      expect(stats.bySport.all.userStats[user.id]).toBeDefined();
+      expect(stats.bySport.all.userStats[user.id].name).toBe('Stat Player');
+
+      const recomputeResult = await storage.recomputeStats();
+      expect(recomputeResult.success).toBe(true);
+      expect(recomputeResult.stats.pastEventsCount).toBe(1);
+    });
+  });
 });

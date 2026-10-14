@@ -105,6 +105,39 @@ export interface SportEvent {
   gameHistory?: GameRound[]; // completed previous rounds
   sportType?: SportType; // optional for backward compat — defaults to 'volejbal'
   teamId?: string; // club/group tenant ID
+  isCompacted?: boolean; // true if participants are embedded and separate attendance:* keys pruned
+  compactedAt?: string;  // ISO timestamp of when compaction occurred
+}
+
+// ── Compacted Statistics Types ──
+
+export interface SportStatsBundle {
+  leaderboard: LeaderboardEntry[];
+  userStats: Record<string, UserStats>;        // keyed by userId
+  formTrends: Record<string, PlayerFormTrend>; // keyed by userId
+  dayHeatmaps: Record<string, number[]>;       // keyed by userId (7 numbers Mon-Sun)
+  nemesisData: Record<string, NemesisData>;    // keyed by userId
+  clutchData: Record<string, ClutchData>;      // keyed by userId
+  badges: Badge[];
+  duoStats: DuoStats[];
+  eventHealth: EventHealthMetrics;
+  monthlyTrends: MonthlyTrend[];
+  totalEventsCount: number;
+}
+
+export interface CompactedStats {
+  version: 1;
+  updatedAt: string;          // ISO timestamp of compaction (e.g. "2026-10-14T03:00:00.000Z")
+  pastEventsCount: number;    // Number of past events included
+  lastEventDate: string;      // Date of latest event in snapshot
+  activeSports: SportType[];  // List of sports with events in this team
+  primarySport?: SportType;   // Set if team only plays one sport
+  bySport: {
+    all: SportStatsBundle;
+    volejbal?: SportStatsBundle;
+    tenis?: SportStatsBundle;
+    badminton?: SportStatsBundle;
+  };
 }
 
 /** @deprecated Use SportEvent instead */

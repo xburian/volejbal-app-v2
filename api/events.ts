@@ -73,11 +73,12 @@ async function handleGet(res: ApiResponse, teamId: string) {
     }
   }
 
-  // Hydrate each event with participants
+  // Hydrate each event with participants (supporting both compacted embedded participants and live attendance keys)
   const hydratedEvents = await Promise.all(
     rawEvents.map(async (event: any) => {
       const attendanceCompositeKeys = await redis.smembers(`attendance:event:${event.id}`);
-      let participants: any[] = [];
+      const embeddedParticipants = Array.isArray(event.participants) ? event.participants : [];
+      let participants: any[];
 
       if (attendanceCompositeKeys && attendanceCompositeKeys.length > 0) {
         const attPipeline = redis.pipeline();
@@ -86,14 +87,39 @@ async function handleGet(res: ApiResponse, teamId: string) {
         }
         const attendanceRecords = (await attPipeline.exec()).filter(Boolean).map(parseJson);
 
-        participants = attendanceRecords.map((record: any) => {
+        const liveMap = new Map<string, any>();
+        for (const record of attendanceRecords) {
           const user = usersMap[record.userId];
-          return {
+          liveMap.set(record.userId, {
             userId: record.userId,
             name: user ? user.name : 'Neznámý',
             photoUrl: user?.photoUrl,
             status: record.status,
             hasPaid: record.hasPaid,
+          });
+        }
+
+        const mergedMap = new Map<string, any>();
+        for (const p of embeddedParticipants) {
+          const user = usersMap[p.userId];
+          mergedMap.set(p.userId, {
+            ...p,
+            name: user ? user.name : p.name,
+            photoUrl: user ? user.photoUrl : p.photoUrl,
+          });
+        }
+        for (const [uid, liveP] of liveMap.entries()) {
+          mergedMap.set(uid, liveP);
+        }
+        participants = Array.from(mergedMap.values());
+      } else {
+        // No live keys — event is compacted or has no attendance yet
+        participants = embeddedParticipants.map(p => {
+          const user = usersMap[p.userId];
+          return {
+            ...p,
+            name: user ? user.name : p.name,
+            photoUrl: user ? user.photoUrl : p.photoUrl,
           };
         });
       }
@@ -218,6 +244,8 @@ async function handlePut(req: ApiRequest, res: ApiResponse, teamId: string) {
   }
 
   await redis.set(`event:${eventData.id}`, JSON.stringify(updated));
+  // Invalidate cached stats snapshot so edits to past games are immediately reflected
+  await redis.del(`team:${teamId}:stats`);
   return res.status(200).json({ success: true });
 }
 
@@ -232,6 +260,8 @@ async function handleDelete(req: ApiRequest, res: ApiResponse, teamId: string) {
   // 1. Delete event from sets and keys
   await redis.del(`event:${id}`);
   await redis.srem(`team:${teamId}:events`, id);
+  // Invalidate cached stats snapshot
+  await redis.del(`team:${teamId}:stats`);
 
   // 2. Cascade delete attendance records for this event
   const attendanceKeys = await redis.smembers(`attendance:event:${id}`);

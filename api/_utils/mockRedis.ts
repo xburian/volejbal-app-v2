@@ -2,6 +2,7 @@ import fs from 'node:fs';
 
 export interface RedisOptions {
   ex?: number;
+  nx?: boolean;
 }
 
 export class MockRedis {
@@ -90,17 +91,63 @@ export class MockRedis {
   // --- Redis Commands ---
 
   async get<T = any>(key: string): Promise<T | null> {
+    const exp = this.ttls.get(key);
+    if (exp && exp <= Date.now()) {
+      this.data.delete(key);
+      this.ttls.delete(key);
+      return null;
+    }
     const val = this.data.get(key);
     return (val as T) ?? null;
   }
 
-  async set(key: string, value: any, options?: RedisOptions): Promise<string> {
+  async set(key: string, value: any, options?: RedisOptions): Promise<string | null> {
+    if (options?.nx) {
+      const exp = this.ttls.get(key);
+      const isAlive = (this.data.has(key) || this.sets.has(key)) && (!exp || exp > Date.now());
+      if (isAlive) return null;
+    }
     this.data.set(key, value);
     if (options?.ex) {
       this.ttls.set(key, Date.now() + options.ex * 1000);
     }
     this.scheduleSave();
     return 'OK';
+  }
+
+  async exists(...keys: string[]): Promise<number> {
+    let count = 0;
+    for (const k of keys) {
+      const exp = this.ttls.get(k);
+      if (exp && exp <= Date.now()) {
+        this.data.delete(k);
+        this.ttls.delete(k);
+        continue;
+      }
+      if (this.data.has(k) || this.sets.has(k)) count++;
+    }
+    return count;
+  }
+
+  async type(key: string): Promise<string> {
+    if (this.sets.has(key)) return 'set';
+    if (this.data.has(key)) return 'string';
+    return 'none';
+  }
+
+  async scan(cursor: string, _options?: { count?: number }): Promise<[string, string[]]> {
+    if (cursor === '0') {
+      const allKeys = Array.from(new Set([...this.data.keys(), ...this.sets.keys()]));
+      return ['0', allKeys];
+    }
+    return ['0', []];
+  }
+
+  async keys(pattern: string): Promise<string[]> {
+    const all = Array.from(new Set([...this.data.keys(), ...this.sets.keys()]));
+    if (pattern === '*' || !pattern) return all;
+    const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+    return all.filter(k => regex.test(k));
   }
 
   async del(...keys: string[]): Promise<number> {

@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { BankAccount, User, SportConfig, SportType, VALID_SPORT_TYPES, SPORT_EMOJI, maskAccountNumber, Team } from '../types';
 import * as storage from '../services/storage';
+import { compressImageFile } from '../utils/imageCompression';
 import { 
   X, Landmark, UserCircle, Loader2, AlertTriangle, Sparkles, 
   Camera, Pencil, Check, Trash2, Settings as Settings2Icon, 
@@ -136,29 +137,25 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   const handleProfilePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      setError('Obrázek je příliš velký. Maximum je 2MB.');
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Obrázek je příliš velký. Maximum je 10MB.');
       return;
     }
     setIsUploadingPhoto(true);
     setError(null);
     try {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64 = reader.result as string;
-        const photoUrl = await storage.uploadUserPhoto(currentUser.id, base64);
-        onUserUpdate({ ...currentUser, photoUrl });
-        setIsUploadingPhoto(false);
-        setSuccessMessage('Fotka byla změněna.');
-        setTimeout(() => setSuccessMessage(null), 2500);
-      };
-      reader.onerror = () => {
-        setError('Chyba při načítání obrázku.');
-        setIsUploadingPhoto(false);
-      };
-      reader.readAsDataURL(file);
+      const base64 = await compressImageFile(file, {
+        maxWidth: 160,
+        maxHeight: 160,
+        quality: 0.82,
+      });
+      const photoUrl = await storage.uploadUserPhoto(currentUser.id, base64);
+      onUserUpdate({ ...currentUser, photoUrl });
+      setSuccessMessage('Fotka byla změněna.');
+      setTimeout(() => setSuccessMessage(null), 2500);
     } catch {
-      setError('Chyba při ukládání fotky.');
+      setError('Chyba při nahrávání nebo optimalizaci fotky.');
+    } finally {
       setIsUploadingPhoto(false);
     }
   };
