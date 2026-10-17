@@ -70,11 +70,38 @@ const App: React.FC = () => {
     setMobileView('calendar');
   };
 
+  // On new session open, if user hasn't seen profile yet and no explicit view in URL, show player profile
+  useEffect(() => {
+    if (!currentUser) return;
+    try {
+      const sessionSeen = sessionStorage.getItem('seen_profile_session');
+      if (!sessionSeen) {
+        sessionStorage.setItem('seen_profile_session', 'true');
+        const searchParams = new URLSearchParams(window.location.search);
+        const hasExplicitParam = searchParams.has('view') || searchParams.has('event');
+        if (!hasExplicitParam) {
+          setShowProfile(true);
+          setMobileView('profile');
+        }
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }, [currentUser, setMobileView]);
+
   const handleLogin = (user: NonNullable<typeof currentUser>) => {
     login(user);
     setSelectedDate(null);
     setViewDate(new Date());
-    setMobileView('calendar');
+    try {
+      sessionStorage.setItem('seen_profile_session', 'true');
+    } catch {
+      // ignore storage errors
+    }
+    setMobileView('profile');
+    setShowProfile(true);
+    setShowStats(false);
+    setShowChangelog(false);
   };
 
   const handleLogout = () => {
@@ -163,6 +190,9 @@ const App: React.FC = () => {
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
     setViewDate(date);
+    setShowProfile(false);
+    setShowStats(false);
+    setShowChangelog(false);
     const eventsOnDay = events
       .filter(e => isSameDay(new Date(e.date), date))
       .sort((a, b) => a.time.localeCompare(b.time));
@@ -172,11 +202,17 @@ const App: React.FC = () => {
   const handleShowUpcoming = () => {
     setSelectedDate(null);
     setViewDate(new Date());
+    setShowProfile(false);
+    setShowStats(false);
+    setShowChangelog(false);
     clearSelection();
   };
 
   const handleMobileEventSelect = (eventId: string) => {
     setSelectedEventId(eventId);
+    setShowProfile(false);
+    setShowStats(false);
+    setShowChangelog(false);
     setMobileView('detail');
   };
 
@@ -461,7 +497,12 @@ const App: React.FC = () => {
             events={displayedEvents}
             selectedEventId={selectedEventId}
             selectedDate={selectedDate}
-            onSelectEvent={setSelectedEventId}
+            onSelectEvent={id => {
+              setSelectedEventId(id);
+              setShowProfile(false);
+              setShowStats(false);
+              setShowChangelog(false);
+            }}
             onDeleteEvent={handleRequestDelete}
             onShowUpcoming={handleShowUpcoming}
             onCreateEvent={() => setIsModalOpen(true)}

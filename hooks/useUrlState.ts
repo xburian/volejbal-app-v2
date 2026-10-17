@@ -17,7 +17,7 @@ function readFromStorage(key: string): string | null {
   }
 }
 
-const VALID_VIEWS: MobileView[] = ['detail', 'stats', 'changelog'];
+const VALID_VIEWS: MobileView[] = ['detail', 'stats', 'changelog', 'profile'];
 
 export function useUrlState() {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(
