@@ -43,6 +43,23 @@ export interface TeamAuthResponse {
   team: Team;
 }
 
+export type PlayerPosition =
+  | 'setter'          // Nahrávač 🎯
+  | 'outside_hitter'  // Smečař 💥
+  | 'middle_blocker'  // Blokař 🛡️
+  | 'opposite'        // Univerzál ⚡
+  | 'libero'          // Libero 🛡️
+  | 'allrounder';     // Univerzální hráč 🌟
+
+export const PLAYER_POSITIONS: { type: PlayerPosition; label: string; shortLabel: string; icon: string }[] = [
+  { type: 'allrounder', label: 'Univerzál (Všestranný)', shortLabel: 'UNI', icon: '🌟' },
+  { type: 'setter', label: 'Nahrávač', shortLabel: 'NAH', icon: '🎯' },
+  { type: 'outside_hitter', label: 'Smečař', shortLabel: 'SME', icon: '💥' },
+  { type: 'middle_blocker', label: 'Blokař', shortLabel: 'BLO', icon: '🛡️' },
+  { type: 'opposite', label: 'Diagonální útočník', shortLabel: 'DIA', icon: '⚡' },
+  { type: 'libero', label: 'Libero / Polař', shortLabel: 'LIB', icon: '🛡️' },
+];
+
 export interface User {
   id: string;
   name: string;
@@ -50,6 +67,13 @@ export interface User {
   photoUrl?: string; // URL or base64 encoded image
   hasMultisportCard?: boolean; // Multisport discount card holder
   autoAttendSportTypes?: SportType[]; // sport types to auto-join on event creation
+  preferredPosition?: PlayerPosition;
+  playerMotto?: string;
+  dominantHand?: 'right' | 'left' | 'ambidextrous';
+  activeTitle?: string;
+  pinnedBadgeIds?: string[];
+  highestLevelAchieved?: number;
+  lastAcknowledgedLevel?: number;
 }
 
 export interface BankAccount {
@@ -65,6 +89,8 @@ export interface Participant {
   photoUrl?: string; // Denormalized photo for display
   status: 'joined' | 'declined' | 'maybe' | 'waitlist';
   hasPaid: boolean;
+  firstJoinedAt?: number; // Immutable timestamp of first joining (for Early Bird bonus)
+  kudosReceived?: string[]; // E.g. ['setter', 'spikes']
 }
 
 export interface TeamMember {
@@ -84,6 +110,12 @@ export interface GameRound {
   winningTeam?: 0 | 1;
   /** Set scores for the round, e.g. [[25,20],[25,18],[22,25]] */
   score?: [number, number][];
+}
+
+export interface EventAwards {
+  mvpUserId?: string;      // Hvězda zápasu (+40 XP)
+  fairPlayUserId?: string; // Srdcař večera / Fair-play (+30 XP)
+  ironmanUserId?: string;  // Bojovník večera (+30 XP)
 }
 
 export interface SportEvent {
@@ -107,6 +139,7 @@ export interface SportEvent {
   teamId?: string; // club/group tenant ID
   isCompacted?: boolean; // true if participants are embedded and separate attendance:* keys pruned
   compactedAt?: string;  // ISO timestamp of when compaction occurred
+  eventAwards?: EventAwards; // Match awards (MVP, Fair-play, Ironman)
 }
 
 // ── Compacted Statistics Types ──
@@ -281,4 +314,51 @@ export interface Issue {
   authorName: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// ── Gamification & Player Dashboard Types ──
+
+export type RankTier = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond' | 'hall_of_fame';
+
+export interface PlayerAttributes {
+  reliability: number; // SPO (Spolehlivost: attendance + on-time payments) 50-99
+  form: number;        // FOR (Forma: recent win rate + normalized ELO) 50-99
+  clutch: number;      // CLU (Clutch: performance in close sets <=2pts) 50-99
+  teamplay: number;    // TÝM (Týmovost: partner diversity & attendance) 50-99
+  endurance: number;   // VÝD (Výdrž: total events played) 50-99
+}
+
+export interface ActiveQuest {
+  id: string;
+  title: string;
+  description: string;
+  type: 'weekly' | 'monthly' | 'lifetime';
+  progress: number;
+  goal: number;
+  xpReward: number;
+  isCompleted: boolean;
+  expiresAt?: string;
+}
+
+export interface PlayerGamificationState {
+  userId: string;
+  totalXp: number;
+  currentLevel: number;
+  highestLevelAchieved: number;
+  rankTitle: string;
+  rankTier: RankTier;
+  xpInCurrentLevel: number;
+  xpForNextLevel: number;
+  levelProgressPercent: number; // 0 - 100
+  currentAttendanceStreak: number;
+  longestAttendanceStreak: number;
+  streakShieldsAvailable: number; // 0 - 2
+  isOnFire: boolean; // streak >= 3 -> +10% XP bonus
+  isStreakFrozen: boolean;
+  attributes: PlayerAttributes;
+  activeQuests: ActiveQuest[];
+  nextLevelDeficit: number;
+  nextLevelHintText: string;
+  mvpAwardsCount: number;
+  kudosCount: number;
 }

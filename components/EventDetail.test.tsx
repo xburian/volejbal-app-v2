@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { convertToCZIBAN, EventDetail } from './EventDetail';
 import { SportEvent, User, DEFAULT_SPORT_CONFIGS } from '../types';
@@ -1418,6 +1418,50 @@ describe('EventDetail Component', () => {
       // Winner team should show trophy icon
       const winnerText = screen.getByText(/Výherce/);
       expect(winnerText).toBeInTheDocument();
+    });
+  });
+
+  describe('Public Player Profile Modal Integration', () => {
+    it('opens public player modal when participant is clicked', async () => {
+      const otherUser: User = {
+        id: 'other-user',
+        name: 'Honza Smečař',
+        preferredPosition: 'outside_hitter',
+        playerMotto: 'Všechno do země!',
+      };
+
+      const eventWithTeammates: SportEvent = {
+        ...mockEvent,
+        participants: [
+          { userId: mockCurrentUser.id, name: mockCurrentUser.name, status: 'joined', hasPaid: true },
+          { userId: otherUser.id, name: otherUser.name, status: 'joined', hasPaid: true },
+        ],
+      };
+
+      render(
+        <EventDetail
+          event={eventWithTeammates}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]}
+          sportConfigs={DEFAULT_SPORT_CONFIGS}
+          allEvents={[eventWithTeammates]}
+          allUsers={[mockCurrentUser, otherUser]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      const participantName = screen.getByTestId('participant-name-other-user');
+      fireEvent.click(participantName);
+
+      const modal = screen.getByTestId('public-player-modal');
+      expect(modal).toBeInTheDocument();
+      expect(within(modal).getByText('Honza Smečař')).toBeInTheDocument();
+      expect(within(modal).getByText('„Všechno do země!“')).toBeInTheDocument();
+
+      const closeButton = screen.getByTitle('Zavřít');
+      fireEvent.click(closeButton);
+      expect(screen.queryByTestId('public-player-modal')).not.toBeInTheDocument();
     });
   });
 });
