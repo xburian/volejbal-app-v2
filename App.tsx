@@ -19,10 +19,11 @@ import { MobileHeader } from './components/MobileHeader';
 import { ReloadToast, ReloadToastStatus } from './components/ReloadToast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { DevTestingToolbar } from './components/DevTestingToolbar';
+import { PlayerDashboard } from './components/PlayerDashboard/PlayerDashboard';
 import { usePersistedAuth } from './hooks/usePersistedAuth';
 import { useUrlState } from './hooks/useUrlState';
 import { useDataLoading } from './hooks/useDataLoading';
-import { Calendar as CalendarIcon, Trophy, Loader2, Settings, BarChart3, RefreshCw, Menu } from 'lucide-react';
+import { Calendar as CalendarIcon, Trophy, Loader2, Settings, BarChart3, RefreshCw, Menu, User as UserIcon } from 'lucide-react';
 import { isSameDay, startOfDay } from 'date-fns';
 import { downloadICS } from './utils/icalExport';
 
@@ -40,6 +41,7 @@ const App: React.FC = () => {
   const [eventToDelete, setEventToDelete] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
   const [showIssueDrawer, setShowIssueDrawer] = useState(false);
   const [isAppMenuOpen, setIsAppMenuOpen] = useState(false);
@@ -68,11 +70,38 @@ const App: React.FC = () => {
     setMobileView('calendar');
   };
 
+  // On new session open, if user hasn't seen profile yet and no explicit view in URL, show player profile
+  useEffect(() => {
+    if (!currentUser) return;
+    try {
+      const sessionSeen = sessionStorage.getItem('seen_profile_session');
+      if (!sessionSeen) {
+        sessionStorage.setItem('seen_profile_session', 'true');
+        const searchParams = new URLSearchParams(window.location.search);
+        const hasExplicitParam = searchParams.has('view') || searchParams.has('event');
+        if (!hasExplicitParam) {
+          setShowProfile(true);
+          setMobileView('profile');
+        }
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }, [currentUser, setMobileView]);
+
   const handleLogin = (user: NonNullable<typeof currentUser>) => {
     login(user);
     setSelectedDate(null);
     setViewDate(new Date());
-    setMobileView('calendar');
+    try {
+      sessionStorage.setItem('seen_profile_session', 'true');
+    } catch {
+      // ignore storage errors
+    }
+    setMobileView('profile');
+    setShowProfile(true);
+    setShowStats(false);
+    setShowChangelog(false);
   };
 
   const handleLogout = () => {
@@ -161,6 +190,9 @@ const App: React.FC = () => {
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
     setViewDate(date);
+    setShowProfile(false);
+    setShowStats(false);
+    setShowChangelog(false);
     const eventsOnDay = events
       .filter(e => isSameDay(new Date(e.date), date))
       .sort((a, b) => a.time.localeCompare(b.time));
@@ -170,17 +202,24 @@ const App: React.FC = () => {
   const handleShowUpcoming = () => {
     setSelectedDate(null);
     setViewDate(new Date());
+    setShowProfile(false);
+    setShowStats(false);
+    setShowChangelog(false);
     clearSelection();
   };
 
   const handleMobileEventSelect = (eventId: string) => {
     setSelectedEventId(eventId);
+    setShowProfile(false);
+    setShowStats(false);
+    setShowChangelog(false);
     setMobileView('detail');
   };
 
   const handleMobileNavigate = (view: MobileView) => {
     setShowStats(view === 'stats');
     setShowChangelog(view === 'changelog');
+    setShowProfile(view === 'profile');
     setMobileView(view);
   };
 
@@ -188,6 +227,7 @@ const App: React.FC = () => {
     setMobileView('calendar');
     setShowStats(false);
     setShowChangelog(false);
+    setShowProfile(false);
   };
 
   // ── Derived state ──
@@ -308,6 +348,22 @@ const App: React.FC = () => {
           </div>
         )}
 
+        {/* Mobile: Player Profile View */}
+        {mobileView === 'profile' && (
+          <div className="flex-1 overflow-y-auto px-4 py-4 pb-28 overscroll-contain custom-scrollbar animate-slide-in-right bg-slate-50">
+            <PlayerDashboard
+              currentUser={currentUser}
+              events={events}
+              allUsers={users}
+              onOpenSettings={() => setIsSettingsOpen(true)}
+              onUpdateUser={async (updated) => {
+                await updateUser({ ...currentUser, ...updated });
+              }}
+              onClose={handleMobileBack}
+            />
+          </div>
+        )}
+
         <MobileBottomNav
           activeView={mobileView}
           onNavigate={handleMobileNavigate}
@@ -366,9 +422,9 @@ const App: React.FC = () => {
           <div className="px-6 pb-3.5 flex items-center justify-between gap-2">
             <div className="flex items-center bg-slate-200/70 p-1 rounded-xl gap-1">
               <button
-                onClick={() => { setShowStats(false); setShowChangelog(false); }}
+                onClick={() => { setShowStats(false); setShowChangelog(false); setShowProfile(false); }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                  !showStats && !showChangelog
+                  !showStats && !showChangelog && !showProfile
                     ? 'bg-white text-blue-600 shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
@@ -378,7 +434,7 @@ const App: React.FC = () => {
                 Zápasy
               </button>
               <button
-                onClick={() => { setShowStats(true); setShowChangelog(false); }}
+                onClick={() => { setShowStats(true); setShowChangelog(false); setShowProfile(false); }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                   showStats
                     ? 'bg-white text-blue-600 shadow-sm'
@@ -388,6 +444,18 @@ const App: React.FC = () => {
               >
                 <BarChart3 size={14} />
                 Statistiky
+              </button>
+              <button
+                onClick={() => { setShowProfile(true); setShowStats(false); setShowChangelog(false); }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                  showProfile
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                data-testid="desktop-tab-profile"
+              >
+                <UserIcon size={14} />
+                Hráč
               </button>
             </div>
 
@@ -429,7 +497,12 @@ const App: React.FC = () => {
             events={displayedEvents}
             selectedEventId={selectedEventId}
             selectedDate={selectedDate}
-            onSelectEvent={setSelectedEventId}
+            onSelectEvent={id => {
+              setSelectedEventId(id);
+              setShowProfile(false);
+              setShowStats(false);
+              setShowChangelog(false);
+            }}
             onDeleteEvent={handleRequestDelete}
             onShowUpcoming={handleShowUpcoming}
             onCreateEvent={() => setIsModalOpen(true)}
@@ -444,6 +517,17 @@ const App: React.FC = () => {
       <div className="hidden md:block flex-1 bg-slate-100 p-4 md:p-8 overflow-y-auto h-screen">
         {showChangelog ? (
           <ReleaseNotesPage onClose={() => setShowChangelog(false)} />
+        ) : showProfile ? (
+          <PlayerDashboard
+            currentUser={currentUser}
+            events={events}
+            allUsers={users}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+            onUpdateUser={async (updated) => {
+              await updateUser({ ...currentUser, ...updated });
+            }}
+            onClose={() => setShowProfile(false)}
+          />
         ) : showStats ? (
           <StatsPage events={events} currentUser={currentUser} isLoading={isLoading} onClose={() => setShowStats(false)} sportConfigs={sportConfigs} />
         ) : selectedEvent ? (
@@ -500,6 +584,7 @@ const App: React.FC = () => {
           currentUser={currentUser}
           currentTeam={currentTeam}
           onOpenSettings={() => setIsSettingsOpen(true)}
+          onOpenProfile={() => { setShowProfile(true); setShowStats(false); setShowChangelog(false); setMobileView('profile'); }}
           onOpenIssues={() => setShowIssueDrawer(true)}
           onOpenChangelog={() => { setShowChangelog(true); setShowStats(false); setMobileView('changelog'); }}
           onExportICS={() => downloadICS(events)}

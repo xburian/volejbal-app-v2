@@ -14,6 +14,7 @@ interface ParticipantListProps {
   isPastEvent: boolean;
   participants: ParticipantsState;
   photoUpload: PhotoUploadState;
+  onSelectUser?: (userId: string) => void;
 }
 
 export const ParticipantList: React.FC<ParticipantListProps> = ({
@@ -26,6 +27,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
   isPastEvent,
   participants,
   photoUpload,
+  onSelectUser,
 }) => (
   <div>
     <h3 className="text-lg font-semibold text-slate-700 mb-4 flex items-center justify-between">
@@ -123,7 +125,13 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
                     )}
                   </div>
                 ) : (
-                  <>
+                  <button
+                    type="button"
+                    onClick={() => onSelectUser?.(p.userId)}
+                    className="focus:outline-none cursor-pointer hover:opacity-80 transition-opacity"
+                    title={`Zobrazit profil hráče ${p.name}`}
+                    data-testid={`participant-avatar-${p.userId}`}
+                  >
                     {p.photoUrl ? (
                       <img src={p.photoUrl} alt={p.name} className="w-8 h-8 rounded-full object-cover border-2 border-slate-200" />
                     ) : (
@@ -131,11 +139,18 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
                         {p.name.charAt(0).toUpperCase()}
                       </div>
                     )}
-                  </>
+                  </button>
                 )}
 
                 <div>
-                  <p className={`font-medium text-sm ${isMe ? 'text-blue-800' : 'text-slate-800'}`}>
+                  <p
+                    onClick={() => !isMe && onSelectUser?.(p.userId)}
+                    className={`font-medium text-sm ${
+                      isMe ? 'text-blue-800' : 'text-slate-800 hover:text-blue-600 cursor-pointer'
+                    }`}
+                    title={!isMe ? `Zobrazit profil hráče ${p.name}` : undefined}
+                    data-testid={`participant-name-${p.userId}`}
+                  >
                     {p.name} {isMe && '(Já)'}
                   </p>
                   {isMe ? (

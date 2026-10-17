@@ -13,6 +13,9 @@ import { ParticipantList } from './ParticipantList';
 import { WaitlistSection } from './WaitlistSection';
 import { TeamSection } from './TeamSection';
 import { PaymentSection } from './PaymentSection';
+import { EventAwardsSection } from './EventAwardsSection';
+import { PublicPlayerModal } from '../PlayerDashboard/PublicPlayerModal';
+import { computePlayerGamification } from '@/services/gamificationEngine';
 import { ErrorBoundary } from '../ErrorBoundary';
 
 interface EventDetailProps {
@@ -44,6 +47,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({
   const [isEditingTime, setIsEditingTime] = useState(false);
   const [tempTime, setTempTime] = useState(event.time);
   const [isCopied, setIsCopied] = useState(false);
+  const [inspectingUserId, setInspectingUserId] = useState<string | null>(null);
 
   useEffect(() => {
     setTempTotalCost(String(event.totalCost));
@@ -180,6 +184,28 @@ export const EventDetail: React.FC<EventDetailProps> = ({
       .map(p => ({ name: p.name }));
   }, [joinedParticipants, allUsers]);
 
+  // ── Inspected player for Public Profile Modal ──
+  const inspectingUser = useMemo(() => {
+    if (!inspectingUserId) return null;
+    const found = allUsers.find(u => u.id === inspectingUserId);
+    if (found) return found;
+    const part = event.participants?.find(p => p.userId === inspectingUserId);
+    if (part) {
+      return {
+        id: part.userId,
+        name: part.name,
+        photoUrl: part.photoUrl,
+      } as User;
+    }
+    return null;
+  }, [inspectingUserId, allUsers, event.participants]);
+
+  const inspectingGamification = useMemo(() => {
+    if (!inspectingUser) return null;
+    const allTeamUserIds = allUsers.map(u => u.id);
+    return computePlayerGamification(allEvents, inspectingUser.id, inspectingUser, allTeamUserIds);
+  }, [inspectingUser, allEvents, allUsers]);
+
   return (
     <div className="bg-white md:rounded-2xl shadow-none md:shadow-lg border-0 md:border md:border-slate-200 overflow-hidden flex flex-col h-full relative">
       {participants.isLoading && (
@@ -230,6 +256,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({
               isPastEvent={isPastEvent}
               participants={participants}
               photoUpload={photoUpload}
+              onSelectUser={setInspectingUserId}
             />
           </ErrorBoundary>
 
@@ -245,6 +272,15 @@ export const EventDetail: React.FC<EventDetailProps> = ({
               event={event}
               teamManagement={teamManagement}
               scoreTracking={scoreTracking}
+              onSelectUser={setInspectingUserId}
+            />
+          </ErrorBoundary>
+
+          <ErrorBoundary fallbackMessage="Chyba v ocenění zápasu">
+            <EventAwardsSection
+              event={event}
+              allUsers={allUsers}
+              onUpdate={onUpdate}
             />
           </ErrorBoundary>
         </div>
@@ -267,6 +303,15 @@ export const EventDetail: React.FC<EventDetailProps> = ({
           />
         </ErrorBoundary>
       </div>
+
+      {/* Public Player Profile Modal */}
+      {inspectingUser && inspectingGamification && (
+        <PublicPlayerModal
+          user={inspectingUser}
+          gamification={inspectingGamification}
+          onClose={() => setInspectingUserId(null)}
+        />
+      )}
     </div>
   );
 };

@@ -586,5 +586,17 @@ describe('Desktop Navigation & Drawers', () => {
       expect(screen.getByTestId('desktop-tab-events').className).toContain('text-blue-600');
     });
   });
+
+  it('shows player profile when user newly logs in', async () => {
+    await act(async () => { render(<App />); });
+    await waitFor(() => { expect(screen.getByText('Jan')).toBeInTheDocument(); });
+    await act(async () => { fireEvent.click(screen.getByText('Jan')); });
+
+    // After login, player dashboard should be shown immediately
+    await waitFor(() => {
+      expect(screen.getAllByTestId('player-dashboard').length).toBeGreaterThan(0);
+      expect(screen.getByTestId('desktop-tab-profile').className).toContain('text-blue-600');
+    });
+  });
 });
 

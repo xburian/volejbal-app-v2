@@ -13,6 +13,54 @@ interface ChangeEntry {
 
 const versions: { version: string; date: string; title: string; changes: ChangeEntry[] }[] = [
   {
+    version: '1.14.0',
+    date: '17. 10. 2026',
+    title: 'Hráčský profil, gamifikace & FUT herní karty',
+    changes: [
+      {
+        icon: <UserCircle size={16} />,
+        title: 'Hráčská karta & Osobní profil (FUT styl)',
+        items: [
+          'Nový osobní hráčský profil (Player Dashboard) s designem sběratelské FUT/RPG karty a kovovým orámováním podle dosažené divize',
+          'Možnost volby preferované herní pozice (Nahrávač, Smečař, Blokař, Univerzál, Libero, Všestranný) a vlastního hráčského motta',
+          'Animovaný indikátor série docházky (Streak) s plamenem 🔥 pro 3 a více účastí v řadě',
+          'Pětibodový parametrický SVG radarový profil (50–99) měřící Spolehlivost (SPO), Formu (FOR), Koncovky (CLU), Týmovost (TÝM) a Výdrž (VÝD)',
+          'Nově přihlášený uživatel je po přihlášení automaticky přivítán na své hráčské kartě',
+        ],
+      },
+      {
+        icon: <Trophy size={16} />,
+        title: 'Gamifikace, XP levely (1–50+) & Divize',
+        items: [
+          'Propracovaný systém postupu z Levelu 1 až 50+ v 6 divizích: Bronz, Stříbro, Zlato, Platina, Diamant a Síň slávy',
+          'Férové získávání XP primárně za docházku (+100 XP za účast, +30 XP za včasné přihlášení Early Bird >48h, +25 XP za včasnou platbu)',
+          'Bonusové XP za hru a bojovnost (+10 XP za set, +15 XP za výhru setu, +30 XP za výhru zápasu, +25 XP za těsnou koncovku a +40 XP za MVP)',
+          'Ochrana proti ztrátě úrovně (monotonní high-water mark): dosažený level vám již nikdo nevezme',
+          'Sezónní zmrazení streaku: letní a vánoční pauzy delší než 14 dní nepřeruší vaši sérii docházky',
+        ],
+      },
+      {
+        icon: <Target size={16} />,
+        title: 'Výzvy, Síň slávy & Zápasová ocenění',
+        items: [
+          'Týdenní, měsíční i celoživotní výzvy (Questy) s interaktivními ukazateli postupu a okamžitými XP odměnami',
+          'Síň slávy s přehledem odemčených trofejí a praktickou nápovědou pro získání zbývajících',
+          'Hlasování o oceněních zápasu (Hráč zápasu MVP 🌟, Fair-play hráč 🤝 a Železný muž 🛡️) přímo v detailu každé odehrané události',
+        ],
+      },
+      {
+        icon: <Sparkles size={16} />,
+        title: 'Anti-toxická veřejná vizitka & Navigace',
+        items: [
+          'Kliknutím na kteréhokoliv spoluhráče v seznamu účastníků nebo v rozpisu týmů se otevře jeho veřejná prestižní vizitka',
+          'Veřejná vizitka záměrně neobsahuje negativní metriky ani dovednostní radar, aby podporovala přátelskou a pozitivní atmosféru',
+          'Nová 4slotová mobilní navigace s vyhrazenou záložkou Můj Profil',
+          'Desktopový segmentovaný přepínač Zápasy | Statistiky | Hráč a rychlý přístup přes profilový pozdrav v záhlaví',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.13.0',
     date: '13. 10. 2026',
     title: 'UX Architektura, boční panely & moderní přihlašování',

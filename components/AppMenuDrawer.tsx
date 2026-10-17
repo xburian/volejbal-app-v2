@@ -2,7 +2,7 @@ import React from 'react';
 import { User, Team } from '../types';
 import { 
   X, Settings, MessageSquarePlus, Info, Download, RefreshCw, 
-  Users, LogOut, Trophy, ChevronRight
+  Users, LogOut, Trophy, ChevronRight, Sparkles
 } from 'lucide-react';
 
 export interface AppMenuDrawerProps {
@@ -11,6 +11,7 @@ export interface AppMenuDrawerProps {
   currentUser: User;
   currentTeam?: Team | null;
   onOpenSettings: () => void;
+  onOpenProfile?: () => void;
   onOpenIssues: () => void;
   onOpenChangelog: () => void;
   onExportICS: () => void;
@@ -26,6 +27,7 @@ export const AppMenuDrawer: React.FC<AppMenuDrawerProps> = ({
   currentUser,
   currentTeam,
   onOpenSettings,
+  onOpenProfile,
   onOpenIssues,
   onOpenChangelog,
   onExportICS,
@@ -100,6 +102,25 @@ export const AppMenuDrawer: React.FC<AppMenuDrawerProps> = ({
               Správa & Nástroje
             </p>
             <div className="space-y-1">
+              {onOpenProfile && (
+                <button
+                  onClick={() => { onClose(); onOpenProfile(); }}
+                  className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors text-left group"
+                  data-testid="menu-item-profile"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-amber-50 text-amber-600 group-hover:bg-amber-100 transition-colors">
+                      <Sparkles size={18} />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-slate-800 text-sm">Hráčská karta & Profil</div>
+                      <div className="text-xs text-slate-400">Statistiky, level, odznaky a pozice</div>
+                    </div>
+                  </div>
+                  <ChevronRight size={16} className="text-slate-300 group-hover:text-slate-500" />
+                </button>
+              )}
+
               <button
                 onClick={() => { onClose(); onOpenSettings(); }}
                 className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors text-left group"

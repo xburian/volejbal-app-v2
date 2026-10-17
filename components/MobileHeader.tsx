@@ -87,6 +87,21 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
             </span>
             <div className="w-16 shrink-0" />
           </>
+        ) : mobileView === 'profile' ? (
+          <>
+            <button
+              data-testid="mobile-back"
+              onClick={onBack}
+              className="flex items-center gap-1.5 text-white/90 hover:text-white px-2 py-1.5 rounded-xl hover:bg-white/10 active:scale-95 transition-all shrink-0 cursor-pointer"
+            >
+              <ArrowLeft size={18} />
+              <span className="text-sm font-semibold">Zpět</span>
+            </button>
+            <span data-testid="mobile-title" className="font-bold text-sm sm:text-base flex-1 text-center px-2">
+              Můj profil
+            </span>
+            <div className="w-16 shrink-0" />
+          </>
         ) : (
           <>
             {/* Calendar View Header: Team/App info */}
