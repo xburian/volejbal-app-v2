@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { SportEvent, User, UserStats, Badge, DuoStats, SportConfig, SportType, SPORT_EMOJI, LeaderboardEntry, PlayerFormTrend, NemesisData, EventHealthMetrics, ClutchData, MonthlyTrend, TimeFilter } from '../types';
-import { useStatistics } from '../services/useStatistics';
+import { useCompactedStatistics } from '../hooks/useCompactedStatistics';
 import {
   ArrowLeft, Loader2, Trophy, Flame, Ghost, HelpCircle, Wallet,
-  PartyPopper, TrendingUp, Calendar, Users, Target, BarChart3, Star, Swords, Zap, AlertCircle, CheckCircle, ChevronDown
+  PartyPopper, TrendingUp, Calendar, Users, Target, BarChart3, Star, Swords, Zap, AlertCircle, CheckCircle, ChevronDown,
+  RefreshCw
 } from 'lucide-react';
 
 interface StatsPageProps {
@@ -553,7 +554,30 @@ export const StatsPage: React.FC<StatsPageProps> = ({ events, currentUser, isLoa
     [events, sportFilter]
   );
 
-  const { personalStats, monthlyTrends, badges, duoStats, leaderboard, formTrend, nemesis, eventHealth, clutchData, dayHeatmap } = useStatistics(filteredEvents, currentUser, false, sportConfigs, timeFilter);
+  const {
+    personalStats,
+    monthlyTrends,
+    badges,
+    duoStats,
+    leaderboard,
+    formTrend,
+    nemesis,
+    eventHealth,
+    clutchData,
+    dayHeatmap,
+    isCompacted,
+    updatedAt,
+    isRecomputing,
+    recomputeError,
+    recompute,
+  } = useCompactedStatistics(
+    events,
+    currentUser,
+    false,
+    sportConfigs,
+    timeFilter,
+    sportFilter
+  );
 
   const hasEnoughData = filteredEvents.length >= 3;
 
@@ -642,6 +666,31 @@ export const StatsPage: React.FC<StatsPageProps> = ({ events, currentUser, isLoa
                 {config.label}
               </button>
             ))}
+          </div>
+        )}
+
+        {/* Compaction status & manual refresh */}
+        {timeFilter === 'all' && (
+          <div className="w-full flex items-center justify-between text-xs text-slate-500 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+            {isCompacted && updatedAt ? (
+              <span>⚡ Předpočteno ze serveru ({new Date(updatedAt).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' })})</span>
+            ) : (
+              <span>📊 Výpočet v reálném čase</span>
+            )}
+            <button
+              onClick={() => recompute()}
+              disabled={isRecomputing}
+              className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 disabled:opacity-50 font-medium cursor-pointer"
+              title="Přepočítat statistiky na serveru"
+            >
+              <RefreshCw size={12} className={isRecomputing ? 'animate-spin' : ''} />
+              <span>{isRecomputing ? 'Přepočítávám...' : 'Přepočítat'}</span>
+            </button>
+          </div>
+        )}
+        {recomputeError && (
+          <div className="w-full text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl">
+            {recomputeError}
           </div>
         )}
       </div>

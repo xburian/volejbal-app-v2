@@ -1,4 +1,9 @@
-import { SportEvent, User, AttendanceRecord, Participant, BankAccount, SportConfig, SportType, VALID_SPORT_TYPES, DEFAULT_SPORT_CONFIGS, Issue, Team, TeamAuthResponse } from '../types';
+import { SportEvent, User, AttendanceRecord, Participant, BankAccount, SportConfig, SportType, VALID_SPORT_TYPES, DEFAULT_SPORT_CONFIGS, Issue, Team, TeamAuthResponse, CompactedStats, SportStatsBundle, UserStats, PlayerFormTrend, NemesisData, ClutchData } from '../types';
+import {
+  computeUserStats, computeEloRatings, computeFormTrend, computeDayHeatmap,
+  computeNemesis, computeClutchFactor, computeReliabilityScore, computeLeaderboard,
+  computeEventHealth, computeMonthlyTrends, computeDuoStats, computeExtendedBadges,
+} from './statsEngine';
 
 // Local Storage Keys (fallback for offline / test / dev:vite mode)
 const LS_TEAMS = 'volleyball_teams_db_v1';
@@ -729,5 +734,93 @@ export const changeTeamPassword = async (oldPassword: string, newPassword: strin
   if (res.accessToken && res.refreshToken) {
     setSession(res.accessToken, res.refreshToken);
   }
+};
+
+// --- Compacted Statistics ---
+
+function computeLocalStatsBundle(events: SportEvent[], users: User[]): SportStatsBundle {
+  const statsMap = computeUserStats(events);
+  const eloMap = computeEloRatings(events);
+
+  for (const [userId, stats] of statsMap) {
+    stats.eloRating = Math.round(eloMap.get(userId) ?? 1000);
+    stats.reliabilityScore = computeReliabilityScore(stats);
+    stats.dayOfWeekDistribution = computeDayHeatmap(events, userId);
+  }
+
+  const leaderboard = computeLeaderboard(statsMap, eloMap, events);
+  const monthlyTrends = computeMonthlyTrends(events);
+  const badges = computeExtendedBadges(statsMap, events);
+  const duoStats = computeDuoStats(events);
+  const eventHealth = computeEventHealth(events, []);
+
+  const userStatsObj: Record<string, UserStats> = {};
+  const formTrendsObj: Record<string, PlayerFormTrend> = {};
+  const dayHeatmapsObj: Record<string, number[]> = {};
+  const nemesisDataObj: Record<string, NemesisData> = {};
+  const clutchDataObj: Record<string, ClutchData> = {};
+
+  for (const user of users) {
+    const s = statsMap.get(user.id);
+    if (s) userStatsObj[user.id] = s;
+    formTrendsObj[user.id] = computeFormTrend(events, user.id);
+    nemesisDataObj[user.id] = computeNemesis(events, user.id);
+    clutchDataObj[user.id] = computeClutchFactor(events, user.id);
+    const hm = computeDayHeatmap(events, user.id);
+    dayHeatmapsObj[user.id] = hm;
+  }
+
+  return {
+    leaderboard,
+    userStats: userStatsObj,
+    formTrends: formTrendsObj,
+    dayHeatmaps: dayHeatmapsObj,
+    nemesisData: nemesisDataObj,
+    clutchData: clutchDataObj,
+    badges,
+    duoStats,
+    eventHealth,
+    monthlyTrends,
+    totalEventsCount: events.length,
+  };
+}
+
+export const getCompactedStats = async (forceRefresh = false): Promise<CompactedStats> => {
+  if (!useApi()) {
+    const events = await getEvents();
+    const users = await getUsers();
+    const now = new Date();
+    const pastEvents = events
+      .filter(e => new Date(e.date) <= now)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const allBundle = computeLocalStatsBundle(pastEvents, users);
+
+    return {
+      version: 1,
+      updatedAt: new Date().toISOString(),
+      pastEventsCount: pastEvents.length,
+      lastEventDate: pastEvents.length > 0 ? pastEvents[pastEvents.length - 1].date : '',
+      activeSports: ['volejbal'],
+      bySport: {
+        all: allBundle,
+        volejbal: allBundle,
+      },
+    };
+  }
+
+  const endpoint = forceRefresh ? '/stats?refresh=true' : '/stats';
+  return apiFetch<CompactedStats>(endpoint);
+};
+
+export const recomputeStats = async (): Promise<{ success: boolean; stats: CompactedStats }> => {
+  if (!useApi()) {
+    const stats = await getCompactedStats(true);
+    return { success: true, stats };
+  }
+
+  return apiFetch<{ success: boolean; stats: CompactedStats }>('/stats', {
+    method: 'POST',
+  });
 };
 

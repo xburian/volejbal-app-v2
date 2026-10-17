@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { User } from '@/types.ts';
 import * as storage from '@/services/storage.ts';
+import { compressImageFile } from '@/utils/imageCompression.ts';
 
 interface UsePhotoUploadProps {
   currentUser: User;
@@ -24,20 +25,16 @@ export function usePhotoUpload({ currentUser, refreshEventData }: UsePhotoUpload
     setPhotoError(null);
 
     try {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const photoBase64 = reader.result as string;
-        await storage.uploadUserPhoto(currentUser.id, photoBase64);
-        await refreshEventData();
-        setIsUploadingPhoto(false);
-      };
-      reader.onerror = () => {
-        setPhotoError('Chyba při načítání obrázku.');
-        setIsUploadingPhoto(false);
-      };
-      reader.readAsDataURL(file);
+      const photoBase64 = await compressImageFile(file, {
+        maxWidth: 160,
+        maxHeight: 160,
+        quality: 0.82,
+      });
+      await storage.uploadUserPhoto(currentUser.id, photoBase64);
+      await refreshEventData();
     } catch {
-      setPhotoError('Chyba při ukládání obrázku.');
+      setPhotoError('Chyba při nahrávání nebo optimalizaci obrázku.');
+    } finally {
       setIsUploadingPhoto(false);
     }
   };

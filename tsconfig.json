@@ -29,8 +29,5 @@
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
-  "exclude": ["api", "scripts", "node_modules", "tests"],
-  "references": [
-    { "path": "./tsconfig.server.json" }
-  ]
+  "exclude": ["api", "scripts", "node_modules", "tests"]
 }

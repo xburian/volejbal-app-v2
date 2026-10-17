@@ -39,6 +39,8 @@ async function start() {
   const sportConfigsHandler = await import('../api/sport-configs.js');
   const issuesHandler = await import('../api/issues.js');
   const authHandler = await import('../api/auth.js');
+  const statsHandler = await import('../api/stats.js');
+  const cronHandler = await import('../api/cron/compact.js');
   const { isMockDb, resetMockDb, seedRandomMockDb, getMockDbStats } = await import('../api/_utils/redis.js');
 
   app.all('/api/auth', wrapHandler(authHandler));
@@ -51,6 +53,8 @@ async function start() {
   app.all('/api/bank-accounts', wrapHandler(bankAccountsHandler));
   app.all('/api/sport-configs', wrapHandler(sportConfigsHandler));
   app.all('/api/issues', wrapHandler(issuesHandler));
+  app.all('/api/stats', wrapHandler(statsHandler));
+  app.all('/api/cron/compact', wrapHandler(cronHandler));
 
   // Dev mock database tools (local dev server only)
   app.post('/api/dev/seed', async (_req, res) => {
@@ -83,7 +87,7 @@ async function start() {
   const PORT = 3001;
   app.listen(PORT, () => {
     console.log(`🚀 Local API server running on http://localhost:${PORT}`);
-    console.log(`   Routes: /api/auth, /api/teams, /api/users, /api/events, /api/events-batch, /api/attendance, /api/photos, /api/bank-accounts, /api/sport-configs, /api/issues`);
+    console.log(`   Routes: /api/auth, /api/teams, /api/users, /api/events, /api/events-batch, /api/attendance, /api/photos, /api/bank-accounts, /api/sport-configs, /api/issues, /api/stats, /api/cron/compact`);
     if (isMockDb()) {
       console.log(`   Storage: 💾 IN-MEMORY MOCK DB active (persisting to .mock-db.json)`);
       console.log(`   Dev tools: POST /api/dev/seed, POST /api/dev/reset, GET /api/dev/status`);

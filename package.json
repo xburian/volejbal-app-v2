@@ -15,11 +15,16 @@
     "lint:fix": "eslint . --fix",
     "prepare": "husky",
     "migrate": "tsx scripts/migrate-firebase-to-redis.ts",
-    "migrate:teams": "tsx scripts/migrate-to-teams.ts"
+    "migrate:teams": "tsx scripts/migrate-to-teams.ts",
+    "backup": "tsx scripts/backup-db.ts",
+    "restore": "tsx scripts/restore-db.ts",
+    "compact": "tsx scripts/compact-past-events.ts",
+    "optimize:photos": "tsx scripts/optimize-prod-photos.ts"
   },
   "dependencies": {
     "@upstash/redis": "^1.38.0",
     "date-fns": "^4.4.0",
+    "jimp": "^1.6.1",
     "lucide-react": "^1.53.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

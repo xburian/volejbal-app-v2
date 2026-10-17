@@ -74,6 +74,13 @@ async function handlePost(req: ApiRequest, res: ApiResponse) {
     return res.status(400).json({ error: 'userId and photoBase64 are required' });
   }
 
+  // Guardrail: reject oversized base64 payloads (>150 KB)
+  if (typeof photoBase64 === 'string' && photoBase64.length > 150 * 1024) {
+    return res.status(400).json({
+      error: 'Fotografie je příliš velká (> 150 KB). Obrázek musí být před odesláním optimalizován.',
+    });
+  }
+
   // Store photo in its own Redis key
   await redis.set(`photo:${userId}`, photoBase64);
 

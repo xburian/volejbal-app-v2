@@ -1,5 +1,11 @@
 {
   "framework": "vite",
+  "crons": [
+    {
+      "path": "/api/cron/compact",
+      "schedule": "0 3 * * 1"
+    }
+  ],
   "rewrites": [
     { "source": "/api/teams", "destination": "/api/auth" },
     { "source": "/api/events-batch", "destination": "/api/events" },

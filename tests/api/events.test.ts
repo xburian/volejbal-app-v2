@@ -326,6 +326,86 @@ describe('API /api/events handler', () => {
       expect(updateRes.getStatus()).toBe(403);
       expect(updateRes.getJson().error).toBe('Tato událost nepatří do vašeho týmu.');
     });
+
+    it('correctly returns compacted event with embedded participants', async () => {
+      // User in team 1
+      await mockRedisInstance.set('user:u-comp', JSON.stringify({ id: 'u-comp', name: 'Compacted User' }));
+      await mockRedisInstance.sadd('team:team-1:users', 'u-comp');
+
+      // Compacted event with embedded participants and 0 live attendance keys
+      const compactedEvent = {
+        id: 'e-compacted',
+        title: 'Compacted Event',
+        date: '2026-01-01',
+        time: '18:00',
+        sportType: 'volejbal',
+        teamId: 'team-1',
+        isCompacted: true,
+        participants: [{ userId: 'u-comp', name: 'Compacted User', status: 'joined', hasPaid: true }],
+      };
+      await mockRedisInstance.set('event:e-compacted', JSON.stringify(compactedEvent));
+      await mockRedisInstance.sadd('team:team-1:events', 'e-compacted');
+
+      const { req, res } = createReqRes({ method: 'GET', token: team1Token });
+      await handler(req, res);
+
+      expect(res.getStatus()).toBe(200);
+      const events = res.getJson();
+      const target = events.find((e: any) => e.id === 'e-compacted');
+      expect(target).toBeDefined();
+      expect(target.participants).toHaveLength(1);
+      expect(target.participants[0].userId).toBe('u-comp');
+      expect(target.participants[0].hasPaid).toBe(true);
+    });
+
+    it('merges live attendance records over embedded participants and invalidates stats on put', async () => {
+      // Seed cached stats snapshot
+      await mockRedisInstance.set('team:team-1:stats', JSON.stringify({ version: 1, cached: true }));
+
+      // User in team 1
+      await mockRedisInstance.set('user:u-delta', JSON.stringify({ id: 'u-delta', name: 'Delta User' }));
+      await mockRedisInstance.sadd('team:team-1:users', 'u-delta');
+
+      const event = {
+        id: 'e-delta',
+        title: 'Delta Event',
+        date: '2026-01-01',
+        time: '18:00',
+        sportType: 'volejbal',
+        teamId: 'team-1',
+        participants: [{ userId: 'u-delta', name: 'Delta User', status: 'joined', hasPaid: false }],
+      };
+      await mockRedisInstance.set('event:e-delta', JSON.stringify(event));
+      await mockRedisInstance.sadd('team:team-1:events', 'e-delta');
+
+      // Live attendance key setting hasPaid to true
+      await mockRedisInstance.set('attendance:e-delta_u-delta', JSON.stringify({
+        eventId: 'e-delta',
+        userId: 'u-delta',
+        status: 'joined',
+        hasPaid: true,
+      }));
+      await mockRedisInstance.sadd('attendance:event:e-delta', 'e-delta_u-delta');
+
+      const { req: getReq, res: getRes } = createReqRes({ method: 'GET', token: team1Token });
+      await handler(getReq, getRes);
+
+      const events = getRes.getJson();
+      const target = events.find((e: any) => e.id === 'e-delta');
+      expect(target.participants[0].hasPaid).toBe(true); // Live record merged over false!
+
+      // PUT should invalidate team stats
+      const { req: putReq, res: putRes } = createReqRes({
+        method: 'PUT',
+        body: { id: 'e-delta', title: 'New Delta Title' },
+        token: team1Token,
+      });
+      await handler(putReq, putRes);
+      expect(putRes.getStatus()).toBe(200);
+
+      // Verify cached stats was deleted
+      expect(await mockRedisInstance.get('team:team-1:stats')).toBeNull();
+    });
   });
 });
 
