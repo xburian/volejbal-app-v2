@@ -101,11 +101,18 @@ export async function optimizePhotos(options: OptimizePhotosOptions = {}): Promi
     const user = typeof rawUser === 'string' ? JSON.parse(rawUser) : rawUser;
     const userId = user.id || userKey.replace('user:', '');
 
-    if (!user.photoUrl) continue;
+    const photoKey = `photo:${userId}`;
+    let rawPhoto: any = await r.get(photoKey);
+
+    if (!rawPhoto && user.photoUrl && user.photoUrl.startsWith('data:image/')) {
+      rawPhoto = user.photoUrl;
+    }
+
+    if (!rawPhoto) continue;
     result.photosFound++;
 
-    const photoUrl: string = user.photoUrl;
-    const cleanBase64 = photoUrl.replace(/^data:image\/[a-zA-Z+]+;base64,/, '');
+    const photoStr = typeof rawPhoto === 'string' ? rawPhoto : String(rawPhoto);
+    const cleanBase64 = photoStr.replace(/^data:image\/[a-zA-Z+]+;base64,/, '');
     const originalBytes = Buffer.byteLength(cleanBase64, 'base64');
 
     if (originalBytes <= minBytes) {
@@ -144,15 +151,13 @@ export async function optimizePhotos(options: OptimizePhotosOptions = {}): Promi
         });
 
         if (!dryRun) {
-          user.photoUrl = newPhotoUrl;
-          await r.set(userKey, JSON.stringify(user));
-
-          // Also keep photo:{userId} synchronized if present
-          const photoKey = `photo:${userId}`;
-          const existingPhotoKey = await r.get(photoKey);
-          if (existingPhotoKey) {
-            await r.set(photoKey, newPhotoUrl);
+          await r.set(photoKey, newPhotoUrl);
+          if (user.photoUrl && !user.photoUrl.startsWith('/api/photos')) {
+            user.photoUrl = newPhotoUrl;
+          } else {
+            user.photoUrl = `/api/photos?id=${userId}&v=${Date.now()}`;
           }
+          await r.set(userKey, JSON.stringify(user));
         }
       }
     } catch (err: any) {
