@@ -219,7 +219,7 @@ const App: React.FC = () => {
       {/* ═══════════════════════════════════════════ */}
       {/*  MOBILE LAYOUT (md:hidden)                 */}
       {/* ═══════════════════════════════════════════ */}
-      <div className="md:hidden flex flex-col h-[100dvh] max-h-[100dvh] overflow-hidden bg-slate-100 relative">
+      <div className="md:hidden flex flex-col min-h-[100dvh] bg-slate-100 relative overflow-x-clip">
         <MobileHeader
           mobileView={mobileView}
           currentUser={currentUser}
@@ -237,7 +237,7 @@ const App: React.FC = () => {
 
         {/* Mobile: Calendar View */}
         {mobileView === 'calendar' && (
-          <div className="flex-1 overflow-y-auto pb-24 overscroll-contain custom-scrollbar animate-fade-in-up bg-slate-50">
+          <div className="flex-1 pb-28 animate-fade-in-up bg-slate-50">
             <CalendarView
               currentDate={viewDate}
               selectedDate={selectedDate}
@@ -265,7 +265,7 @@ const App: React.FC = () => {
 
         {/* Mobile: Event Detail View */}
         {mobileView === 'detail' && (
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden animate-slide-in-right bg-white">
+          <div className="flex-1 animate-slide-in-right bg-white min-h-[calc(100dvh-56px)]">
             {selectedEvent ? (
               <ErrorBoundary fallbackMessage="Chyba při zobrazení detailu události">
                 <EventDetail
@@ -290,7 +290,7 @@ const App: React.FC = () => {
 
         {/* Mobile: Stats View */}
         {mobileView === 'stats' && (
-          <div className="flex-1 overflow-y-auto px-4 py-4 pb-28 overscroll-contain custom-scrollbar animate-slide-in-right bg-slate-50">
+          <div className="flex-1 px-4 py-4 pb-28 animate-slide-in-right bg-slate-50">
             <StatsPage
               events={events}
               currentUser={currentUser}
@@ -303,17 +303,19 @@ const App: React.FC = () => {
 
         {/* Mobile: Changelog View */}
         {mobileView === 'changelog' && (
-          <div className="flex-1 overflow-y-auto px-4 py-4 pb-28 overscroll-contain custom-scrollbar animate-slide-in-right bg-slate-50">
+          <div className="flex-1 px-4 py-4 pb-28 animate-slide-in-right bg-slate-50">
             <ReleaseNotesPage onClose={handleMobileBack} />
           </div>
         )}
 
-        <MobileBottomNav
-          activeView={mobileView}
-          onNavigate={handleMobileNavigate}
-          onOpenSettings={() => setIsSettingsOpen(true)}
-          onCreateEvent={() => setIsModalOpen(true)}
-        />
+        {mobileView !== 'detail' && (
+          <MobileBottomNav
+            activeView={mobileView}
+            onNavigate={handleMobileNavigate}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+            onCreateEvent={() => setIsModalOpen(true)}
+          />
+        )}
       </div>
 
       {/* ═══════════════════════════════════════════ */}

@@ -259,3 +259,68 @@ describe('CreateEventModal — Recurrence until-date mode', () => {
   });
 });
 
+describe('CreateEventModal — Mobile Bottom Sheet & Form Ergonomics', () => {
+  it('renders bottom sheet container with mobile rounded top and responsive desktop classes', () => {
+    renderModal();
+    const sheet = screen.getByTestId('create-event-sheet');
+    expect(sheet.className).toContain('fixed inset-x-0 bottom-0');
+    expect(sheet.className).toContain('max-h-[92dvh]');
+    expect(sheet.className).toContain('rounded-t-[32px]');
+    expect(sheet.className).toContain('md:static');
+    expect(sheet.className).toContain('md:rounded-2xl');
+    expect(sheet.className).toContain('md:max-w-md');
+  });
+
+  it('renders mobile top drag indicator', () => {
+    renderModal();
+    const dragHandle = screen.getByTestId('bottom-sheet-drag-handle');
+    expect(dragHandle).toBeInTheDocument();
+    expect(dragHandle.className).toContain('w-12');
+    expect(dragHandle.className).toContain('h-1.5');
+    expect(dragHandle.className).toContain('bg-slate-300');
+    expect(dragHandle.className).toContain('rounded-full');
+    expect(dragHandle.className).toContain('md:hidden');
+  });
+
+  it('sets text-base md:text-sm on input fields to prevent iOS 16px auto-zoom', () => {
+    renderModal();
+    // Test title, date, time, cost, location inputs and textarea
+    const titleInput = screen.getByDisplayValue('Volejbal');
+    expect(titleInput.className).toContain('text-base');
+    expect(titleInput.className).toContain('md:text-sm');
+
+    const dateInput = screen.getByDisplayValue('2026-05-13');
+    expect(dateInput.className).toContain('text-base');
+    expect(dateInput.className).toContain('md:text-sm');
+
+    const timeInput = screen.getByDisplayValue('18:00');
+    expect(timeInput.className).toContain('text-base');
+    expect(timeInput.className).toContain('md:text-sm');
+
+    const costInput = screen.getByDisplayValue('1000');
+    expect(costInput.className).toContain('text-base');
+    expect(costInput.className).toContain('md:text-sm');
+
+    const locationInput = screen.getByDisplayValue('Hala');
+    expect(locationInput.className).toContain('text-base');
+    expect(locationInput.className).toContain('md:text-sm');
+  });
+
+  it('calls onClose when clicking the backdrop', async () => {
+    const onCloseSpy = vi.fn();
+    render(
+      <CreateEventModal
+        selectedDate={new Date('2026-05-13')}
+        onClose={onCloseSpy}
+        onCreate={vi.fn()}
+        sportConfigs={defaultConfigs}
+        bankAccounts={[]}
+      />
+    );
+    const backdrop = screen.getByTestId('modal-backdrop');
+    fireEvent.click(backdrop);
+    expect(onCloseSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+

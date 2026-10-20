@@ -72,18 +72,19 @@ export const EventDetailHeader: React.FC<EventDetailHeaderProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-slate-500 mt-2 text-sm">
           {/* Time with inline editing */}
           <div className="flex items-center gap-1" data-testid="event-time-section">
-            <Clock size={16} />
+            <Clock size={16} className="shrink-0" />
             {!isEditingTime ? (
               <>
                 <span className="font-mono font-medium">{event.time}</span>
                 {onStartEditTime && (
                   <button
                     onClick={onStartEditTime}
-                    className="ml-1 text-slate-400 hover:text-blue-600 transition-colors p-0.5"
+                    className="ml-0.5 text-slate-400 hover:text-blue-600 transition-colors w-11 h-11 flex items-center justify-center -my-3 rounded-lg active:bg-slate-200/60"
                     title="Upravit čas"
+                    aria-label="Upravit čas"
                     data-testid="edit-time-btn"
                   >
-                    <Edit2 size={12} />
+                    <Edit2 size={13} />
                   </button>
                 )}
               </>
@@ -97,25 +98,25 @@ export const EventDetailHeader: React.FC<EventDetailHeaderProps> = ({
                     if (e.key === 'Enter') onSaveTime?.();
                     if (e.key === 'Escape') onCancelTimeEdit?.();
                   }}
-                  className="px-1.5 py-0.5 text-sm border border-blue-300 rounded focus:ring-1 focus:ring-blue-200 outline-none w-24"
+                  className="px-2 py-1 text-base md:text-sm border border-blue-300 rounded-lg focus:ring-1 focus:ring-blue-200 outline-none w-28 bg-white"
                   autoFocus
                   data-testid="edit-time-input"
                 />
                 <button
                   onClick={onSaveTime}
-                  className="text-green-600 hover:bg-green-50 p-0.5 rounded transition-colors"
+                  className="text-green-600 hover:bg-green-50 w-11 h-11 flex items-center justify-center -my-3 rounded-lg transition-colors"
                   title="Uložit čas"
                   data-testid="save-time-btn"
                 >
-                  <Check size={14} />
+                  <Check size={16} />
                 </button>
                 <button
                   onClick={onCancelTimeEdit}
-                  className="text-red-600 hover:bg-red-50 p-0.5 rounded transition-colors"
+                  className="text-red-600 hover:bg-red-50 w-11 h-11 flex items-center justify-center -my-3 rounded-lg transition-colors"
                   title="Zrušit úpravu času"
                   data-testid="cancel-time-btn"
                 >
-                  <X size={14} />
+                  <X size={16} />
                 </button>
               </div>
             )}
@@ -123,17 +124,18 @@ export const EventDetailHeader: React.FC<EventDetailHeaderProps> = ({
 
           {/* Location with inline editing */}
           <div className="flex items-center gap-1">
-            <MapPin size={16} />
+            <MapPin size={16} className="shrink-0" />
             {!isEditingLocation ? (
               <>
                 <span>{event.location}</span>
                 {onStartEditLocation && (
                   <button
                     onClick={onStartEditLocation}
-                    className="ml-1 text-slate-400 hover:text-blue-600 transition-colors p-0.5"
+                    className="ml-0.5 text-slate-400 hover:text-blue-600 transition-colors w-11 h-11 flex items-center justify-center -my-3 rounded-lg active:bg-slate-200/60"
                     title="Upravit polohu / místo"
+                    aria-label="Upravit polohu / místo"
                   >
-                    <Edit2 size={12} />
+                    <Edit2 size={13} />
                   </button>
                 )}
               </>
@@ -147,38 +149,39 @@ export const EventDetailHeader: React.FC<EventDetailHeaderProps> = ({
                     if (e.key === 'Enter') onSaveLocation?.();
                     if (e.key === 'Escape') onCancelLocationEdit?.();
                   }}
-                  className="px-1.5 py-0.5 text-sm border border-blue-300 rounded focus:ring-1 focus:ring-blue-200 outline-none w-36 sm:w-48"
+                  className="px-2 py-1 text-base md:text-sm border border-blue-300 rounded-lg focus:ring-1 focus:ring-blue-200 outline-none w-36 sm:w-48 bg-white"
                   placeholder="Místo konání"
                   autoFocus
                 />
                 <button
                   onClick={onSaveLocation}
-                  className="text-green-600 hover:bg-green-50 p-0.5 rounded transition-colors"
+                  className="text-green-600 hover:bg-green-50 w-11 h-11 flex items-center justify-center -my-3 rounded-lg transition-colors"
                   title="Uložit polohu"
                 >
-                  <Check size={14} />
+                  <Check size={16} />
                 </button>
                 <button
                   onClick={onCancelLocationEdit}
-                  className="text-red-600 hover:bg-red-50 p-0.5 rounded transition-colors"
+                  className="text-red-600 hover:bg-red-50 w-11 h-11 flex items-center justify-center -my-3 rounded-lg transition-colors"
                   title="Zrušit úpravu polohy"
                 >
-                  <X size={14} />
+                  <X size={16} />
                 </button>
               </div>
             )}
           </div>
           <div className="flex items-center gap-1">
-            <Wallet size={16} />
+            <Wallet size={16} className="shrink-0" />
             {!isEditingCost ? (
               <>
                 <span>Celkem: {event.totalCost} Kč</span>
                 <button
                   onClick={onStartEditCost}
-                  className="ml-1 text-slate-400 hover:text-blue-600 transition-colors p-0.5"
+                  className="ml-0.5 text-slate-400 hover:text-blue-600 transition-colors w-11 h-11 flex items-center justify-center -my-3 rounded-lg active:bg-slate-200/60"
                   title="Upravit celkovou cenu"
+                  aria-label="Upravit celkovou cenu"
                 >
-                  <Edit2 size={12} />
+                  <Edit2 size={13} />
                 </button>
               </>
             ) : (
@@ -190,15 +193,23 @@ export const EventDetailHeader: React.FC<EventDetailHeaderProps> = ({
                   onChange={(e) => onTempTotalCostChange(e.target.value)}
                   onFocus={(e) => { if (e.target.value === '0') onTempTotalCostChange(''); }}
                   onBlur={(e) => { if (e.target.value === '') onTempTotalCostChange('0'); }}
-                  className="w-16 px-1 py-0.5 text-sm border border-blue-300 rounded focus:ring-1 focus:ring-blue-200 outline-none"
+                  className="w-20 px-2 py-1 text-base md:text-sm border border-blue-300 rounded-lg focus:ring-1 focus:ring-blue-200 outline-none bg-white"
                   min="0"
                 />
                 <span>Kč</span>
-                <button onClick={onSaveCost} className="text-green-600 hover:bg-green-50 p-0.5 rounded transition-colors">
-                  <Check size={14} />
+                <button
+                  onClick={onSaveCost}
+                  className="text-green-600 hover:bg-green-50 w-11 h-11 flex items-center justify-center -my-3 rounded-lg transition-colors"
+                  title="Uložit cenu"
+                >
+                  <Check size={16} />
                 </button>
-                <button onClick={onCancelCostEdit} className="text-red-600 hover:bg-red-50 p-0.5 rounded transition-colors">
-                  <X size={14} />
+                <button
+                  onClick={onCancelCostEdit}
+                  className="text-red-600 hover:bg-red-50 w-11 h-11 flex items-center justify-center -my-3 rounded-lg transition-colors"
+                  title="Zrušit úpravu ceny"
+                >
+                  <X size={16} />
                 </button>
               </div>
             )}
@@ -213,7 +224,7 @@ export const EventDetailHeader: React.FC<EventDetailHeaderProps> = ({
         </div>
         <button
           onClick={() => onDelete(event.id)}
-          className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
+          className="text-red-500 hover:text-red-700 hover:bg-red-50 w-11 h-11 flex items-center justify-center rounded-xl transition-colors"
           title="Smazat událost"
         >
           <Trash2 size={20} />

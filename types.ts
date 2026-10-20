@@ -86,6 +86,12 @@ export interface GameRound {
   score?: [number, number][];
 }
 
+export interface EventAwards {
+  mvpUserId?: string;      // Hvězda zápasu (+40 XP)
+  fairPlayUserId?: string; // Srdcař večera / Fair-play (+30 XP)
+  ironmanUserId?: string;  // Bojovník večera (+30 XP)
+}
+
 export interface SportEvent {
   id: string;
   title: string;
@@ -107,6 +113,7 @@ export interface SportEvent {
   teamId?: string; // club/group tenant ID
   isCompacted?: boolean; // true if participants are embedded and separate attendance:* keys pruned
   compactedAt?: string;  // ISO timestamp of when compaction occurred
+  eventAwards?: EventAwards; // Match awards (MVP, Fair-play, Ironman)
 }
 
 // ── Compacted Statistics Types ──

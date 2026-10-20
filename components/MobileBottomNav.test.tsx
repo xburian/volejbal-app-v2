@@ -71,5 +71,18 @@ describe('MobileBottomNav', () => {
     await user.click(screen.getByTestId('nav-create'));
     expect(onCreateEvent).toHaveBeenCalled();
   });
+
+  it('includes safe-area-inset-bottom padding and >=44px touch targets on all tabs', () => {
+    const { container } = render(<MobileBottomNav {...baseProps} />);
+    const nav = container.querySelector('nav');
+    expect(nav?.className).toContain('pb-[env(safe-area-inset-bottom,0px)]');
+
+    const tabs = ['nav-calendar', 'nav-create', 'nav-stats', 'nav-settings'];
+    tabs.forEach(testId => {
+      const el = screen.getByTestId(testId);
+      expect(el.className).toContain('min-w-[44px]');
+      expect(el.className).toContain('min-h-[44px]');
+    });
+  });
 });
 

@@ -29,14 +29,14 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   isRefreshing = false,
 }) => {
   return (
-    <header className="sticky top-0 z-30 shrink-0 bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 text-white shadow-md border-b border-white/10">
+    <header className="sticky top-0 z-30 shrink-0 bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 text-white shadow-md border-b border-white/10 pt-[env(safe-area-inset-top,0px)]">
       <div className="px-4 py-2.5 flex items-center justify-between gap-2 min-h-[56px]">
         {mobileView === 'detail' && selectedEvent ? (
           <>
             <button
               data-testid="mobile-back"
               onClick={onBack}
-              className="flex items-center gap-1.5 text-white/90 hover:text-white px-2 py-1.5 rounded-xl hover:bg-white/10 active:scale-95 transition-all shrink-0 cursor-pointer"
+              className="min-w-[44px] min-h-[44px] flex items-center gap-1.5 text-white/90 hover:text-white px-2.5 py-2 rounded-xl hover:bg-white/10 active:scale-95 transition-all shrink-0 cursor-pointer"
             >
               <ArrowLeft size={18} />
               <span className="text-sm font-semibold">Zpět</span>
@@ -49,10 +49,10 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                 <button
                   data-testid="mobile-refresh-detail"
                   onClick={onRefresh}
-                  className="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 transition-all flex items-center justify-center text-white border border-white/15 cursor-pointer"
+                  className="w-11 h-11 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 transition-all flex items-center justify-center text-white border border-white/15 cursor-pointer shadow-sm"
                   title="Obnovit data"
                 >
-                  <RefreshCw size={15} className={isRefreshing ? 'animate-spin text-cyan-200' : ''} />
+                  <RefreshCw size={18} className={isRefreshing ? 'animate-spin text-cyan-200' : ''} />
                 </button>
               )}
             </div>
@@ -62,12 +62,12 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
             <button
               data-testid="mobile-back"
               onClick={onBack}
-              className="flex items-center gap-1.5 text-white/90 hover:text-white px-2 py-1.5 rounded-xl hover:bg-white/10 active:scale-95 transition-all shrink-0 cursor-pointer"
+              className="min-w-[44px] min-h-[44px] flex items-center gap-1.5 text-white/90 hover:text-white px-2.5 py-2 rounded-xl hover:bg-white/10 active:scale-95 transition-all shrink-0 cursor-pointer"
             >
               <ArrowLeft size={18} />
               <span className="text-sm font-semibold">Zpět</span>
             </button>
-            <span data-testid="mobile-title" className="font-bold text-sm sm:text-base flex-1 text-center px-2">
+            <span data-testid="mobile-title" className="font-bold text-sm sm:text-base truncate flex-1 text-center px-2">
               Statistiky
             </span>
             <div className="w-16 shrink-0" />
@@ -77,12 +77,12 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
             <button
               data-testid="mobile-back"
               onClick={onBack}
-              className="flex items-center gap-1.5 text-white/90 hover:text-white px-2 py-1.5 rounded-xl hover:bg-white/10 active:scale-95 transition-all shrink-0 cursor-pointer"
+              className="min-w-[44px] min-h-[44px] flex items-center gap-1.5 text-white/90 hover:text-white px-2.5 py-2 rounded-xl hover:bg-white/10 active:scale-95 transition-all shrink-0 cursor-pointer"
             >
               <ArrowLeft size={18} />
               <span className="text-sm font-semibold">Zpět</span>
             </button>
-            <span data-testid="mobile-title" className="font-bold text-sm sm:text-base flex-1 text-center px-2">
+            <span data-testid="mobile-title" className="font-bold text-sm sm:text-base truncate flex-1 text-center px-2">
               Seznam změn
             </span>
             <div className="w-16 shrink-0" />
@@ -117,7 +117,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                   type="button"
                   data-testid="mobile-user-menu"
                   onClick={onOpenMenu}
-                  className="rounded-full ring-2 ring-white/30 hover:ring-white/70 active:scale-95 transition-all focus:outline-none shrink-0 cursor-pointer"
+                  className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full ring-2 ring-white/30 hover:ring-white/70 active:scale-95 transition-all focus:outline-none shrink-0 cursor-pointer"
                   title="Menu profilu a týmu"
                 >
                   {currentUser.photoUrl ? (
@@ -146,10 +146,10 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                 <button
                   data-testid="mobile-refresh"
                   onClick={onRefresh}
-                  className="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 transition-all flex items-center justify-center text-white border border-white/15 shrink-0 cursor-pointer shadow-sm"
+                  className="w-11 h-11 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 transition-all flex items-center justify-center text-white border border-white/15 shrink-0 cursor-pointer shadow-sm"
                   title="Obnovit data"
                 >
-                  <RefreshCw size={15} className={`transition-transform ${isRefreshing ? 'animate-spin text-cyan-200' : ''}`} />
+                  <RefreshCw size={18} className={`transition-transform ${isRefreshing ? 'animate-spin text-cyan-200' : ''}`} />
                 </button>
               )}
 
@@ -157,20 +157,20 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                 <button
                   data-testid="mobile-logout-team"
                   onClick={onLogoutTeam}
-                  className="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 transition-all flex items-center justify-center text-white border border-white/15 shrink-0 cursor-pointer shadow-sm"
+                  className="w-11 h-11 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 transition-all flex items-center justify-center text-white border border-white/15 shrink-0 cursor-pointer shadow-sm"
                   title="Změnit tým"
                 >
-                  <Users size={15} />
+                  <Users size={18} />
                 </button>
               )}
 
               <button
                 data-testid="mobile-logout"
                 onClick={onLogout}
-                className="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 transition-all flex items-center justify-center text-white border border-white/15 shrink-0 cursor-pointer shadow-sm"
+                className="w-11 h-11 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 transition-all flex items-center justify-center text-white border border-white/15 shrink-0 cursor-pointer shadow-sm"
                 title="Odhlásit hráče"
               >
-                <LogOut size={15} />
+                <LogOut size={18} />
               </button>
             </div>
           </>

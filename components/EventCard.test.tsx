@@ -117,4 +117,122 @@ describe('EventCard', () => {
     );
     expect(screen.getByTestId('sport-emoji')).toHaveTextContent('🏐');
   });
+
+  describe('Mobile ergonomics & capacity pill', () => {
+    it('applies comfortable touch target minimum height classes', () => {
+      render(
+        <EventCard event={mockEvent} isSelected={false} onSelect={vi.fn()} onDelete={vi.fn()} />
+      );
+      const card = screen.getByTestId('event-card-evt-1');
+      expect(card.className).toContain('min-h-[72px]');
+      expect(card.className).toContain('sm:min-h-[80px]');
+    });
+
+    it('displays spots remaining with green styling when capacity is plentiful', () => {
+      // 2 joined out of 12 (default volejbal) => 10 spots remaining
+      render(
+        <EventCard event={mockEvent} isSelected={false} onSelect={vi.fn()} onDelete={vi.fn()} />
+      );
+      const pill = screen.getByTestId('capacity-pill');
+      expect(pill).toHaveTextContent('10 volných míst');
+      expect(pill.className).toContain('bg-emerald-50');
+      expect(pill.className).toContain('text-emerald-700');
+    });
+
+    it('displays warning style when remaining spots are 2 or fewer', () => {
+      // tenis: max 4 players. 2 joined => 2 spots remaining
+      const tenisEvent: SportEvent = {
+        ...mockEvent,
+        sportType: 'tenis',
+        participants: [
+          { userId: 'u1', name: 'Alice', status: 'joined', hasPaid: true },
+          { userId: 'u2', name: 'Bob', status: 'joined', hasPaid: true },
+        ],
+      };
+      render(
+        <EventCard event={tenisEvent} isSelected={false} onSelect={vi.fn()} onDelete={vi.fn()} />
+      );
+      const pill = screen.getByTestId('capacity-pill');
+      expect(pill).toHaveTextContent('2 volná místa');
+      expect(pill.className).toContain('bg-amber-50');
+      expect(pill.className).toContain('text-amber-700');
+    });
+
+    it('displays 1 volné místo when only 1 spot remains', () => {
+      // tenis: max 4. 3 joined => 1 spot remaining
+      const tenisEvent: SportEvent = {
+        ...mockEvent,
+        sportType: 'tenis',
+        participants: [
+          { userId: 'u1', name: 'Alice', status: 'joined', hasPaid: true },
+          { userId: 'u2', name: 'Bob', status: 'joined', hasPaid: true },
+          { userId: 'u3', name: 'Carl', status: 'joined', hasPaid: true },
+        ],
+      };
+      render(
+        <EventCard event={tenisEvent} isSelected={false} onSelect={vi.fn()} onDelete={vi.fn()} />
+      );
+      const pill = screen.getByTestId('capacity-pill');
+      expect(pill).toHaveTextContent('1 volné místo');
+      expect(pill.className).toContain('bg-amber-50');
+    });
+
+    it('displays Plno with red styling when event is at or over capacity', () => {
+      // tenis: max 4. 4 joined => full
+      const fullEvent: SportEvent = {
+        ...mockEvent,
+        sportType: 'tenis',
+        participants: [
+          { userId: 'u1', name: 'Alice', status: 'joined', hasPaid: true },
+          { userId: 'u2', name: 'Bob', status: 'joined', hasPaid: true },
+          { userId: 'u3', name: 'Carl', status: 'joined', hasPaid: true },
+          { userId: 'u4', name: 'Dana', status: 'joined', hasPaid: true },
+        ],
+      };
+      render(
+        <EventCard event={fullEvent} isSelected={false} onSelect={vi.fn()} onDelete={vi.fn()} />
+      );
+      const pill = screen.getByTestId('capacity-pill');
+      expect(pill).toHaveTextContent('Plno');
+      expect(pill.className).toContain('bg-red-50');
+      expect(pill.className).toContain('text-red-700');
+    });
+  });
+
+  describe('Cost display', () => {
+    it('displays calculated cost per person when participants are joined', () => {
+      // totalCost 1000, 2 joined => 500 Kč / os.
+      render(
+        <EventCard event={mockEvent} isSelected={false} onSelect={vi.fn()} onDelete={vi.fn()} />
+      );
+      const costBadge = screen.getByTestId('cost-display');
+      expect(costBadge).toHaveTextContent('500 Kč / os.');
+    });
+
+    it('displays total cost when no participants have joined yet', () => {
+      const emptyEvent: SportEvent = {
+        ...mockEvent,
+        totalCost: 1200,
+        participants: [],
+      };
+      render(
+        <EventCard event={emptyEvent} isSelected={false} onSelect={vi.fn()} onDelete={vi.fn()} />
+      );
+      const costBadge = screen.getByTestId('cost-display');
+      expect(costBadge).toHaveTextContent('1200 Kč');
+    });
+
+    it('displays 0 Kč when total cost is 0', () => {
+      const freeEvent: SportEvent = {
+        ...mockEvent,
+        totalCost: 0,
+        participants: [{ userId: 'u1', name: 'Alice', status: 'joined', hasPaid: false }],
+      };
+      render(
+        <EventCard event={freeEvent} isSelected={false} onSelect={vi.fn()} onDelete={vi.fn()} />
+      );
+      const costBadge = screen.getByTestId('cost-display');
+      expect(costBadge).toHaveTextContent('0 Kč');
+    });
+  });
 });
