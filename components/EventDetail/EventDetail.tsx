@@ -14,6 +14,7 @@ import { WaitlistSection } from './WaitlistSection';
 import { TeamSection } from './TeamSection';
 import { PaymentSection } from './PaymentSection';
 import { EventAwardsSection } from './EventAwardsSection';
+import { EventBottomActionDock } from './EventBottomActionDock';
 import { PublicPlayerModal } from '../PlayerDashboard/PublicPlayerModal';
 import { computePlayerGamification } from '@/services/gamificationEngine';
 import { ErrorBoundary } from '../ErrorBoundary';
@@ -184,6 +185,31 @@ export const EventDetail: React.FC<EventDetailProps> = ({
       .map(p => ({ name: p.name }));
   }, [joinedParticipants, allUsers]);
 
+  // ── Mobile Tab State ──
+  const [activeTab, setActiveTab] = useState<'roster' | 'game' | 'payment'>('roster');
+
+  // ── Action Dock Handlers ──
+  const isWaitlisted = waitlistedParticipants.some(p => p.userId === currentUser.id);
+
+  const handleJoinOrWaitlist = () => {
+    participants.handleStatusChange(currentUser.id, 'joined');
+  };
+
+  const handleDecline = () => {
+    participants.handleStatusChange(currentUser.id, 'declined');
+  };
+
+  const handleGoToPayment = () => {
+    setActiveTab('payment');
+    if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+      try {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch {
+        // Fallback for environments lacking smooth scroll support
+      }
+    }
+  };
+
   // ── Inspected player for Public Profile Modal ──
   const inspectingUser = useMemo(() => {
     if (!inspectingUserId) return null;
@@ -207,13 +233,14 @@ export const EventDetail: React.FC<EventDetailProps> = ({
   }, [inspectingUser, allEvents, allUsers]);
 
   return (
-    <div className="bg-white md:rounded-2xl shadow-none md:shadow-lg border-0 md:border md:border-slate-200 overflow-hidden flex flex-col h-full relative">
+    <div className="bg-white md:rounded-2xl shadow-none md:shadow-lg border-0 md:border md:border-slate-200 md:overflow-hidden flex flex-col md:h-full relative pb-28 md:pb-0">
       {participants.isLoading && (
         <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-50 flex items-center justify-center">
           <Loader2 className="animate-spin text-blue-600" />
         </div>
       )}
 
+      {/* Header is inside the scrollable document flow on mobile */}
       <ErrorBoundary fallbackMessage="Chyba v hlavičce">
         <EventDetailHeader
           event={event}
@@ -242,67 +269,133 @@ export const EventDetail: React.FC<EventDetailProps> = ({
         />
       </ErrorBoundary>
 
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 sm:pb-6 grid lg:grid-cols-2 gap-6 lg:gap-8 overscroll-contain custom-scrollbar">
-        {/* Left Column: Participants & Teams */}
-        <div className="space-y-6">
-          <ErrorBoundary fallbackMessage="Chyba v seznamu účastníků">
-            <ParticipantList
-              sortedParticipants={sortedParticipants}
-              currentUser={currentUser}
-              sportConfig={sportConfig}
-              countJoined={countJoined}
-              costPerPerson={costPerPerson}
-              isAtCapacity={isAtCapacity}
-              isPastEvent={isPastEvent}
-              participants={participants}
-              photoUpload={photoUpload}
-              onSelectUser={setInspectingUserId}
-            />
-          </ErrorBoundary>
-
-          <ErrorBoundary fallbackMessage="Chyba v čekací listině">
-            <WaitlistSection
-              waitlistedParticipants={waitlistedParticipants}
-              currentUser={currentUser}
-            />
-          </ErrorBoundary>
-
-          <ErrorBoundary fallbackMessage="Chyba v sekci týmů">
-            <TeamSection
-              event={event}
-              teamManagement={teamManagement}
-              scoreTracking={scoreTracking}
-              onSelectUser={setInspectingUserId}
-            />
-          </ErrorBoundary>
-
-          <ErrorBoundary fallbackMessage="Chyba v ocenění zápasu">
-            <EventAwardsSection
-              event={event}
-              allUsers={allUsers}
-              onUpdate={onUpdate}
-            />
-          </ErrorBoundary>
+      {/* Mobile Segmented Control */}
+      <div className="md:hidden px-4 pt-3 pb-2" data-testid="event-detail-mobile-tabs">
+        <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1 border border-slate-200/80">
+          <button
+            type="button"
+            data-testid="tab-roster"
+            onClick={() => setActiveTab('roster')}
+            className={`flex-1 py-2 px-2 text-xs font-bold rounded-lg transition-all text-center cursor-pointer ${
+              activeTab === 'roster'
+                ? 'bg-white text-slate-800 shadow-xs'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            Účastníci ({countJoined})
+          </button>
+          <button
+            type="button"
+            data-testid="tab-game"
+            onClick={() => setActiveTab('game')}
+            className={`flex-1 py-2 px-2 text-xs font-bold rounded-lg transition-all text-center cursor-pointer ${
+              activeTab === 'game'
+                ? 'bg-white text-slate-800 shadow-xs'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            Týmy & Skóre
+          </button>
+          <button
+            type="button"
+            data-testid="tab-payment"
+            onClick={() => setActiveTab('payment')}
+            className={`flex-1 py-2 px-2 text-xs font-bold rounded-lg transition-all text-center cursor-pointer ${
+              activeTab === 'payment'
+                ? 'bg-white text-slate-800 shadow-xs'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            Platba ({costPerPerson} Kč)
+          </button>
         </div>
-
-        {/* Right Column: Payment Info */}
-        <ErrorBoundary fallbackMessage="Chyba v platebních údajích">
-          <PaymentSection
-            event={event}
-            bankAccounts={bankAccounts}
-            effectiveAccountNumber={effectiveAccountNumber}
-            selectedAccountOwner={selectedAccountOwner}
-            iban={iban}
-            qrString={qrString}
-            costPerPerson={costPerPerson}
-            countJoined={countJoined}
-            isCopied={isCopied}
-            onCopyToClipboard={handleCopyToClipboard}
-            onBankAccountChange={handleBankAccountChange}
-            multisportUsers={multisportUsers}
-          />
-        </ErrorBoundary>
       </div>
+
+      {/* Main Content Area */}
+      <div className="p-4 sm:p-6 md:p-6 md:flex-1 md:overflow-y-auto pb-6 overscroll-contain custom-scrollbar">
+        <div className="grid lg:grid-cols-2 gap-6 lg:gap-8">
+          {/* Left Column: Participants & Teams */}
+          <div className="flex flex-col gap-6">
+            <div className={activeTab === 'roster' ? 'flex flex-col gap-6' : 'hidden md:flex md:flex-col md:gap-6'}>
+              <ErrorBoundary fallbackMessage="Chyba v seznamu účastníků">
+                <ParticipantList
+                  sortedParticipants={sortedParticipants}
+                  currentUser={currentUser}
+                  sportConfig={sportConfig}
+                  countJoined={countJoined}
+                  costPerPerson={costPerPerson}
+                  isAtCapacity={isAtCapacity}
+                  isPastEvent={isPastEvent}
+                  participants={participants}
+                  photoUpload={photoUpload}
+                  onSelectUser={setInspectingUserId}
+                />
+              </ErrorBoundary>
+
+              <ErrorBoundary fallbackMessage="Chyba v čekací listině">
+                <WaitlistSection
+                  waitlistedParticipants={waitlistedParticipants}
+                  currentUser={currentUser}
+                />
+              </ErrorBoundary>
+            </div>
+
+            <div className={activeTab === 'game' ? 'flex flex-col gap-6' : 'hidden md:flex md:flex-col md:gap-6'}>
+              <ErrorBoundary fallbackMessage="Chyba v sekci týmů">
+                <TeamSection
+                  event={event}
+                  teamManagement={teamManagement}
+                  scoreTracking={scoreTracking}
+                  onSelectUser={setInspectingUserId}
+                />
+              </ErrorBoundary>
+
+              <ErrorBoundary fallbackMessage="Chyba v ocenění zápasu">
+                <EventAwardsSection
+                  event={event}
+                  allUsers={allUsers}
+                  onUpdate={onUpdate}
+                />
+              </ErrorBoundary>
+            </div>
+          </div>
+
+          {/* Right Column: Payment Info */}
+          <div className={activeTab === 'payment' ? 'block' : 'hidden md:block'}>
+            <ErrorBoundary fallbackMessage="Chyba v platebních údajích">
+              <PaymentSection
+                event={event}
+                bankAccounts={bankAccounts}
+                effectiveAccountNumber={effectiveAccountNumber}
+                selectedAccountOwner={selectedAccountOwner}
+                iban={iban}
+                qrString={qrString}
+                costPerPerson={costPerPerson}
+                countJoined={countJoined}
+                isCopied={isCopied}
+                onCopyToClipboard={handleCopyToClipboard}
+                onBankAccountChange={handleBankAccountChange}
+                multisportUsers={multisportUsers}
+              />
+            </ErrorBoundary>
+          </div>
+        </div>
+      </div>
+
+      {/* Floating Action Dock for Mobile */}
+      <EventBottomActionDock
+        isCurrentUserJoined={participants.isCurrentUserJoined}
+        isWaitlisted={isWaitlisted}
+        isAtCapacity={isAtCapacity}
+        countJoined={countJoined}
+        maxPlayers={sportConfig.maxPlayers}
+        costPerPerson={costPerPerson}
+        hasPaid={participants.currentUserParticipant?.hasPaid ?? false}
+        isSaving={participants.savingUsers.has(currentUser.id)}
+        onJoinOrWaitlist={handleJoinOrWaitlist}
+        onDecline={handleDecline}
+        onGoToPayment={handleGoToPayment}
+      />
 
       {/* Public Player Profile Modal */}
       {inspectingUser && inspectingGamification && (

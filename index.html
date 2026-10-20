@@ -2,16 +2,42 @@
 <html lang="cs">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <title>Sport Plánovač</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="alternate icon" href="/favicon.ico" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+      html, body {
+        overflow-x: clip;
+      }
       body {
         font-family: 'Inter', sans-serif;
         background-color: #f1f5f9;
+        min-height: 100vh;
+        min-height: 100dvh;
+        -webkit-font-smoothing: antialiased;
+      }
+      .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+      .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+      @media screen and (max-width: 768px) {
+        input[type="text"],
+        input[type="number"],
+        input[type="date"],
+        input[type="time"],
+        input[type="email"],
+        input[type="password"],
+        select,
+        textarea {
+          font-size: 16px !important;
+        }
+      }
+      * {
+        -webkit-tap-highlight-color: transparent;
+      }
+      button, a, input, select {
+        touch-action: manipulation;
       }
       @keyframes slideInRight {
         from { opacity: 0; transform: translateX(30px); }

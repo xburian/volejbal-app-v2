@@ -1464,4 +1464,75 @@ describe('EventDetail Component', () => {
       expect(screen.queryByTestId('public-player-modal')).not.toBeInTheDocument();
     });
   });
+
+  describe('Mobile Segmented Control and Action Dock', () => {
+    it('renders mobile segmented tabs and floating action dock', () => {
+      render(
+        <EventDetail
+          event={mockEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]}
+          sportConfigs={DEFAULT_SPORT_CONFIGS}
+          allEvents={[mockEvent]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      expect(screen.getByTestId('event-detail-mobile-tabs')).toBeInTheDocument();
+      expect(screen.getByTestId('tab-roster')).toBeInTheDocument();
+      expect(screen.getByTestId('tab-game')).toBeInTheDocument();
+      expect(screen.getByTestId('tab-payment')).toBeInTheDocument();
+      expect(screen.getByTestId('event-bottom-action-dock')).toBeInTheDocument();
+    });
+
+    it('switches tabs when mobile segmented tab buttons are clicked', async () => {
+      const user = userEvent.setup();
+      render(
+        <EventDetail
+          event={mockEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]}
+          sportConfigs={DEFAULT_SPORT_CONFIGS}
+          allEvents={[mockEvent]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      const tabGame = screen.getByTestId('tab-game');
+      const tabPayment = screen.getByTestId('tab-payment');
+      const tabRoster = screen.getByTestId('tab-roster');
+
+      await user.click(tabGame);
+      expect(tabGame.className).toContain('bg-white');
+
+      await user.click(tabPayment);
+      expect(tabPayment.className).toContain('bg-white');
+
+      await user.click(tabRoster);
+      expect(tabRoster.className).toContain('bg-white');
+    });
+
+    it('navigates to payment tab when action-dock-pay is clicked', async () => {
+      const user = userEvent.setup();
+      render(
+        <EventDetail
+          event={mockEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]}
+          sportConfigs={DEFAULT_SPORT_CONFIGS}
+          allEvents={[mockEvent]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      const payBtn = screen.getByTestId('action-dock-pay');
+      await user.click(payBtn);
+
+      const tabPayment = screen.getByTestId('tab-payment');
+      expect(tabPayment.className).toContain('bg-white');
+    });
+  });
 });

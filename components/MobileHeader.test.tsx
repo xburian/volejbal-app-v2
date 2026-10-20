@@ -167,6 +167,59 @@ describe('MobileHeader', () => {
     await user.click(screen.getByTestId('mobile-user-menu'));
     expect(onOpenMenu).toHaveBeenCalled();
   });
+
+  it('includes safe-area-inset-top padding and >=44px touch targets', () => {
+    const { container } = render(
+      <MobileHeader
+        mobileView="calendar"
+        currentUser={mockUser}
+        selectedEvent={undefined}
+        onBack={vi.fn()}
+        onLogout={vi.fn()}
+        onLogoutTeam={vi.fn()}
+        onRefresh={vi.fn()}
+        onOpenMenu={vi.fn()}
+      />
+    );
+    const header = container.querySelector('header');
+    expect(header?.className).toContain('pt-[env(safe-area-inset-top,0px)]');
+
+    const refreshBtn = screen.getByTestId('mobile-refresh');
+    expect(refreshBtn.className).toContain('w-11');
+    expect(refreshBtn.className).toContain('h-11');
+
+    const logoutBtn = screen.getByTestId('mobile-logout');
+    expect(logoutBtn.className).toContain('w-11');
+    expect(logoutBtn.className).toContain('h-11');
+
+    const logoutTeamBtn = screen.getByTestId('mobile-logout-team');
+    expect(logoutTeamBtn.className).toContain('w-11');
+    expect(logoutTeamBtn.className).toContain('h-11');
+
+    const userMenuBtn = screen.getByTestId('mobile-user-menu');
+    expect(userMenuBtn.className).toContain('min-w-[44px]');
+    expect(userMenuBtn.className).toContain('min-h-[44px]');
+  });
+
+  it('provides >=44px back and refresh touch targets on detail view', () => {
+    render(
+      <MobileHeader
+        mobileView="detail"
+        currentUser={mockUser}
+        selectedEvent={mockEvent}
+        onBack={vi.fn()}
+        onLogout={vi.fn()}
+        onRefresh={vi.fn()}
+      />
+    );
+    const backBtn = screen.getByTestId('mobile-back');
+    expect(backBtn.className).toContain('min-w-[44px]');
+    expect(backBtn.className).toContain('min-h-[44px]');
+
+    const refreshBtn = screen.getByTestId('mobile-refresh-detail');
+    expect(refreshBtn.className).toContain('w-11');
+    expect(refreshBtn.className).toContain('h-11');
+  });
 });
 
 

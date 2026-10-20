@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { SportEvent, User } from '../../types';
-import { Award, Sparkles, Heart, Shield, Check } from 'lucide-react';
+import { Award, Sparkles, Heart, Shield } from 'lucide-react';
 
 interface EventAwardsSectionProps {
   event: SportEvent;
@@ -24,7 +24,7 @@ export const EventAwardsSection: React.FC<EventAwardsSectionProps> = ({
   const handleSelectAward = (type: 'mvpUserId' | 'fairPlayUserId' | 'ironmanUserId', userId: string) => {
     const updatedAwards = {
       ...currentAwards,
-      [type]: currentAwards[type] === userId ? undefined : userId,
+      [type]: userId ? userId : undefined,
     };
     onUpdate({
       ...event,
@@ -69,7 +69,7 @@ export const EventAwardsSection: React.FC<EventAwardsSectionProps> = ({
             <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">
               Hvězda zápasu (MVP) +40 XP
             </div>
-            <div className="text-xs font-extrabold text-slate-800 truncate">
+            <div className="text-xs font-extrabold text-slate-800 truncate" data-testid="award-display-mvp">
               {mvpName || <span className="text-slate-400 font-normal italic">Nezvoleno</span>}
             </div>
           </div>
@@ -84,7 +84,7 @@ export const EventAwardsSection: React.FC<EventAwardsSectionProps> = ({
             <div className="text-[10px] font-bold text-rose-600 uppercase tracking-wider">
               Srdcař večera +30 XP
             </div>
-            <div className="text-xs font-extrabold text-slate-800 truncate">
+            <div className="text-xs font-extrabold text-slate-800 truncate" data-testid="award-display-fairplay">
               {fairPlayName || <span className="text-slate-400 font-normal italic">Nezvoleno</span>}
             </div>
           </div>
@@ -99,64 +99,80 @@ export const EventAwardsSection: React.FC<EventAwardsSectionProps> = ({
             <div className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">
               Bojovník večera +30 XP
             </div>
-            <div className="text-xs font-extrabold text-slate-800 truncate">
+            <div className="text-xs font-extrabold text-slate-800 truncate" data-testid="award-display-ironman">
               {ironmanName || <span className="text-slate-400 font-normal italic">Nezvoleno</span>}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Editor Drawer */}
+      {/* Editor Drawer with Selectors */}
       {isEditing && (
-        <div className="mt-3 pt-3 border-t border-amber-200/60 space-y-3 animate-fade-in">
+        <div className="mt-4 pt-4 border-t border-amber-200/60 space-y-3.5 animate-fade-in" data-testid="awards-editor">
+          {/* MVP Selector */}
           <div>
-            <span className="text-xs font-bold text-slate-700 mb-1.5 block">
-              Zvolit Hvězdu zápasu (MVP):
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {participants.map(p => {
-                const isSelected = currentAwards.mvpUserId === p.userId;
-                return (
-                  <button
-                    key={p.userId}
-                    onClick={() => handleSelectAward('mvpUserId', p.userId)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
-                      isSelected
-                        ? 'bg-amber-500 text-white shadow-xs'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    {isSelected && <Check size={12} className="stroke-[3]" />}
-                    <span>{p.name}</span>
-                  </button>
-                );
-              })}
-            </div>
+            <label htmlFor="award-select-mvp" className="text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+              <Sparkles size={14} className="text-amber-500" />
+              <span>Hvězda zápasu (MVP):</span>
+            </label>
+            <select
+              id="award-select-mvp"
+              data-testid="award-select-mvp"
+              value={currentAwards.mvpUserId || ''}
+              onChange={(e) => handleSelectAward('mvpUserId', e.target.value)}
+              className="w-full text-base md:text-sm bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-semibold focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 outline-none cursor-pointer min-h-[44px]"
+            >
+              <option value="">-- Vyberte hráče (nevybráno) --</option>
+              {participants.map(p => (
+                <option key={p.userId} value={p.userId}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
           </div>
 
+          {/* Fair-Play Selector */}
           <div>
-            <span className="text-xs font-bold text-slate-700 mb-1.5 block">
-              Zvolit Srdcaře večera (Fair-Play):
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {participants.map(p => {
-                const isSelected = currentAwards.fairPlayUserId === p.userId;
-                return (
-                  <button
-                    key={p.userId}
-                    onClick={() => handleSelectAward('fairPlayUserId', p.userId)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
-                      isSelected
-                        ? 'bg-rose-500 text-white shadow-xs'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    {isSelected && <Check size={12} className="stroke-[3]" />}
-                    <span>{p.name}</span>
-                  </button>
-                );
-              })}
-            </div>
+            <label htmlFor="award-select-fairplay" className="text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+              <Heart size={14} className="text-rose-500 fill-rose-500" />
+              <span>Srdcař večera (Fair-Play):</span>
+            </label>
+            <select
+              id="award-select-fairplay"
+              data-testid="award-select-fairplay"
+              value={currentAwards.fairPlayUserId || ''}
+              onChange={(e) => handleSelectAward('fairPlayUserId', e.target.value)}
+              className="w-full text-base md:text-sm bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-semibold focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400 outline-none cursor-pointer min-h-[44px]"
+            >
+              <option value="">-- Vyberte hráče (nevybráno) --</option>
+              {participants.map(p => (
+                <option key={p.userId} value={p.userId}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Bojovník večera Selector */}
+          <div>
+            <label htmlFor="award-select-ironman" className="text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+              <Shield size={14} className="text-indigo-500" />
+              <span>Bojovník večera:</span>
+            </label>
+            <select
+              id="award-select-ironman"
+              data-testid="award-select-ironman"
+              value={currentAwards.ironmanUserId || ''}
+              onChange={(e) => handleSelectAward('ironmanUserId', e.target.value)}
+              className="w-full text-base md:text-sm bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-semibold focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none cursor-pointer min-h-[44px]"
+            >
+              <option value="">-- Vyberte hráče (nevybráno) --</option>
+              {participants.map(p => (
+                <option key={p.userId} value={p.userId}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       )}

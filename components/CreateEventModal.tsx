@@ -91,16 +91,26 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ selectedDate
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200 max-h-[90vh] flex flex-col">
+    <div
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end md:items-center justify-center p-0 md:p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      data-testid="modal-backdrop"
+    >
+      <div
+        className="bg-white fixed inset-x-0 bottom-0 z-50 max-h-[92dvh] rounded-t-[32px] md:static md:rounded-2xl md:max-w-md shadow-2xl w-full overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200"
+        data-testid="create-event-sheet"
+      >
+        <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto my-3 md:hidden shrink-0" data-testid="bottom-sheet-drag-handle" />
         <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 flex-shrink-0">
           <h3 className="font-bold text-lg text-slate-800">Přidat událost</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1" title="Zavřít" data-testid="modal-close-button">
             <X size={24} />
           </button>
         </div>
         
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
+        <form onSubmit={handleSubmit} className="p-6 pb-8 md:pb-6 space-y-4 overflow-y-auto flex-1">
           {/* Sport Type Selector — FIRST FIELD */}
           {sportConfigs.length > 0 && (
             <div>
@@ -141,7 +151,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ selectedDate
               type="text"
               value={formData.title}
               onChange={e => setFormData({...formData, title: e.target.value})}
-              className="w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-base md:text-sm"
             />
           </div>
 
@@ -152,7 +162,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ selectedDate
                type="date"
                value={formData.date}
                onChange={e => setFormData({...formData, date: e.target.value})}
-               className="w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+               className="w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-base md:text-sm"
              />
           </div>
 
@@ -177,7 +187,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ selectedDate
                   <select
                     value={recurrence.frequency}
                     onChange={e => setRecurrence({ ...recurrence, frequency: e.target.value as 'weekly' | 'biweekly' })}
-                    className="w-full px-2 py-1.5 bg-white text-slate-900 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none h-[34px]"
+                    className="w-full px-2 py-1.5 bg-white text-slate-900 border border-slate-300 rounded-lg text-base md:text-sm focus:ring-2 focus:ring-blue-500 outline-none min-h-[38px] md:h-[34px]"
                     data-testid="recurrence-frequency"
                   >
                     <option value="weekly">Každý týden</option>
@@ -215,7 +225,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ selectedDate
                         max={26}
                         value={recurrence.count}
                         onChange={e => setRecurrence({ ...recurrence, count: Math.min(26, Math.max(2, Number(e.target.value))) })}
-                        className="w-full px-2 py-1.5 bg-white text-slate-900 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none h-[34px]"
+                        className="w-full px-2 py-1.5 bg-white text-slate-900 border border-slate-300 rounded-lg text-base md:text-sm focus:ring-2 focus:ring-blue-500 outline-none min-h-[38px] md:h-[34px]"
                         data-testid="recurrence-count"
                       />
                     </>
@@ -227,7 +237,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ selectedDate
                         min={formData.date}
                         value={recurrence.untilDate}
                         onChange={e => setRecurrence({ ...recurrence, untilDate: e.target.value < formData.date ? formData.date : e.target.value })}
-                        className="w-full px-2 py-1.5 bg-white text-slate-900 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none h-[34px]"
+                        className="w-full px-2 py-1.5 bg-white text-slate-900 border border-slate-300 rounded-lg text-base md:text-sm focus:ring-2 focus:ring-blue-500 outline-none min-h-[38px] md:h-[34px]"
                         data-testid="recurrence-until-date"
                       />
                     </>
@@ -250,7 +260,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ selectedDate
                 type="time"
                 value={formData.time}
                 onChange={e => setFormData({...formData, time: e.target.value})}
-                className="w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-base md:text-sm"
               />
             </div>
             <div>
@@ -263,7 +273,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ selectedDate
                 onChange={e => setFormData({...formData, totalCost: e.target.value})}
                 onFocus={e => { if (e.target.value === '0') setFormData({...formData, totalCost: ''}); }}
                 onBlur={e => { if (e.target.value === '') setFormData({...formData, totalCost: '0'}); }}
-                className="w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-base md:text-sm"
               />
             </div>
           </div>
@@ -275,7 +285,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ selectedDate
               type="text"
               value={formData.location}
               onChange={e => setFormData({...formData, location: e.target.value})}
-              className="w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-base md:text-sm"
             />
           </div>
 
@@ -286,7 +296,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ selectedDate
                 <select
                   value={selectedBankAccountId}
                   onChange={e => setSelectedBankAccountId(e.target.value)}
-                  className="w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm appearance-none pr-8 cursor-pointer"
+                  className="w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-base md:text-sm appearance-none pr-8 cursor-pointer"
                   data-testid="bank-account-select"
                 >
                   <option value="">Bez účtu</option>
@@ -311,7 +321,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ selectedDate
               rows={2}
               value={formData.description}
               onChange={e => setFormData({...formData, description: e.target.value})}
-              className="w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-base md:text-sm"
             />
           </div>
 
