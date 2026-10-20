@@ -1,7 +1,7 @@
 import React from 'react';
-import { Calendar, BarChart3, Settings, Plus } from 'lucide-react';
+import { Calendar, BarChart3, User, Plus } from 'lucide-react';
 
-export type MobileView = 'calendar' | 'detail' | 'stats' | 'changelog';
+export type MobileView = 'calendar' | 'detail' | 'stats' | 'changelog' | 'profile';
 
 interface MobileBottomNavProps {
   activeView: MobileView;
@@ -13,7 +13,6 @@ interface MobileBottomNavProps {
 export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   activeView,
   onNavigate,
-  onOpenSettings,
   onCreateEvent,
 }) => {
   return (
@@ -59,14 +58,16 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           <span className="text-[10px] font-medium leading-none">Statistiky</span>
         </button>
 
-        {/* Settings Tab */}
+        {/* Profile / Gamification Tab */}
         <button
-          data-testid="nav-settings"
-          onClick={onOpenSettings}
-          className="min-w-[44px] min-h-[44px] flex flex-col items-center justify-center gap-1 transition-all duration-200 text-slate-400 hover:text-slate-600 active:scale-95 cursor-pointer"
+          data-testid="nav-profile"
+          onClick={() => onNavigate('profile')}
+          className={`min-w-[44px] min-h-[44px] flex flex-col items-center justify-center gap-1 transition-all duration-200 cursor-pointer ${
+            activeView === 'profile' ? 'text-blue-600 font-bold' : 'text-slate-400 hover:text-slate-600 active:scale-95'
+          }`}
         >
-          <Settings size={20} />
-          <span className="text-[10px] font-medium leading-none">Nastavení</span>
+          <User size={20} className={activeView === 'profile' ? 'stroke-[2.5]' : ''} />
+          <span className="text-[10px] font-medium leading-none">Můj profil</span>
         </button>
       </div>
     </nav>

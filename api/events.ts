@@ -96,6 +96,8 @@ async function handleGet(res: ApiResponse, teamId: string) {
             photoUrl: user?.photoUrl,
             status: record.status,
             hasPaid: record.hasPaid,
+            firstJoinedAt: record.firstJoinedAt,
+            kudosReceived: record.kudosReceived,
           });
         }
 

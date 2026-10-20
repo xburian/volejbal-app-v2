@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SportEvent, User } from '@/types.ts';
+import { SportEvent, User } from '../../types';
 import { Award, Sparkles, Heart, Shield, Check } from 'lucide-react';
 
 interface EventAwardsSectionProps {

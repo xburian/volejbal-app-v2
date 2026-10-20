@@ -75,12 +75,19 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     const existing: any = await redis.get(`attendance:${compositeKey}`);
     const parsed = existing ? (typeof existing === 'string' ? JSON.parse(existing) : existing) : {};
 
+    // Preserve firstJoinedAt immutable when user joined
+    const firstJoinedAt = status === 'joined'
+      ? (parsed.firstJoinedAt || (parsed.status === 'joined' && parsed.timestamp ? parsed.timestamp : Date.now()))
+      : parsed.firstJoinedAt;
+
     const record = {
       eventId,
       userId,
       status,
       hasPaid: hasPaid ?? parsed.hasPaid ?? false,
       timestamp: Date.now(),
+      firstJoinedAt,
+      kudosReceived: parsed.kudosReceived,
     };
 
     // Store the attendance record

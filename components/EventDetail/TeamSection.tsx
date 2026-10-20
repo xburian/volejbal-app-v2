@@ -10,12 +10,14 @@ interface TeamSectionProps {
   event: SportEvent;
   teamManagement: TeamManagement;
   scoreTracking: ScoreTracking;
+  onSelectUser?: (userId: string) => void;
 }
 
 export const TeamSection: React.FC<TeamSectionProps> = ({
   event,
   teamManagement,
   scoreTracking,
+  onSelectUser,
 }) => {
   const [isShuffling, setIsShuffling] = useState(false);
 
@@ -104,16 +106,23 @@ export const TeamSection: React.FC<TeamSectionProps> = ({
               </h4>
               <div className="space-y-1.5">
                 {team.map(p => (
-                  <div key={p.userId} className="flex items-center gap-2">
+                  <button
+                    key={p.userId}
+                    type="button"
+                    onClick={() => onSelectUser?.(p.userId)}
+                    className="w-full flex items-center gap-2 text-left p-1 rounded-md hover:bg-black/5 transition-colors cursor-pointer focus:outline-none"
+                    title={`Zobrazit profil hráče ${p.name}`}
+                    data-testid={`team-player-${p.userId}`}
+                  >
                     {p.photoUrl ? (
-                      <img src={p.photoUrl} alt={p.name} className="w-6 h-6 rounded-full object-cover" />
+                      <img src={p.photoUrl} alt={p.name} className="w-6 h-6 rounded-full object-cover shrink-0" />
                     ) : (
-                      <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">
+                      <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600 shrink-0">
                         {p.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                       </div>
                     )}
-                    <span className="text-sm text-slate-700">{p.name}</span>
-                  </div>
+                    <span className="text-sm text-slate-700 hover:text-blue-600 font-medium truncate">{p.name}</span>
+                  </button>
                 ))}
               </div>
             </div>

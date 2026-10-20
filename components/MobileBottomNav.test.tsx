@@ -15,7 +15,7 @@ describe('MobileBottomNav', () => {
     render(<MobileBottomNav {...baseProps} />);
     expect(screen.getByTestId('nav-calendar')).toBeInTheDocument();
     expect(screen.getByTestId('nav-stats')).toBeInTheDocument();
-    expect(screen.getByTestId('nav-settings')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-profile')).toBeInTheDocument();
     expect(screen.getByTestId('nav-create')).toBeInTheDocument();
   });
 
@@ -23,7 +23,7 @@ describe('MobileBottomNav', () => {
     render(<MobileBottomNav {...baseProps} />);
     expect(screen.getByText('Kalendář')).toBeInTheDocument();
     expect(screen.getByText('Statistiky')).toBeInTheDocument();
-    expect(screen.getByText('Nastavení')).toBeInTheDocument();
+    expect(screen.getByText('Můj profil')).toBeInTheDocument();
   });
 
   it('highlights calendar tab when activeView is calendar', () => {
@@ -54,14 +54,12 @@ describe('MobileBottomNav', () => {
     expect(onNavigate).toHaveBeenCalledWith('stats');
   });
 
-  it('calls onOpenSettings when settings tab is clicked (not onNavigate)', async () => {
+  it('calls onNavigate("profile") when profile tab is clicked', async () => {
     const onNavigate = vi.fn();
-    const onOpenSettings = vi.fn();
     const user = userEvent.setup();
-    render(<MobileBottomNav {...baseProps} onNavigate={onNavigate} onOpenSettings={onOpenSettings} />);
-    await user.click(screen.getByTestId('nav-settings'));
-    expect(onOpenSettings).toHaveBeenCalled();
-    expect(onNavigate).not.toHaveBeenCalled();
+    render(<MobileBottomNav {...baseProps} onNavigate={onNavigate} />);
+    await user.click(screen.getByTestId('nav-profile'));
+    expect(onNavigate).toHaveBeenCalledWith('profile');
   });
 
   it('calls onCreateEvent when FAB button is clicked', async () => {
@@ -77,7 +75,7 @@ describe('MobileBottomNav', () => {
     const nav = container.querySelector('nav');
     expect(nav?.className).toContain('pb-[env(safe-area-inset-bottom,0px)]');
 
-    const tabs = ['nav-calendar', 'nav-create', 'nav-stats', 'nav-settings'];
+    const tabs = ['nav-calendar', 'nav-create', 'nav-stats', 'nav-profile'];
     tabs.forEach(testId => {
       const el = screen.getByTestId(testId);
       expect(el.className).toContain('min-w-[44px]');
