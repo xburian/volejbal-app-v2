@@ -202,10 +202,19 @@ export const EventDetail: React.FC<EventDetailProps> = ({
 
   // ── Mobile Tab & Swipe Navigation State ──
   const [activeTab, setActiveTab] = useState<'roster' | 'game' | 'payment'>('roster');
+  const [tabDirection, setTabDirection] = useState<'right' | 'left'>('right');
   const TABS: Array<'roster' | 'game' | 'payment'> = ['roster', 'game', 'payment'];
   const touchStartX = useRef<number>(0);
   const touchStartY = useRef<number>(0);
   const touchStartTime = useRef<number>(0);
+
+  const handleTabChange = (nextTab: 'roster' | 'game' | 'payment') => {
+    if (nextTab === activeTab) return;
+    const currentIndex = TABS.indexOf(activeTab);
+    const nextIndex = TABS.indexOf(nextTab);
+    setTabDirection(nextIndex >= currentIndex ? 'right' : 'left');
+    setActiveTab(nextTab);
+  };
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length !== 1) return;
@@ -235,11 +244,11 @@ export const EventDetail: React.FC<EventDetailProps> = ({
     if (Math.abs(deltaX) >= 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5 && elapsed < 600) {
       const currentIndex = TABS.indexOf(activeTab);
       if (deltaX < 0 && currentIndex < TABS.length - 1) {
-        // Swipe left -> advance to next tab
-        setActiveTab(TABS[currentIndex + 1]);
+        // Swipe left -> advance to next tab (moves right)
+        handleTabChange(TABS[currentIndex + 1]);
       } else if (deltaX > 0 && currentIndex > 0) {
-        // Swipe right -> retreat to previous tab
-        setActiveTab(TABS[currentIndex - 1]);
+        // Swipe right -> retreat to previous tab (moves left)
+        handleTabChange(TABS[currentIndex - 1]);
       }
     }
   };
@@ -260,7 +269,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({
   };
 
   const handleGoToPayment = () => {
-    setActiveTab('payment');
+    handleTabChange('payment');
     if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
       try {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -292,6 +301,8 @@ export const EventDetail: React.FC<EventDetailProps> = ({
     return computePlayerGamification(allEvents, inspectingUser.id, inspectingUser, allTeamUserIds);
   }, [inspectingUser, allEvents, allUsers]);
 
+  const tabAnimationClass = tabDirection === 'right' ? 'animate-tab-slide-in-right' : 'animate-tab-slide-in-left';
+
   return (
     <div className="bg-white md:rounded-2xl shadow-none md:shadow-lg border-0 md:border md:border-slate-200 md:overflow-hidden flex flex-col md:h-full relative pb-28 md:pb-0">
       {participants.isLoading && (
@@ -309,8 +320,8 @@ export const EventDetail: React.FC<EventDetailProps> = ({
           <button
             type="button"
             data-testid="tab-roster"
-            onClick={() => setActiveTab('roster')}
-            className={`flex-1 py-2 px-2 text-xs font-bold rounded-lg transition-all text-center cursor-pointer ${
+            onClick={() => handleTabChange('roster')}
+            className={`flex-1 py-2 px-2 text-xs font-bold rounded-lg transition-all duration-200 text-center cursor-pointer active:scale-95 ${
               activeTab === 'roster'
                 ? 'bg-white text-slate-800 shadow-xs'
                 : 'text-slate-500 hover:text-slate-800'
@@ -321,8 +332,8 @@ export const EventDetail: React.FC<EventDetailProps> = ({
           <button
             type="button"
             data-testid="tab-game"
-            onClick={() => setActiveTab('game')}
-            className={`flex-1 py-2 px-2 text-xs font-bold rounded-lg transition-all text-center cursor-pointer ${
+            onClick={() => handleTabChange('game')}
+            className={`flex-1 py-2 px-2 text-xs font-bold rounded-lg transition-all duration-200 text-center cursor-pointer active:scale-95 ${
               activeTab === 'game'
                 ? 'bg-white text-slate-800 shadow-xs'
                 : 'text-slate-500 hover:text-slate-800'
@@ -333,8 +344,8 @@ export const EventDetail: React.FC<EventDetailProps> = ({
           <button
             type="button"
             data-testid="tab-payment"
-            onClick={() => setActiveTab('payment')}
-            className={`flex-1 py-2 px-2 text-xs font-bold rounded-lg transition-all text-center cursor-pointer ${
+            onClick={() => handleTabChange('payment')}
+            className={`flex-1 py-2 px-2 text-xs font-bold rounded-lg transition-all duration-200 text-center cursor-pointer active:scale-95 ${
               activeTab === 'payment'
                 ? 'bg-white text-slate-800 shadow-xs'
                 : 'text-slate-500 hover:text-slate-800'
@@ -412,7 +423,14 @@ export const EventDetail: React.FC<EventDetailProps> = ({
         <div className="grid lg:grid-cols-2 gap-6 lg:gap-8">
           {/* Left Column: Participants & Teams */}
           <div className="flex flex-col gap-6">
-            <div className={activeTab === 'roster' ? 'flex flex-col gap-6' : 'hidden md:flex md:flex-col md:gap-6'}>
+            <div
+              data-testid="tab-content-roster"
+              className={
+                activeTab === 'roster'
+                  ? `flex flex-col gap-6 md:animate-none ${tabAnimationClass}`
+                  : 'hidden md:flex md:flex-col md:gap-6'
+              }
+            >
               <ErrorBoundary fallbackMessage="Chyba v seznamu účastníků">
                 <ParticipantList
                   sortedParticipants={sortedParticipants}
@@ -436,7 +454,14 @@ export const EventDetail: React.FC<EventDetailProps> = ({
               </ErrorBoundary>
             </div>
 
-            <div className={activeTab === 'game' ? 'flex flex-col gap-6' : 'hidden md:flex md:flex-col md:gap-6'}>
+            <div
+              data-testid="tab-content-game"
+              className={
+                activeTab === 'game'
+                  ? `flex flex-col gap-6 md:animate-none ${tabAnimationClass}`
+                  : 'hidden md:flex md:flex-col md:gap-6'
+              }
+            >
               <ErrorBoundary fallbackMessage="Chyba v sekci týmů">
                 <TeamSection
                   event={event}
@@ -457,7 +482,14 @@ export const EventDetail: React.FC<EventDetailProps> = ({
           </div>
 
           {/* Right Column: Payment Info */}
-          <div className={activeTab === 'payment' ? 'block' : 'hidden md:block'}>
+          <div
+            data-testid="tab-content-payment"
+            className={
+              activeTab === 'payment'
+                ? `block md:animate-none ${tabAnimationClass}`
+                : 'hidden md:block'
+            }
+          >
             <ErrorBoundary fallbackMessage="Chyba v platebních údajích">
               <PaymentSection
                 event={event}

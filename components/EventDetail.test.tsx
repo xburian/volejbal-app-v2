@@ -1534,6 +1534,53 @@ describe('EventDetail Component', () => {
       const tabPayment = screen.getByTestId('tab-payment');
       expect(tabPayment.className).toContain('bg-white');
     });
+
+    it('applies directional slide transition animations when switching tabs', async () => {
+      const user = userEvent.setup();
+      render(
+        <EventDetail
+          event={mockEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]}
+          sportConfigs={DEFAULT_SPORT_CONFIGS}
+          allEvents={[mockEvent]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      const tabRoster = screen.getByTestId('tab-roster');
+      const tabGame = screen.getByTestId('tab-game');
+      const tabPayment = screen.getByTestId('tab-payment');
+
+      const contentRoster = screen.getByTestId('tab-content-roster');
+      const contentGame = screen.getByTestId('tab-content-game');
+      const contentPayment = screen.getByTestId('tab-content-payment');
+
+      // Initial state: roster is active, desktop has md:animate-none
+      expect(contentRoster.className).toContain('animate-tab-slide-in-right');
+      expect(contentRoster.className).toContain('md:animate-none');
+
+      // Switching forward (Roster -> Game): slides in from right
+      await user.click(tabGame);
+      expect(contentGame.className).toContain('animate-tab-slide-in-right');
+      expect(contentGame.className).toContain('md:animate-none');
+
+      // Switching forward (Game -> Payment): slides in from right
+      await user.click(tabPayment);
+      expect(contentPayment.className).toContain('animate-tab-slide-in-right');
+      expect(contentPayment.className).toContain('md:animate-none');
+
+      // Switching backward (Payment -> Game): slides in from left
+      await user.click(tabGame);
+      expect(contentGame.className).toContain('animate-tab-slide-in-left');
+      expect(contentGame.className).toContain('md:animate-none');
+
+      // Switching backward (Game -> Roster): slides in from left
+      await user.click(tabRoster);
+      expect(contentRoster.className).toContain('animate-tab-slide-in-left');
+      expect(contentRoster.className).toContain('md:animate-none');
+    });
   });
 
   describe('Mobile Sticky Tabs, Collapsible Hero & Swipe Gestures', () => {
