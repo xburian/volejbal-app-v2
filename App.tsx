@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SportEvent, SportType } from './types';
+import { SportEvent, SportType, User } from './types';
 import * as storage from './services/storage';
 import { CalendarView } from './components/CalendarView';
 import { EventDetail } from './components/EventDetail';
@@ -32,7 +32,7 @@ const App: React.FC = () => {
   const { selectedEventId, setSelectedEventId, clearSelection, mobileView, setMobileView } = useUrlState();
   const {
     events, isLoading, isRefreshing, unpaidDebts, bankAccounts, setBankAccounts,
-    sportConfigs, setSportConfigs, users, loadEvents, refreshAll, createEvent, createEventsBatch, updateEvent, deleteEvent,
+    sportConfigs, setSportConfigs, users, loadEvents, loadUsers, refreshAll, createEvent, createEventsBatch, updateEvent, deleteEvent,
   } = useDataLoading({ currentUser });
 
   const [viewDate, setViewDate] = useState<Date>(new Date());
@@ -113,6 +113,19 @@ const App: React.FC = () => {
   const handleUserUpdate = (updatedUser: NonNullable<typeof currentUser>) => {
     updateUser(updatedUser);
     loadEvents();
+  };
+
+  const handleUpdateProfile = async (updated: Partial<User>) => {
+    if (!currentUser) return;
+    try {
+      const savedUser = await storage.updateUser(currentUser.id, updated);
+      updateUser(savedUser);
+      await loadUsers();
+    } catch (err) {
+      console.error('Failed to update user profile in storage:', err);
+      updateUser({ ...currentUser, ...updated });
+      throw err;
+    }
   };
 
   const handleManualRefresh = async () => {
@@ -356,9 +369,7 @@ const App: React.FC = () => {
               events={events}
               allUsers={users}
               onOpenSettings={() => setIsSettingsOpen(true)}
-              onUpdateUser={async (updated) => {
-                await updateUser({ ...currentUser, ...updated });
-              }}
+              onUpdateUser={handleUpdateProfile}
               onClose={handleMobileBack}
             />
           </div>
@@ -525,9 +536,7 @@ const App: React.FC = () => {
             events={events}
             allUsers={users}
             onOpenSettings={() => setIsSettingsOpen(true)}
-            onUpdateUser={async (updated) => {
-              await updateUser({ ...currentUser, ...updated });
-            }}
+            onUpdateUser={handleUpdateProfile}
             onClose={() => setShowProfile(false)}
           />
         ) : showStats ? (

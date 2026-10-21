@@ -65,10 +65,12 @@ export const PlayerHeroCard: React.FC<PlayerHeroCardProps> = ({
           {onEditProfile && (
             <button
               onClick={onEditProfile}
-              className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white/80 hover:text-white transition-all cursor-pointer"
+              data-testid="edit-profile-btn"
+              className="min-w-[44px] min-h-[44px] p-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white/80 hover:text-white transition-all flex items-center justify-center cursor-pointer shrink-0"
               title="Upravit pozici a motto"
+              aria-label="Upravit pozici a motto"
             >
-              <Edit2 size={15} />
+              <Edit2 size={16} />
             </button>
           )}
         </div>
@@ -112,10 +114,28 @@ export const PlayerHeroCard: React.FC<PlayerHeroCardProps> = ({
             </span>
           </div>
 
-          {/* Player Motto */}
-          <p className="text-xs sm:text-sm text-slate-300 italic mt-2 line-clamp-2">
-            „{currentUser.playerMotto || 'Příjem je základ všeho! 🏐'}“
-          </p>
+          {/* Player Motto (interactive and easily editable) */}
+          <div
+            onClick={onEditProfile}
+            role={onEditProfile ? 'button' : undefined}
+            tabIndex={onEditProfile ? 0 : undefined}
+            data-testid="player-motto-clickable"
+            className={
+              onEditProfile
+                ? 'group inline-flex items-center gap-2 mt-2 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 active:scale-98 transition-all cursor-pointer text-left max-w-full'
+                : 'mt-2'
+            }
+            title={onEditProfile ? 'Upravit motto' : undefined}
+          >
+            <p className="text-xs sm:text-sm text-slate-300 italic line-clamp-2">
+              „{currentUser.playerMotto || 'Příjem je základ všeho! 🏐'}“
+            </p>
+            {onEditProfile && (
+              <span className="shrink-0 p-1 rounded-lg bg-white/10 text-white/70 group-hover:text-white transition-colors">
+                <Edit2 size={12} />
+              </span>
+            )}
+          </div>
 
           {/* Social Badges Row: MVP & Kudos */}
           <div className="flex items-center justify-center sm:justify-start gap-3 mt-3">
