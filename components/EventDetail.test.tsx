@@ -1535,4 +1535,169 @@ describe('EventDetail Component', () => {
       expect(tabPayment.className).toContain('bg-white');
     });
   });
+
+  describe('Mobile Sticky Tabs, Collapsible Hero & Swipe Gestures', () => {
+    it('anchors mobile segmented tabs with sticky top offset', () => {
+      render(
+        <EventDetail
+          event={mockEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]}
+          sportConfigs={DEFAULT_SPORT_CONFIGS}
+          allEvents={[mockEvent]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      const tabs = screen.getByTestId('event-detail-mobile-tabs');
+      expect(tabs).toBeInTheDocument();
+      expect(tabs.className).toContain('sticky');
+      expect(tabs.className).toContain('top-[calc(56px+env(safe-area-inset-top,0px))]');
+      expect(tabs.className).toContain('z-20');
+    });
+
+    it('toggles mobile collapsible event header accordion', async () => {
+      const user = userEvent.setup();
+      render(
+        <EventDetail
+          event={mockEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]}
+          sportConfigs={DEFAULT_SPORT_CONFIGS}
+          allEvents={[mockEvent]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      const toggleBtn = screen.getByTestId('event-detail-header-toggle');
+      const headerContainer = screen.getByTestId('event-detail-header-container');
+      const summary = screen.getByTestId('mobile-header-summary');
+
+      // Starts collapsed
+      expect(toggleBtn).toHaveAttribute('aria-expanded', 'false');
+      expect(toggleBtn).toHaveTextContent('Info');
+      expect(headerContainer.className).toContain('hidden md:block');
+      expect(summary).toHaveTextContent('18:00');
+      expect(summary).toHaveTextContent('Test Hall');
+      expect(summary).toHaveTextContent('500 Kč/os.');
+
+      // Click to expand
+      await user.click(toggleBtn);
+      expect(toggleBtn).toHaveAttribute('aria-expanded', 'true');
+      expect(toggleBtn).toHaveTextContent('Méně');
+      expect(headerContainer.className).toContain('block animate-fade-in');
+
+      // Click to collapse
+      await user.click(toggleBtn);
+      expect(toggleBtn).toHaveAttribute('aria-expanded', 'false');
+      expect(toggleBtn).toHaveTextContent('Info');
+      expect(headerContainer.className).toContain('hidden md:block');
+    });
+
+    it('switches tabs smoothly via horizontal swipe gestures', () => {
+      render(
+        <EventDetail
+          event={mockEvent}
+          currentUser={mockCurrentUser}
+          onUpdate={mockOnUpdate}
+          bankAccounts={[]}
+          sportConfigs={DEFAULT_SPORT_CONFIGS}
+          allEvents={[mockEvent]}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      const content = screen.getByTestId('event-detail-swipeable-content');
+      const tabRoster = screen.getByTestId('tab-roster');
+      const tabGame = screen.getByTestId('tab-game');
+      const tabPayment = screen.getByTestId('tab-payment');
+
+      // Starts on 'roster'
+      expect(tabRoster.className).toContain('bg-white');
+
+      // Swipe left (advance to 'game')
+      fireEvent.touchStart(content, {
+        touches: [{ clientX: 250, clientY: 100 }],
+      });
+      fireEvent.touchEnd(content, {
+        changedTouches: [{ clientX: 150, clientY: 105 }],
+      });
+      expect(tabGame.className).toContain('bg-white');
+
+      // Swipe left (advance to 'payment')
+      fireEvent.touchStart(content, {
+        touches: [{ clientX: 250, clientY: 100 }],
+      });
+      fireEvent.touchEnd(content, {
+        changedTouches: [{ clientX: 150, clientY: 102 }],
+      });
+      expect(tabPayment.className).toContain('bg-white');
+
+      // Swipe left while at end (stays on 'payment')
+      fireEvent.touchStart(content, {
+        touches: [{ clientX: 250, clientY: 100 }],
+      });
+      fireEvent.touchEnd(content, {
+        changedTouches: [{ clientX: 150, clientY: 100 }],
+      });
+      expect(tabPayment.className).toContain('bg-white');
+
+      // Swipe right (retreats to 'game')
+      fireEvent.touchStart(content, {
+        touches: [{ clientX: 100, clientY: 100 }],
+      });
+      fireEvent.touchEnd(content, {
+        changedTouches: [{ clientX: 200, clientY: 102 }],
+      });
+      expect(tabGame.className).toContain('bg-white');
+
+      // Swipe right (retreats to 'roster')
+      fireEvent.touchStart(content, {
+        touches: [{ clientX: 100, clientY: 100 }],
+      });
+      fireEvent.touchEnd(content, {
+        changedTouches: [{ clientX: 200, clientY: 102 }],
+      });
+      expect(tabRoster.className).toContain('bg-white');
+
+      // Swipe right while at start (stays on 'roster')
+      fireEvent.touchStart(content, {
+        touches: [{ clientX: 100, clientY: 100 }],
+      });
+      fireEvent.touchEnd(content, {
+        changedTouches: [{ clientX: 200, clientY: 100 }],
+      });
+      expect(tabRoster.className).toContain('bg-white');
+
+      // Predominantly vertical swipe should NOT trigger tab switch
+      fireEvent.touchStart(content, {
+        touches: [{ clientX: 200, clientY: 100 }],
+      });
+      fireEvent.touchEnd(content, {
+        changedTouches: [{ clientX: 150, clientY: 250 }], // dy is 150, dx is -50
+      });
+      expect(tabRoster.className).toContain('bg-white');
+
+      // Small gesture under threshold (<45px) should NOT trigger tab switch
+      fireEvent.touchStart(content, {
+        touches: [{ clientX: 200, clientY: 100 }],
+      });
+      fireEvent.touchEnd(content, {
+        changedTouches: [{ clientX: 175, clientY: 100 }], // dx is -25
+      });
+      expect(tabRoster.className).toContain('bg-white');
+
+      // Touch cancel should clear touch coordinates
+      fireEvent.touchStart(content, {
+        touches: [{ clientX: 250, clientY: 100 }],
+      });
+      fireEvent.touchCancel(content);
+      fireEvent.touchEnd(content, {
+        changedTouches: [{ clientX: 150, clientY: 100 }],
+      });
+      expect(tabRoster.className).toContain('bg-white');
+    });
+  });
 });

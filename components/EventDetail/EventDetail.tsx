@@ -1,7 +1,9 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { SportEvent, User, BankAccount, SportConfig } from '@/types.ts';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { SportEvent, User, BankAccount, SportConfig, SPORT_EMOJI } from '@/types.ts';
 import { convertToCZIBAN } from '@/utils/iban.ts';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ChevronDown } from 'lucide-react';
+import { format } from 'date-fns';
+import { cs } from 'date-fns/locale';
 
 import { useTeamManagement } from './hooks/useTeamManagement';
 import { useScoreTracking } from './hooks/useScoreTracking';
@@ -49,6 +51,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({
   const [tempTime, setTempTime] = useState(event.time);
   const [isCopied, setIsCopied] = useState(false);
   const [inspectingUserId, setInspectingUserId] = useState<string | null>(null);
+  const [isHeaderExpanded, setIsHeaderExpanded] = useState(false);
 
   useEffect(() => {
     setTempTotalCost(String(event.totalCost));
@@ -57,6 +60,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({
     setIsEditingLocation(false);
     setTempTime(event.time);
     setIsEditingTime(false);
+    setIsHeaderExpanded(false);
   }, [event.id, event.totalCost, event.location, event.time]);
 
   // ── Resolve sport config ──
@@ -185,8 +189,64 @@ export const EventDetail: React.FC<EventDetailProps> = ({
       .map(p => ({ name: p.name }));
   }, [joinedParticipants, allUsers]);
 
-  // ── Mobile Tab State ──
+  // ── Formatted event date for collapsible mobile banner ──
+  const formattedDate = useMemo(() => {
+    try {
+      const d = new Date(event.date + 'T00:00:00');
+      const raw = format(d, 'EEE d. M.', { locale: cs });
+      return raw.charAt(0).toUpperCase() + raw.slice(1);
+    } catch {
+      return event.date;
+    }
+  }, [event.date]);
+
+  // ── Mobile Tab & Swipe Navigation State ──
   const [activeTab, setActiveTab] = useState<'roster' | 'game' | 'payment'>('roster');
+  const TABS: Array<'roster' | 'game' | 'payment'> = ['roster', 'game', 'payment'];
+  const touchStartX = useRef<number>(0);
+  const touchStartY = useRef<number>(0);
+  const touchStartTime = useRef<number>(0);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    const target = e.target as HTMLElement | null;
+    // Don't trigger swipe if touch originated in horizontally scrollable regions or form inputs
+    if (target?.closest('.overflow-x-auto, input, select, textarea, [data-no-swipe]')) {
+      touchStartX.current = 0;
+      return;
+    }
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    touchStartTime.current = Date.now();
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === 0) return;
+    if (e.changedTouches.length !== 1) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    const deltaX = touchEndX - touchStartX.current;
+    const deltaY = touchEndY - touchStartY.current;
+    const elapsed = Date.now() - touchStartTime.current;
+
+    touchStartX.current = 0;
+
+    // Must be predominantly horizontal gesture: min 45px, dx > 1.5 * dy, within 600ms
+    if (Math.abs(deltaX) >= 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5 && elapsed < 600) {
+      const currentIndex = TABS.indexOf(activeTab);
+      if (deltaX < 0 && currentIndex < TABS.length - 1) {
+        // Swipe left -> advance to next tab
+        setActiveTab(TABS[currentIndex + 1]);
+      } else if (deltaX > 0 && currentIndex > 0) {
+        // Swipe right -> retreat to previous tab
+        setActiveTab(TABS[currentIndex - 1]);
+      }
+    }
+  };
+
+  const handleTouchCancel = () => {
+    touchStartX.current = 0;
+  };
 
   // ── Action Dock Handlers ──
   const isWaitlisted = waitlistedParticipants.some(p => p.userId === currentUser.id);
@@ -240,37 +300,11 @@ export const EventDetail: React.FC<EventDetailProps> = ({
         </div>
       )}
 
-      {/* Header is inside the scrollable document flow on mobile */}
-      <ErrorBoundary fallbackMessage="Chyba v hlavičce">
-        <EventDetailHeader
-          event={event}
-          sportConfig={sportConfig}
-          countJoined={countJoined}
-          costPerPerson={costPerPerson}
-          isEditingCost={isEditingCost}
-          tempTotalCost={tempTotalCost}
-          onTempTotalCostChange={setTempTotalCost}
-          onStartEditCost={() => setIsEditingCost(true)}
-          onSaveCost={handleSaveCost}
-          onCancelCostEdit={handleCancelCostEdit}
-          isEditingTime={isEditingTime}
-          tempTime={tempTime}
-          onTempTimeChange={setTempTime}
-          onStartEditTime={() => setIsEditingTime(true)}
-          onSaveTime={handleSaveTime}
-          onCancelTimeEdit={handleCancelTimeEdit}
-          isEditingLocation={isEditingLocation}
-          tempLocation={tempLocation}
-          onTempLocationChange={setTempLocation}
-          onStartEditLocation={() => setIsEditingLocation(true)}
-          onSaveLocation={handleSaveLocation}
-          onCancelLocationEdit={handleCancelLocationEdit}
-          onDelete={onDelete}
-        />
-      </ErrorBoundary>
-
-      {/* Mobile Segmented Control */}
-      <div className="md:hidden px-4 pt-3 pb-2" data-testid="event-detail-mobile-tabs">
+      {/* Mobile Sticky Segmented Control (pinned under MobileHeader) */}
+      <div
+        className="md:hidden sticky top-[calc(56px+env(safe-area-inset-top,0px))] z-20 bg-white/95 backdrop-blur-md px-4 pt-2.5 pb-2 border-b border-slate-200/80 shadow-xs"
+        data-testid="event-detail-mobile-tabs"
+      >
         <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1 border border-slate-200/80">
           <button
             type="button"
@@ -311,8 +345,70 @@ export const EventDetail: React.FC<EventDetailProps> = ({
         </div>
       </div>
 
+      {/* Mobile Collapsible Header Accordion Banner */}
+      <div className="md:hidden border-b border-slate-200/70 bg-white" data-testid="event-detail-mobile-collapsible-header">
+        <button
+          type="button"
+          onClick={() => setIsHeaderExpanded(prev => !prev)}
+          data-testid="event-detail-header-toggle"
+          aria-expanded={isHeaderExpanded}
+          className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50/90 hover:bg-slate-100/80 active:bg-slate-100 transition-colors text-left cursor-pointer"
+        >
+          <div className="flex items-center gap-2 min-w-0 pr-2">
+            <span className="text-sm shrink-0">{sportConfig?.type ? (SPORT_EMOJI[sportConfig.type] ?? '🏐') : '🏐'}</span>
+            <span data-testid="mobile-header-summary" className="text-xs text-slate-700 font-semibold truncate">
+              {`${formattedDate} • ${event.time} • ${event.location} • ${costPerPerson} Kč/os.`}
+            </span>
+          </div>
+          <div className="flex items-center gap-1 text-[11px] font-bold text-blue-600 shrink-0 ml-1">
+            <span>{isHeaderExpanded ? 'Méně' : 'Info'}</span>
+            <ChevronDown size={14} className={`transform transition-transform duration-200 ${isHeaderExpanded ? 'rotate-180' : ''}`} />
+          </div>
+        </button>
+      </div>
+
+      {/* Event Detail Header: Collapsible on mobile, always visible on desktop */}
+      <div
+        className={isHeaderExpanded ? 'block animate-fade-in' : 'hidden md:block'}
+        data-testid="event-detail-header-container"
+      >
+        <ErrorBoundary fallbackMessage="Chyba v hlavičce">
+          <EventDetailHeader
+            event={event}
+            sportConfig={sportConfig}
+            countJoined={countJoined}
+            costPerPerson={costPerPerson}
+            isEditingCost={isEditingCost}
+            tempTotalCost={tempTotalCost}
+            onTempTotalCostChange={setTempTotalCost}
+            onStartEditCost={() => setIsEditingCost(true)}
+            onSaveCost={handleSaveCost}
+            onCancelCostEdit={handleCancelCostEdit}
+            isEditingTime={isEditingTime}
+            tempTime={tempTime}
+            onTempTimeChange={setTempTime}
+            onStartEditTime={() => setIsEditingTime(true)}
+            onSaveTime={handleSaveTime}
+            onCancelTimeEdit={handleCancelTimeEdit}
+            isEditingLocation={isEditingLocation}
+            tempLocation={tempLocation}
+            onTempLocationChange={setTempLocation}
+            onStartEditLocation={() => setIsEditingLocation(true)}
+            onSaveLocation={handleSaveLocation}
+            onCancelLocationEdit={handleCancelLocationEdit}
+            onDelete={onDelete}
+          />
+        </ErrorBoundary>
+      </div>
+
       {/* Main Content Area */}
-      <div className="p-4 sm:p-6 md:p-6 md:flex-1 md:overflow-y-auto pb-6 overscroll-contain custom-scrollbar">
+      <div
+        className="p-4 sm:p-6 md:p-6 md:flex-1 md:overflow-y-auto pb-6 overscroll-contain custom-scrollbar touch-pan-y"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchCancel}
+        data-testid="event-detail-swipeable-content"
+      >
         <div className="grid lg:grid-cols-2 gap-6 lg:gap-8">
           {/* Left Column: Participants & Teams */}
           <div className="flex flex-col gap-6">
