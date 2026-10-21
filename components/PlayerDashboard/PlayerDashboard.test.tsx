@@ -234,4 +234,26 @@ describe('PlayerDashboard Component', () => {
     fireEvent.click(screen.getByTestId('profile-edit-modal-backdrop'));
     expect(screen.queryByTestId('profile-edit-modal')).not.toBeInTheDocument();
   });
+
+  it('renders motto input at the top of the modal before position selector so no scrolling is needed', () => {
+    render(
+      <PlayerDashboard
+        currentUser={mockUser}
+        events={mockEvents}
+        onOpenSettings={vi.fn()}
+        onUpdateUser={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('player-motto-clickable'));
+
+    const modal = screen.getByTestId('profile-edit-modal');
+    const mottoInput = screen.getByTestId('player-motto-input');
+    const positionHeader = screen.getByText('Preferovaná herní pozice');
+
+    // Verify motto input appears before the position picker in document order
+    expect(modal).toContainElement(mottoInput);
+    expect(modal).toContainElement(positionHeader);
+    expect(mottoInput.compareDocumentPosition(positionHeader) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
 });
