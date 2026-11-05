@@ -40,10 +40,12 @@ async function start() {
   const issuesHandler = await import('../api/issues.js');
   const authHandler = await import('../api/auth.js');
   const statsHandler = await import('../api/stats.js');
+  const adminHandler = await import('../api/admin.js');
   const cronHandler = await import('../api/cron/compact.js');
   const { isMockDb, resetMockDb, seedRandomMockDb, getMockDbStats } = await import('../api/_utils/redis.js');
 
   app.all('/api/auth', wrapHandler(authHandler));
+  app.all('/api/admin', wrapHandler(adminHandler));
   app.all('/api/teams', wrapHandler(authHandler));
   app.all('/api/users', wrapHandler(usersHandler));
   app.all('/api/events-batch', wrapHandler(eventsHandler));

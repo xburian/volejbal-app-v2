@@ -1,7 +1,7 @@
 import React from 'react';
 import { Calendar, BarChart3, User, Plus } from 'lucide-react';
 
-export type MobileView = 'calendar' | 'detail' | 'stats' | 'changelog' | 'profile';
+export type MobileView = 'calendar' | 'detail' | 'stats' | 'changelog' | 'profile' | 'admin';
 
 interface MobileBottomNavProps {
   activeView: MobileView;

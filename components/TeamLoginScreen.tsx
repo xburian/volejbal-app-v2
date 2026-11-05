@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Team } from '../types';
 import * as storage from '../services/storage';
 import { Trophy, Lock, Users, PlusCircle, ArrowRight, Loader2, Eye, EyeOff, ShieldCheck, AlertCircle } from 'lucide-react';
 
 interface TeamLoginScreenProps {
   onLoginTeam: (team: Team, accessToken: string, refreshToken: string) => void;
+  onOpenAdmin?: () => void;
 }
 
-export const TeamLoginScreen: React.FC<TeamLoginScreenProps> = ({ onLoginTeam }) => {
+export const TeamLoginScreen: React.FC<TeamLoginScreenProps> = ({ onLoginTeam, onOpenAdmin }) => {
   const [teams, setTeams] = useState<Team[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [password, setPassword] = useState('');
@@ -22,6 +23,30 @@ export const TeamLoginScreen: React.FC<TeamLoginScreenProps> = ({ onLoginTeam })
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingTeams, setIsFetchingTeams] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const trophyTapsRef = useRef(0);
+
+  // Keyboard shortcut Shift + Alt + A to open admin
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.shiftKey && e.altKey && (e.key === 'a' || e.key === 'A')) {
+        e.preventDefault();
+        onOpenAdmin?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onOpenAdmin]);
+
+  const handleTrophyClick = () => {
+    trophyTapsRef.current += 1;
+    if (trophyTapsRef.current >= 3) {
+      onOpenAdmin?.();
+      trophyTapsRef.current = 0;
+    }
+    setTimeout(() => {
+      trophyTapsRef.current = 0;
+    }, 1200);
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -107,7 +132,11 @@ export const TeamLoginScreen: React.FC<TeamLoginScreenProps> = ({ onLoginTeam })
       <div className="w-full flex-1 flex flex-col bg-white md:flex-initial md:max-w-md md:rounded-3xl md:shadow-2xl md:border md:border-white/20 md:bg-white/95 md:backdrop-blur-xl md:overflow-hidden relative z-10 animate-fade-in">
         {/* Header - Flat & edge-to-edge on mobile */}
         <div className="bg-blue-600 md:bg-gradient-to-r md:from-blue-700 md:via-indigo-700 md:to-blue-800 p-6 md:p-8 text-center text-white relative shadow-none md:shadow-md shrink-0">
-          <div className="inline-flex p-2.5 md:p-3 bg-white/15 backdrop-blur-sm rounded-xl md:rounded-2xl mb-2.5 md:mb-3 shadow-none md:shadow-inner border border-white/20">
+          <div
+            onClick={handleTrophyClick}
+            className="inline-flex p-2.5 md:p-3 bg-white/15 backdrop-blur-sm rounded-xl md:rounded-2xl mb-2.5 md:mb-3 shadow-none md:shadow-inner border border-white/20 cursor-pointer select-none"
+            title="Sport Plánovač"
+          >
             <Trophy size={32} className="text-amber-300 md:w-9 md:h-9 drop-shadow-sm" />
           </div>
           <h1 className="text-2xl font-black tracking-tight leading-tight">Sport Plánovač</h1>
@@ -302,8 +331,20 @@ export const TeamLoginScreen: React.FC<TeamLoginScreenProps> = ({ onLoginTeam })
             )}
           </div>
 
-          <div className="mt-6 pt-4 border-t border-slate-100 text-center text-xs text-slate-400">
-            Aktivní relace zůstává přihlášená. Heslo stačí zadat jednou.
+          <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+            <span>Aktivní relace zůstává přihlášená. Heslo stačí zadat jednou.</span>
+            {onOpenAdmin && (
+              <button
+                type="button"
+                onClick={onOpenAdmin}
+                className="p-1.5 text-slate-300 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+                title="Administrace systému"
+                aria-label="Administrace systému"
+                data-testid="admin-entry-trigger"
+              >
+                <Lock size={13} />
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -20,6 +20,10 @@ import { ReloadToast, ReloadToastStatus } from './components/ReloadToast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { DevTestingToolbar } from './components/DevTestingToolbar';
 import { PlayerDashboard } from './components/PlayerDashboard/PlayerDashboard';
+import { useAdminAuth } from './hooks/useAdminAuth';
+import { AdminLoginModal } from './components/AdminLoginModal';
+import { AdminDashboard } from './components/AdminDashboard';
+import { AdminImpersonationBanner } from './components/AdminImpersonationBanner';
 import { usePersistedAuth } from './hooks/usePersistedAuth';
 import { useUrlState } from './hooks/useUrlState';
 import { useDataLoading } from './hooks/useDataLoading';
@@ -30,6 +34,20 @@ import { downloadICS } from './utils/icalExport';
 const App: React.FC = () => {
   const { currentTeam, currentUser, loginTeam, logoutTeam, login, logout, updateUser } = usePersistedAuth();
   const { selectedEventId, setSelectedEventId, clearSelection, mobileView, setMobileView } = useUrlState();
+  const {
+    adminUser,
+    isAdminAuthenticated,
+    isImpersonating,
+    impersonatingTeam,
+    loginAdmin,
+    logoutAdmin,
+    fetchOverview,
+    impersonateTeam,
+    endImpersonation,
+    resetTeamPassword,
+  } = useAdminAuth();
+
+  const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
   const {
     events, isLoading, isRefreshing, unpaidDebts, bankAccounts, setBankAccounts,
     sportConfigs, setSportConfigs, users, loadEvents, loadUsers, refreshAll, createEvent, createEventsBatch, updateEvent, deleteEvent,
@@ -65,8 +83,37 @@ const App: React.FC = () => {
   };
 
   const handleLogoutTeam = () => {
+    if (isImpersonating) {
+      endImpersonation();
+      setMobileView('admin');
+      return;
+    }
     logoutTeam();
     clearSelection();
+    setMobileView('calendar');
+  };
+
+  const handleAdminImpersonate = async (teamId: string) => {
+    const result = await impersonateTeam(teamId);
+    handleTeamLogin(result.team, result.accessToken, result.refreshToken);
+    logout();
+    clearSelection();
+    setMobileView('calendar');
+    setShowProfile(false);
+    setShowStats(false);
+    setShowChangelog(false);
+  };
+
+  const handleReturnToAdmin = () => {
+    endImpersonation();
+    storage.invalidateAllCaches();
+    setMobileView('admin');
+  };
+
+  const handleExitAdminSession = () => {
+    endImpersonation();
+    logoutAdmin();
+    handleLogoutTeam();
     setMobileView('calendar');
   };
 
@@ -245,8 +292,63 @@ const App: React.FC = () => {
 
   // ── Derived state ──
 
-  if (!currentTeam) return <TeamLoginScreen onLoginTeam={handleTeamLogin} />;
-  if (!currentUser) return <LoginScreen onLogin={handleLogin} currentTeam={currentTeam} onLogoutTeam={handleLogoutTeam} />;
+  if (mobileView === 'admin' && isAdminAuthenticated && adminUser) {
+    return (
+      <AdminDashboard
+        adminUser={adminUser}
+        onLogout={() => {
+          logoutAdmin();
+          setMobileView('calendar');
+        }}
+        onImpersonate={handleAdminImpersonate}
+        onResetPassword={resetTeamPassword}
+        fetchOverview={fetchOverview}
+        onClose={() => setMobileView('calendar')}
+      />
+    );
+  }
+
+  if (!currentTeam) {
+    return (
+      <>
+        <TeamLoginScreen
+          onLoginTeam={handleTeamLogin}
+          onOpenAdmin={() => setIsAdminLoginOpen(true)}
+        />
+        <AdminLoginModal
+          isOpen={isAdminLoginOpen || (mobileView === 'admin' && !isAdminAuthenticated)}
+          onClose={() => {
+            setIsAdminLoginOpen(false);
+            if (mobileView === 'admin') setMobileView('calendar');
+          }}
+          onSuccess={() => {
+            setIsAdminLoginOpen(false);
+            setMobileView('admin');
+          }}
+          loginAdmin={loginAdmin}
+        />
+      </>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        {isImpersonating && impersonatingTeam && (
+          <AdminImpersonationBanner
+            teamName={impersonatingTeam.name}
+            onReturnToAdmin={handleReturnToAdmin}
+            onExitSession={handleExitAdminSession}
+          />
+        )}
+        <LoginScreen
+          onLogin={handleLogin}
+          currentTeam={currentTeam}
+          onLogoutTeam={handleLogoutTeam}
+        />
+      </div>
+    );
+  }
 
   const isUpcomingMode = selectedDate === null;
   const displayedEvents = isUpcomingMode
@@ -258,7 +360,15 @@ const App: React.FC = () => {
   const selectedEvent = events.find(e => e.id === selectedEventId);
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col md:flex-row text-slate-900">
+    <div className="min-h-screen bg-slate-100 flex flex-col text-slate-900">
+      {isImpersonating && impersonatingTeam && (
+        <AdminImpersonationBanner
+          teamName={impersonatingTeam.name}
+          onReturnToAdmin={handleReturnToAdmin}
+          onExitSession={handleExitAdminSession}
+        />
+      )}
+      <div className="flex-1 flex flex-col md:flex-row">
       {/* Loading Overlay — only on cold start without existing events */}
       {isLoading && events.length === 0 && (
         <div className="fixed inset-0 bg-white/50 backdrop-blur-sm z-[100] flex items-center justify-center" data-testid="initial-loading-overlay">
@@ -608,6 +718,7 @@ const App: React.FC = () => {
       {import.meta.env.DEV && (
         <DevTestingToolbar onTeamSwitch={handleTeamLogin} onDataRefresh={refreshAll} />
       )}
+      </div>
     </div>
   );
 };

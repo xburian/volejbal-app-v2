@@ -362,3 +362,27 @@ export interface PlayerGamificationState {
   mvpAwardsCount: number;
   kudosCount: number;
 }
+
+// --- Admin Portal Types ---
+
+export interface AdminUser {
+  username: string;
+  role: 'admin';
+}
+
+export interface TeamOverviewItem {
+  id: string;
+  name: string;
+  createdAt: string;
+  userCount: number;
+  eventCount: number;
+  lastActiveAt: string | null;
+  isCorrupt?: boolean;
+}
+
+export interface AdminOverviewData {
+  totalTeams: number;
+  totalUsers: number;
+  totalEvents: number;
+  teams: TeamOverviewItem[];
+}

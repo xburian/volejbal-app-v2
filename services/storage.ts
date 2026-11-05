@@ -19,11 +19,30 @@ const STORAGE_ACCESS_TOKEN = 'team_access_token';
 const STORAGE_REFRESH_TOKEN = 'team_refresh_token';
 const STORAGE_CURRENT_TEAM = 'current_team';
 
+// Impersonation session keys (isolated to sessionStorage per tab)
+const SS_IMPERSONATION_ACCESS_TOKEN = 'impersonation_team_token';
+const SS_IMPERSONATION_REFRESH_TOKEN = 'impersonation_team_refresh_token';
+const SS_IMPERSONATION_CURRENT_TEAM = 'impersonation_current_team';
+
 // In-memory token cache for fast access
 let inMemoryAccessToken: string | null = null;
 let inMemoryRefreshToken: string | null = null;
 
+export const isImpersonating = (): boolean => {
+  try {
+    return Boolean(sessionStorage.getItem(SS_IMPERSONATION_ACCESS_TOKEN));
+  } catch {
+    return false;
+  }
+};
+
 export const getAccessToken = (): string | null => {
+  try {
+    const imp = sessionStorage.getItem(SS_IMPERSONATION_ACCESS_TOKEN);
+    if (imp) return imp;
+  } catch {
+    /* ignore */
+  }
   if (inMemoryAccessToken) return inMemoryAccessToken;
   try {
     return localStorage.getItem(STORAGE_ACCESS_TOKEN);
@@ -33,6 +52,12 @@ export const getAccessToken = (): string | null => {
 };
 
 export const getRefreshToken = (): string | null => {
+  try {
+    const imp = sessionStorage.getItem(SS_IMPERSONATION_REFRESH_TOKEN);
+    if (imp) return imp;
+  } catch {
+    /* ignore */
+  }
   if (inMemoryRefreshToken) return inMemoryRefreshToken;
   try {
     return localStorage.getItem(STORAGE_REFRESH_TOKEN);
@@ -43,6 +68,12 @@ export const getRefreshToken = (): string | null => {
 
 export const getCurrentTeam = (): Team | null => {
   try {
+    const impRaw = sessionStorage.getItem(SS_IMPERSONATION_CURRENT_TEAM);
+    if (impRaw) return JSON.parse(impRaw);
+  } catch {
+    /* ignore */
+  }
+  try {
     const raw = localStorage.getItem(STORAGE_CURRENT_TEAM);
     return raw ? JSON.parse(raw) : null;
   } catch {
@@ -50,7 +81,39 @@ export const getCurrentTeam = (): Team | null => {
   }
 };
 
-export const setSession = (accessToken: string | null, refreshToken: string | null, team?: Team | null) => {
+export const setSession = (
+  accessToken: string | null,
+  refreshToken: string | null,
+  team?: Team | null,
+  isImpersonation = false
+) => {
+  if (isImpersonation) {
+    try {
+      if (accessToken) {
+        sessionStorage.setItem(SS_IMPERSONATION_ACCESS_TOKEN, accessToken);
+      } else {
+        sessionStorage.removeItem(SS_IMPERSONATION_ACCESS_TOKEN);
+      }
+
+      if (refreshToken) {
+        sessionStorage.setItem(SS_IMPERSONATION_REFRESH_TOKEN, refreshToken);
+      } else {
+        sessionStorage.removeItem(SS_IMPERSONATION_REFRESH_TOKEN);
+      }
+
+      if (team !== undefined) {
+        if (team) {
+          sessionStorage.setItem(SS_IMPERSONATION_CURRENT_TEAM, JSON.stringify(team));
+        } else {
+          sessionStorage.removeItem(SS_IMPERSONATION_CURRENT_TEAM);
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+    return;
+  }
+
   inMemoryAccessToken = accessToken;
   inMemoryRefreshToken = refreshToken;
   try {
@@ -76,6 +139,17 @@ export const setSession = (accessToken: string | null, refreshToken: string | nu
   } catch {
     // Ignore localStorage availability / quota errors
   }
+};
+
+export const clearImpersonationSession = () => {
+  try {
+    sessionStorage.removeItem(SS_IMPERSONATION_ACCESS_TOKEN);
+    sessionStorage.removeItem(SS_IMPERSONATION_REFRESH_TOKEN);
+    sessionStorage.removeItem(SS_IMPERSONATION_CURRENT_TEAM);
+  } catch {
+    /* ignore */
+  }
+  invalidateAllCaches();
 };
 
 // --- In-memory cache with TTL ---
@@ -167,7 +241,7 @@ async function doRefreshAccessToken(): Promise<string | null> {
     }
 
     const data: { accessToken: string; refreshToken?: string } = await res.json();
-    setSession(data.accessToken, data.refreshToken || refreshToken);
+    setSession(data.accessToken, data.refreshToken || refreshToken, undefined, isImpersonating());
     return data.accessToken;
   } catch (error) {
     // Network glitch: don't clear session, allow retry when back online

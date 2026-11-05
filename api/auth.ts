@@ -4,6 +4,7 @@ import {
   hashPassword,
   verifyPassword,
   createAccessToken,
+  createImpersonationToken,
   createRefreshToken,
   getAuthTeam,
   getClientIp,
@@ -309,10 +310,16 @@ async function handleRefresh(req: ApiRequest, res: ApiResponse) {
   }
 
   const team = typeof rawTeam === 'string' ? JSON.parse(rawTeam) : rawTeam;
-  const newAccessToken = createAccessToken({ teamId: team.id, teamName: team.name });
+  const isImpersonated = Boolean(record.isImpersonated);
+  const impersonatedBy = record.impersonatedBy;
 
-  // Roll refresh token expiration
-  await redis.expire(`refreshtoken:${refreshToken}`, REFRESH_TOKEN_TTL_SECONDS);
+  const newAccessToken = isImpersonated
+    ? createImpersonationToken(team.id, team.name, impersonatedBy || 'admin')
+    : createAccessToken({ teamId: team.id, teamName: team.name });
+
+  // Roll refresh token expiration (for impersonation, cap at 2 hours max)
+  const ttl = isImpersonated ? 2 * 60 * 60 : REFRESH_TOKEN_TTL_SECONDS;
+  await redis.expire(`refreshtoken:${refreshToken}`, ttl);
 
   return res.status(200).json({
     accessToken: newAccessToken,
