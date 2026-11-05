@@ -19,7 +19,8 @@
     "backup": "tsx scripts/backup-db.ts",
     "restore": "tsx scripts/restore-db.ts",
     "compact": "tsx scripts/compact-past-events.ts",
-    "optimize:photos": "tsx scripts/optimize-prod-photos.ts"
+    "optimize:photos": "tsx scripts/optimize-prod-photos.ts",
+    "admin:hash-password": "tsx scripts/hash-admin-password.ts"
   },
   "dependencies": {
     "@upstash/redis": "^1.38.0",
